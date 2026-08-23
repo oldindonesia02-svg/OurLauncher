@@ -1,5 +1,7 @@
 package com.ourlauncher.app.ui
 
+import android.app.WallpaperManager
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +38,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
@@ -45,17 +49,28 @@ fun HomeScreen(
     onAppClick: (AppInfo) -> Unit,
     onOpenDrawer: () -> Unit
 ) {
+    val context = LocalContext.current
     var isEditMode by remember { mutableStateOf(false) }
     var isPreviewHidden by remember { mutableStateOf(false) }
     var showHomeSettings by remember { mutableStateOf(false) }
     var showFullSettings by remember { mutableStateOf(false) }
 
+    // Live Customization Settings States
+    var dockRadius by remember { mutableStateOf(32f) }
+    var showDockBg by remember { mutableStateOf(true) }
+    var searchOffset by remember { mutableStateOf(0f) }
+
     val dockApps = apps.take(4)
-    // Clean 4x3 or 4x4 Grid for neat spacing (Max 12 Apps on main home page)
     val gridApps = apps.drop(4).take(12)
 
     if (showFullSettings) {
-        SettingsScreen(onBack = { showFullSettings = false })
+        SettingsScreen(
+            onBack = { showFullSettings = false },
+            dockRadius = dockRadius,
+            onDockRadiusChange = { dockRadius = it },
+            showDockBg = showDockBg,
+            onShowDockBgChange = { showDockBg = it }
+        )
         return
     }
 
@@ -84,7 +99,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(44.dp))
             }
 
-            // CLEAN ALIGNED APP GRID (No overlapping, beautiful gaps)
+            // Clean 4x3 Grid Layout
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
@@ -116,7 +131,16 @@ fun HomeScreen(
 
             if (isEditMode && !isPreviewHidden) {
                 BottomCustomizationMenu(
-                    onWallpaperClick = {},
+                    onWallpaperClick = {
+                        // Open System Wallpaper Picker Intent
+                        try {
+                            val intent = Intent(Intent.ACTION_SET_WALLPAPER)
+                            context.startActivity(Intent.createChooser(intent, "Select Wallpaper"))
+                        } catch (e: Exception) {
+                            val intent = Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER)
+                            context.startActivity(intent)
+                        }
+                    },
                     onDeveloperClick = {},
                     onWidgetsClick = {},
                     onSettingsClick = { showHomeSettings = true }
@@ -126,7 +150,10 @@ fun HomeScreen(
                     dockApps = dockApps,
                     onAppClick = onAppClick,
                     onOpenDrawer = onOpenDrawer,
-                    onSettingsClick = { isEditMode = true }
+                    onSettingsClick = { isEditMode = true },
+                    dockRadius = dockRadius,
+                    showDockBg = showDockBg,
+                    searchOffset = searchOffset
                 )
             }
         }
@@ -197,15 +224,20 @@ fun VoidBottomBar(
     dockApps: List<AppInfo>,
     onAppClick: (AppInfo) -> Unit,
     onOpenDrawer: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    dockRadius: Float,
+    showDockBg: Boolean,
+    searchOffset: Float
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
     ) {
+        // Search Pill
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.offset(y = searchOffset.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -245,27 +277,26 @@ fun VoidBottomBar(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        val dockShape = RoundedCornerShape(32.dp)
+        // Dynamic Glass Dock
+        val dockShape = RoundedCornerShape(dockRadius.dp)
+        val glassBorder = Brush.verticalGradient(
+            listOf(Color.White.copy(alpha = 0.75f), Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.35f))
+        )
+        val glassBg = Brush.verticalGradient(
+            listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.08f))
+        )
+
         Box(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
                 .fillMaxWidth()
                 .clip(dockShape)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.08f))
-                    )
-                )
-                .border(
-                    1.2.dp,
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.75f),
-                            Color.White.copy(alpha = 0.15f),
-                            Color.White.copy(alpha = 0.35f)
-                        )
-                    ),
-                    dockShape
+                .then(
+                    if (showDockBg) {
+                        Modifier
+                            .background(brush = glassBg)
+                            .border(width = 1.2.dp, brush = glassBorder, shape = dockShape)
+                    } else Modifier
                 )
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
