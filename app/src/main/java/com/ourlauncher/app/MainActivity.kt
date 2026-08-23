@@ -5,7 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.ourlauncher.app.ui.AppDrawer
 import com.ourlauncher.app.ui.HomeScreen
@@ -21,14 +24,12 @@ class MainActivity : ComponentActivity() {
             val apps = remember { repository.getInstalledApps() }
 
             Box(modifier = Modifier.fillMaxSize()) {
-                // Main Home Screen
                 HomeScreen(
                     apps = apps,
                     onAppClick = { app -> repository.launchApp(app.packageName) },
                     onOpenDrawer = { isDrawerOpen = true }
                 )
 
-                // App Drawer overlay (shows when swiped up)
                 if (isDrawerOpen) {
                     AppDrawer(
                         apps = apps,
@@ -36,7 +37,7 @@ class MainActivity : ComponentActivity() {
                             repository.launchApp(app.packageName)
                             isDrawerOpen = false
                         },
-                        onCloseDrawer = { isDrawerOpen = false } // Swiping DOWN closes drawer!
+                        onCloseDrawer = { isDrawerOpen = false }
                     )
                 }
             }
