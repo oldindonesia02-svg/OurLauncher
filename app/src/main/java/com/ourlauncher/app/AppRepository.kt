@@ -1,7 +1,9 @@
 package com.ourlauncher.app
 
+import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
+import android.graphics.Rect
 import android.graphics.drawable.Drawable
 
 data class AppInfo(
@@ -28,9 +30,24 @@ class AppRepository(private val context: Context) {
         }.sortedBy { it.label.lowercase() }
     }
 
-    fun launchApp(app: AppInfo) {
+    /**
+     * Launches the app. If sourceBounds (the tapped icon's on-screen rect) is provided,
+     * the app visually "zooms out" from that icon — the same effect real launchers use.
+     */
+    fun launchApp(app: AppInfo, sourceBounds: Rect? = null) {
         val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
-        if (launchIntent != null) {
+            ?: return
+
+        if (sourceBounds != null) {
+            val options = ActivityOptions.makeScaleUpAnimation(
+                android.view.View(context), // placeholder view not actually used for bounds path below
+                sourceBounds.left,
+                sourceBounds.top,
+                sourceBounds.width(),
+                sourceBounds.height()
+            )
+            context.startActivity(launchIntent, options.toBundle())
+        } else {
             context.startActivity(launchIntent)
         }
     }
