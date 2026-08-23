@@ -21,6 +21,7 @@ fun HomeScreen(
     apps: List<AppInfo>,
     showLabels: Boolean,
     onAppClick: (AppInfo) -> Unit,
+    onAppClickWithBounds: (AppInfo, android.graphics.Rect) -> Unit,
     onOpenDrawer: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
@@ -51,7 +52,13 @@ fun HomeScreen(
                     .weight(1f)
             ) {
                 items(gridApps) { app ->
-                    AppIcon(app = app, onClick = { onAppClick(app) }, showLabel = showLabels)
+                    AppIcon(
+                        app = app,
+                        onClick = { onAppClick(app) },
+                        showLabel = showLabels,
+                        onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) }
+                    )
+                }
                 }
             }
 
