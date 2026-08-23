@@ -23,17 +23,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 
-// Scaled down icon conversion for buttery smooth 120Hz scrolling
-fun Drawable.toFastBitmap(): Bitmap {
-    if (this is BitmapDrawable && this.bitmap != null) {
-        return this.bitmap
+// In-Memory Global Cache so icons process ONCE and never lag scrolling
+private val iconCache = HashMap<String, Bitmap>()
+
+fun getCachedBitmap(packageName: String, drawable: Drawable?): Bitmap? {
+    if (drawable == null) return null
+    return iconCache.getOrPut(packageName) {
+        if (drawable is BitmapDrawable && drawable.bitmap != null) {
+            drawable.bitmap
+        } else {
+            val size = 108 // High quality optimized resolution
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, size, size)
+            drawable.draw(canvas)
+            bitmap
+        }
     }
-    val size = 120 // Optimized fixed resolution
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
-    setBounds(0, 0, size, size)
-    draw(canvas)
-    return bitmap
 }
 
 @Composable
@@ -50,10 +56,9 @@ fun AppIcon(
             .clickable { onClick() }
             .padding(4.dp)
     ) {
-        val drawable = app.icon
-        // Cache bitmap in memory so scrolling never lags
+        // Instant memory lookup
         val imageBitmap = remember(app.packageName) {
-            drawable?.toFastBitmap()?.asImageBitmap()
+            getCachedBitmap(app.packageName, app.icon)?.asImageBitmap()
         }
 
         if (imageBitmap != null) {
