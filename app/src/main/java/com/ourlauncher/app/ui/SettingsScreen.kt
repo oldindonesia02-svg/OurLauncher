@@ -16,7 +16,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun HomeScreenSettingsSheet(onDismiss: () -> Unit = {}, onOpenMoreSettings: () -> Unit = {}) {
+fun HomeScreenSettingsSheet(
+    onDismiss: () -> Unit = {},
+    onOpenMoreSettings: () -> Unit = {},
+    selectedEffect: String = "Crossfade",
+    onEffectSelect: (String) -> Unit = {}
+) {
     var showLabel by remember { mutableStateOf(true) }
     var liquidFolder by remember { mutableStateOf(true) }
     Box(Modifier.fillMaxSize().background(Color.Black.copy(0.45f)).clickable { onDismiss() }) {
