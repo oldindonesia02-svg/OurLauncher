@@ -2,6 +2,7 @@ package com.ourlauncher.app.ui
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
@@ -12,18 +13,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 
-// In-Memory Global Cache so icons process ONCE and never lag scrolling
 private val iconCache = HashMap<String, Bitmap>()
 
 fun getCachedBitmap(packageName: String, drawable: Drawable?): Bitmap? {
@@ -32,7 +37,7 @@ fun getCachedBitmap(packageName: String, drawable: Drawable?): Bitmap? {
         if (drawable is BitmapDrawable && drawable.bitmap != null) {
             drawable.bitmap
         } else {
-            val size = 108 // High quality optimized resolution
+            val size = 108
             val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             drawable.setBounds(0, 0, size, size)
@@ -48,15 +53,28 @@ fun AppIcon(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     showLabel: Boolean = true,
-    iconSizeDp: Int = 48
+    iconSizeDp: Int = 48,
+    onClickWithBounds: ((Rect) -> Unit)? = null
 ) {
+    var screenBounds by remember { mutableStateOf<Rect?>(null) }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
-            .clickable { onClick() }
+            .onGloballyPositioned { coords ->
+                val b = coords.boundsInWindow()
+                screenBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
+            }
+            .clickable {
+                val bounds = screenBounds
+                if (onClickWithBounds != null && bounds != null) {
+                    onClickWithBounds(bounds)
+                } else {
+                    onClick()
+                }
+            }
             .padding(4.dp)
     ) {
-        // Instant memory lookup
         val imageBitmap = remember(app.packageName) {
             getCachedBitmap(app.packageName, app.icon)?.asImageBitmap()
         }
