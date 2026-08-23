@@ -1,0 +1,16 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.OurLauncher" parent="android:Theme.Material.Light.NoActionBar">
+    </style>
+
+    <style name="Theme.OurLauncher.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- This is what makes the system wallpaper show through behind our Compose UI,
+             exactly like a real launcher home screen. -->
+        <item name="android:windowShowWallpaper">true</item>
+    </style>
+</resources>
