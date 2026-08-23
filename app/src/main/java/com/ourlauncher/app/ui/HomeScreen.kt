@@ -10,9 +10,9 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +25,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,9 +43,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
+import com.ourlauncher.app.SettingsManager
 
 @Composable
 fun HomeScreen(
@@ -50,15 +56,19 @@ fun HomeScreen(
     onOpenDrawer: () -> Unit
 ) {
     val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+
     var isEditMode by remember { mutableStateOf(false) }
     var isPreviewHidden by remember { mutableStateOf(false) }
     var showHomeSettings by remember { mutableStateOf(false) }
+    var showDockPopup by remember { mutableStateOf(false) }
     var showFullSettings by remember { mutableStateOf(false) }
 
-    // Live Customization Settings States
-    var dockRadius by remember { mutableStateOf(32f) }
-    var showDockBg by remember { mutableStateOf(true) }
-    var searchOffset by remember { mutableStateOf(0f) }
+    // Settings States
+    var dockRadius by remember { mutableStateOf(settingsManager.dockRadius) }
+    var showDockBg by remember { mutableStateOf(settingsManager.showDockBg) }
+    var searchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
+    var showAssistant by remember { mutableStateOf(true) }
 
     val dockApps = apps.take(4)
     val gridApps = apps.drop(4).take(12)
@@ -67,9 +77,20 @@ fun HomeScreen(
         SettingsScreen(
             onBack = { showFullSettings = false },
             dockRadius = dockRadius,
-            onDockRadiusChange = { newRadius -> dockRadius = newRadius },
+            onDockRadiusChange = {
+                dockRadius = it
+                settingsManager.dockRadius = it
+            },
             showDockBg = showDockBg,
-            onShowDockBgChange = { newBg -> showDockBg = newBg }
+            onShowDockBgChange = {
+                showDockBg = it
+                settingsManager.showDockBg = it
+            },
+            searchOffset = searchOffset,
+            onSearchOffsetChange = {
+                searchOffset = it
+                settingsManager.searchOffset = it
+            }
         )
         return
     }
@@ -99,7 +120,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(44.dp))
             }
 
-            // Clean 4x3 Grid Layout
+            // Grid Apps
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
@@ -110,11 +131,9 @@ fun HomeScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                items(gridApps) { app ->
+                items(gridApps, key = { it.packageName }) { app ->
                     Box {
-                        AppIcon(app = app, onClick = {
-                            if (!isEditMode) onAppClick(app)
-                        })
+                        AppIcon(app = app, onClick = { if (!isEditMode) onAppClick(app) })
                         if (isEditMode && !isPreviewHidden) {
                             Box(
                                 modifier = Modifier
@@ -141,7 +160,7 @@ fun HomeScreen(
                         }
                     },
                     onDeveloperClick = {},
-                    onWidgetsClick = {},
+                    onWidgetsClick = { showDockPopup = true }, // Open Floating Dock Customizer
                     onSettingsClick = { showHomeSettings = true }
                 )
             } else {
@@ -152,9 +171,32 @@ fun HomeScreen(
                     onSettingsClick = { isEditMode = true },
                     dockRadius = dockRadius,
                     showDockBg = showDockBg,
-                    searchOffset = searchOffset
+                    searchOffset = searchOffset,
+                    showAssistant = showAssistant
                 )
             }
+        }
+
+        // Void Floating Dock Customization Popup
+        if (showDockPopup) {
+            DockCustomizationPopup(
+                showDockBg = showDockBg,
+                onShowDockBgChange = {
+                    showDockBg = it
+                    settingsManager.showDockBg = it
+                },
+                dockRadius = dockRadius,
+                onDockRadiusChange = {
+                    dockRadius = it
+                    settingsManager.dockRadius = it
+                },
+                searchOffset = searchOffset,
+                onSearchOffsetChange = {
+                    searchOffset = it
+                    settingsManager.searchOffset = it
+                },
+                onClose = { showDockPopup = false }
+            )
         }
 
         if (showHomeSettings) {
@@ -165,6 +207,159 @@ fun HomeScreen(
                     showFullSettings = true
                 }
             )
+        }
+    }
+}
+
+/**
+ * Floating Dock Customization Card (Matches Video/Screenshot #2)
+ */
+@Composable
+fun DockCustomizationPopup(
+    showDockBg: Boolean,
+    onShowDockBgChange: (Boolean) -> Unit,
+    dockRadius: Float,
+    onDockRadiusChange: (Float) -> Unit,
+    searchOffset: Float,
+    onSearchOffsetChange: (Float) -> Unit,
+    onClose: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable { onClose() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(20.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color(0xFF1C1C1E))
+                .clickable(enabled = false) {}
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Reset",
+                    color = Color(0xFF0A84FF),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable {
+                        onDockRadiusChange(32f)
+                        onShowDockBgChange(true)
+                        onSearchOffsetChange(0f)
+                    }
+                )
+                Text(
+                    text = "Dock customization",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "✕",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 18.sp,
+                    modifier = Modifier.clickable { onClose() }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Show Dock Background Toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF2C2C2E))
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Show dock background", color = Color.White, fontSize = 15.sp)
+                    Text("Show or hide the dock's glass backdrop", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+                }
+                Switch(
+                    checked = showDockBg,
+                    onCheckedChange = onShowDockBgChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = Color(0xFF0A84FF)
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Corner Radius Slider
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF2C2C2E))
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Dock corner radius", color = Color.White, fontSize = 15.sp)
+                    Text("${((dockRadius / 50f) * 100).toInt()}%", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+                }
+                Slider(
+                    value = dockRadius,
+                    onValueChange = onDockRadiusChange,
+                    valueRange = 8f..50f,
+                    colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF))
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Vertical Offset Slider
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF2C2C2E))
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Dock vertical offset", color = Color.White, fontSize = 15.sp)
+                    Text("${searchOffset.toInt()} dp", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+                }
+                Slider(
+                    value = searchOffset,
+                    onValueChange = onSearchOffsetChange,
+                    valueRange = -30f..30f,
+                    colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF))
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Apply Button
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF0A84FF))
+                    .clickable { onClose() }
+                    .padding(vertical = 14.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Apply", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -226,7 +421,8 @@ fun VoidBottomBar(
     onSettingsClick: () -> Unit,
     dockRadius: Float,
     showDockBg: Boolean,
-    searchOffset: Float
+    searchOffset: Float,
+    showAssistant: Boolean
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -256,6 +452,21 @@ fun VoidBottomBar(
                     .padding(horizontal = 24.dp, vertical = 8.dp)
             ) {
                 Text("search", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
+            }
+
+            if (showAssistant) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
+                        .clickable { onOpenDrawer() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🎙️", fontSize = 14.sp)
+                }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -321,46 +532,4 @@ fun BottomCustomizationMenu(
         modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
     ) {
         Box(
-            modifier = Modifier
-                .width(40.dp)
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(Color.White.copy(alpha = 0.4f))
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            CustomizationIconButton("🖼️", "Wallpaper", onWallpaperClick)
-            CustomizationIconButton("🧊", "Developer", onDeveloperClick)
-            CustomizationIconButton("🗂️", "Widgets", onWidgetsClick)
-            CustomizationIconButton("⚙️", "Settings", onSettingsClick)
-        }
-    }
-}
-
-@Composable
-fun CustomizationIconButton(icon: String, label: String, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onClick() }
-    ) {
-        Box(
-            modifier = Modifier
-                .size(60.dp)
-                .clip(CircleShape)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.08f))
-                    )
-                )
-                .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(icon, fontSize = 22.sp)
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(label, color = Color.White, fontSize = 12.sp)
-    }
-}
+            modifier 
