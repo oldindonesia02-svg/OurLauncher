@@ -23,16 +23,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 
-// Converts Android Drawable to Compose ImageBitmap without external libraries
-fun Drawable.toBitmap(): Bitmap {
+// Scaled down icon conversion for buttery smooth 120Hz scrolling
+fun Drawable.toFastBitmap(): Bitmap {
     if (this is BitmapDrawable && this.bitmap != null) {
         return this.bitmap
     }
-    val width = if (intrinsicWidth > 0) intrinsicWidth else 48
-    val height = if (intrinsicHeight > 0) intrinsicHeight else 48
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val size = 120 // Optimized fixed resolution
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
-    setBounds(0, 0, canvas.width, canvas.height)
+    setBounds(0, 0, size, size)
     draw(canvas)
     return bitmap
 }
@@ -52,8 +51,9 @@ fun AppIcon(
             .padding(4.dp)
     ) {
         val drawable = app.icon
-        val imageBitmap = remember(drawable) {
-            drawable?.toBitmap()?.asImageBitmap()
+        // Cache bitmap in memory so scrolling never lags
+        val imageBitmap = remember(app.packageName) {
+            drawable?.toFastBitmap()?.asImageBitmap()
         }
 
         if (imageBitmap != null) {
