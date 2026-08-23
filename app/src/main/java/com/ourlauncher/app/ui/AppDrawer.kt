@@ -2,7 +2,11 @@ package com.ourlauncher.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -25,9 +29,13 @@ fun AppDrawer(
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.85f))
             .pointerInput(Unit) {
-                detectVerticalDragGestures { _: PointerInputChange, dragAmount: Float ->
-                    if (dragAmount > 20) onCloseDrawer() // Swipe DOWN closes drawer
-                }
+                detectVerticalDragGestures(
+                    onVerticalDrag = { _: PointerInputChange, dragAmount: Float ->
+                        if (dragAmount > 20f) {
+                            onCloseDrawer() // Swipe DOWN closes drawer
+                        }
+                    }
+                )
             }
     ) {
         Column(
