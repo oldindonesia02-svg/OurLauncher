@@ -2,6 +2,7 @@ package com.ourlauncher.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,20 +18,26 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
@@ -42,6 +49,18 @@ fun AppDrawer(
     onCloseDrawer: () -> Unit
 ) {
     val gridState = rememberLazyGridState()
+    
+    // 🔍 LIVE SEARCH STATE
+    var searchQuery by remember { mutableStateOf("") }
+    
+    // 🔍 FILTER APPS BASED ON SEARCH
+    val filteredApps = remember(searchQuery, apps) {
+        if (searchQuery.isEmpty()) {
+            apps
+        } else {
+            apps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+        }
+    }
 
     // Ultra-sensitive Instant Swipe Down Connection
     val nestedScrollConnection = remember {
@@ -59,15 +78,13 @@ fun AppDrawer(
 
     val sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
-    // Frosted Translucent Liquid Glass Background Gradient (Wallpaper shines through)
     val glassBgGradient = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFF141418).copy(alpha = 0.72f), // Glass top sheen
-            Color(0xFF0A0A0D).copy(alpha = 0.88f)  // Soft dark glass bottom
+            Color(0xFF141418).copy(alpha = 0.72f), 
+            Color(0xFF0A0A0D).copy(alpha = 0.88f)  
         )
     )
 
-    // iOS Style Glossy Top Border Reflection
     val glassBorderGradient = Brush.verticalGradient(
         colors = listOf(
             Color.White.copy(alpha = 0.45f),
@@ -102,11 +119,12 @@ fun AppDrawer(
                     .size(width = 42.dp, height = 5.dp)
                     .clip(RoundedCornerShape(3.dp))
                     .background(Color.White.copy(alpha = 0.45f))
+                    .clickable { onCloseDrawer() }
             )
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Glass Search Bar
+            // 🔍 REAL GLASS SEARCH BAR (Live Typing)
             Box(
                 modifier = Modifier
                     .padding(horizontal = 18.dp)
@@ -114,18 +132,31 @@ fun AppDrawer(
                     .clip(RoundedCornerShape(22.dp))
                     .background(Color.White.copy(alpha = 0.12f))
                     .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(22.dp))
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Text(
-                    text = "Search apps...",
-                    color = Color.White.copy(alpha = 0.55f),
-                    fontSize = 15.sp
+                BasicTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
+                    cursorBrush = SolidColor(Color(0xFF0A84FF)),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    decorationBox = { innerTextField ->
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                text = "Search apps...",
+                                color = Color.White.copy(alpha = 0.4f),
+                                fontSize = 16.sp
+                            )
+                        }
+                        innerTextField()
+                    }
                 )
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Fast App Drawer Grid
+            // 🔍 SHOW FILTERED APPS
             LazyVerticalGrid(
                 state = gridState,
                 columns = GridCells.Fixed(4),
@@ -133,7 +164,7 @@ fun AppDrawer(
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(
-                    items = apps,
+                    items = filteredApps, // Use filtered list!
                     key = { app -> app.packageName }
                 ) { app ->
                     AppIcon(app = app, onClick = { onAppClick(app) })
