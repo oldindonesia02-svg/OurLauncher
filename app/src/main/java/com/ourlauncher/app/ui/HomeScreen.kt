@@ -1,76 +1,68 @@
+package com.ourlauncher.app.ui
+
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.dp
+import com.ourlauncher.app.AppInfo
+import com.ourlauncher.app.settings.LauncherSettings
+
 @Composable
-fun VoidBottomBar(
-    dockApps: List<AppInfo>,
+fun HomeScreen(
+    apps: List<AppInfo>,
+    settings: LauncherSettings,
     onAppClick: (AppInfo) -> Unit,
     onOpenDrawer: () -> Unit,
-    onSettingsClick: () -> Unit,
-    dockRadius: Float,
-    showDockBg: Boolean,
-    searchOffset: Float,
-    showAssistant: Boolean
+    onOpenSettings: () -> Unit
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.offset(y = searchOffset.dp) // Live Move Search Bar!
-        ) {
-            // Search Pill
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color.White.copy(alpha = 0.15f))
-                    .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
-                    .clickable { onOpenDrawer() }
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-            ) {
-                Text("search", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
-            }
+    val dockApps = apps.take(4)
+    val gridApps = apps.drop(4).take(20)
 
-            // Small Assistant/Hex Button
-            Spacer(modifier = Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.15f))
-                    .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
-                    .clickable { onSettingsClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("⬡", color = Color.White, fontSize = 16.sp)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Liquid Glass Dock
-        val dockShape = RoundedCornerShape(dockRadius.dp)
-        Box(
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .fillMaxWidth()
-                .clip(dockShape)
-                .then(
-                    if (showDockBg) {
-                        Modifier
-                            .background(Color.White.copy(alpha = 0.2f))
-                            .border(1.dp, Color.White.copy(alpha = 0.4f), dockShape)
-                    } else Modifier
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onVerticalDrag = { change: androidx.compose.ui.input.pointer.PointerInputChange, dragAmount: Float ->
+                        if (dragAmount < -20) onOpenDrawer()
+                    }
                 )
-                .padding(horizontal = 14.dp, vertical = 10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+            }
+            .pointerInput(Unit) {
+                detectTapGestures(onLongPress = { onOpenSettings() })
+            }
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                contentPadding = PaddingValues(top = 64.dp, start = 16.dp, end = 16.dp),
+                userScrollEnabled = false,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f)
             ) {
-                dockApps.forEach { app ->
-                    AppIcon(app = app, onClick = { onAppClick(app) }, showLabel = false, iconSizeDp = 48)
+                items(gridApps) { app ->
+                    AppIcon(
+                        app = app,
+                        onClick = { onAppClick(app) },
+                        showLabel = settings.showLabels,
+                        iconCornerRadius = settings.iconCornerRadius
+                    )
                 }
             }
+
+            SearchPill(onClick = onOpenDrawer, modifier = Modifier.padding(bottom = 8.dp))
+            Dock(pinnedApps = dockApps, onAppClick = onAppClick, iconCornerRadius = settings.iconCornerRadius)
         }
     }
 }
