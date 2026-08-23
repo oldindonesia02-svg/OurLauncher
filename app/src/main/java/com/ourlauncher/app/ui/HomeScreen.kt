@@ -1,10 +1,5 @@
 package com.ourlauncher.app.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -52,20 +47,24 @@ fun HomeScreen(
 ) {
     var isEditMode by remember { mutableStateOf(false) }
     var isPreviewHidden by remember { mutableStateOf(false) }
+    var showHomeSettings by remember { mutableStateOf(false) }
+    var showFullSettings by remember { mutableStateOf(false) }
 
     val dockApps = apps.take(4)
-    val gridApps = apps.drop(4).take(20)
+    // Clean 4x3 or 4x4 Grid for neat spacing (Max 12 Apps on main home page)
+    val gridApps = apps.drop(4).take(12)
+
+    if (showFullSettings) {
+        SettingsScreen(onBack = { showFullSettings = false })
+        return
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // Long Press on empty screen enters Customization Mode!
             .pointerInput(Unit) {
-                detectTapGestures(
-                    onLongPress = { isEditMode = true }
-                )
+                detectTapGestures(onLongPress = { isEditMode = true })
             }
-            // Swipe Up opens App Drawer
             .pointerInput(Unit) {
                 detectVerticalDragGestures { _: PointerInputChange, dragAmount: Float ->
                     if (!isEditMode && dragAmount < -15f) onOpenDrawer()
@@ -74,7 +73,6 @@ fun HomeScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // Top Space or Edit Mode Header
             if (isEditMode) {
                 TopEditBar(
                     isPreviewHidden = isPreviewHidden,
@@ -83,13 +81,15 @@ fun HomeScreen(
                     onDone = { isEditMode = false; isPreviewHidden = false }
                 )
             } else {
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(44.dp))
             }
 
-            // App Icons Grid
+            // CLEAN ALIGNED APP GRID (No overlapping, beautiful gaps)
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
-                contentPadding = PaddingValues(top = 20.dp, start = 16.dp, end = 16.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 userScrollEnabled = false,
                 modifier = Modifier
                     .weight(1f)
@@ -100,8 +100,6 @@ fun HomeScreen(
                         AppIcon(app = app, onClick = {
                             if (!isEditMode) onAppClick(app)
                         })
-
-                        // Small edit badge dot when in Edit Mode (Void Style)
                         if (isEditMode && !isPreviewHidden) {
                             Box(
                                 modifier = Modifier
@@ -116,13 +114,12 @@ fun HomeScreen(
                 }
             }
 
-            // Bottom Area (Swaps between Glass Dock and Customization Menu)
             if (isEditMode && !isPreviewHidden) {
                 BottomCustomizationMenu(
                     onWallpaperClick = {},
                     onDeveloperClick = {},
                     onWidgetsClick = {},
-                    onSettingsClick = {}
+                    onSettingsClick = { showHomeSettings = true }
                 )
             } else {
                 VoidBottomBar(
@@ -133,12 +130,19 @@ fun HomeScreen(
                 )
             }
         }
+
+        if (showHomeSettings) {
+            HomeScreenSettingsSheet(
+                onDismiss = { showHomeSettings = false },
+                onOpenMoreSettings = {
+                    showHomeSettings = false
+                    showFullSettings = true
+                }
+            )
+        }
     }
 }
 
-/**
- * Top Header in Customization Mode (Cancel | Eye | Done)
- */
 @Composable
 fun TopEditBar(
     isPreviewHidden: Boolean,
@@ -153,7 +157,6 @@ fun TopEditBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Cancel Pill
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
@@ -165,7 +168,6 @@ fun TopEditBar(
             Text("Cancel", color = Color.White, fontSize = 15.sp)
         }
 
-        // Eye (Preview Toggle) Button
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -178,7 +180,6 @@ fun TopEditBar(
             Text(if (isPreviewHidden) "👁️" else "👁", fontSize = 16.sp)
         }
 
-        // Done Pill (Bright Blue)
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
@@ -191,9 +192,6 @@ fun TopEditBar(
     }
 }
 
-/**
- * Void Style Bottom Area (Search Pill + Cube Button + Liquid Glass Dock)
- */
 @Composable
 fun VoidBottomBar(
     dockApps: List<AppInfo>,
@@ -203,17 +201,12 @@ fun VoidBottomBar(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 20.dp)
+        modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
     ) {
-        // Search Pill + Hex/Cube Settings Button
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
+            horizontalArrangement = Arrangement.Center
         ) {
-            // Search Pill
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(24.dp))
@@ -232,12 +225,11 @@ fun VoidBottomBar(
                     .clickable { onOpenDrawer() }
                     .padding(horizontal = 24.dp, vertical = 8.dp)
             ) {
-                Text(text = "search", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
+                Text("search", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Small Hexagon / Cube Settings Button
             Box(
                 modifier = Modifier
                     .size(36.dp)
@@ -247,52 +239,48 @@ fun VoidBottomBar(
                     .clickable { onSettingsClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "⬡", color = Color.White, fontSize = 16.sp)
+                Text("⬡", color = Color.White, fontSize = 16.sp)
             }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // ULTRA LIQUID GLASS DOCK
         val dockShape = RoundedCornerShape(32.dp)
-        val glassBorderGradient = Brush.verticalGradient(
-            colors = listOf(
-                Color.White.copy(alpha = 0.75f),
-                Color.White.copy(alpha = 0.15f),
-                Color.White.copy(alpha = 0.35f)
-            )
-        )
-        val glassBgGradient = Brush.verticalGradient(
-            colors = listOf(
-                Color.White.copy(alpha = 0.28f),
-                Color.White.copy(alpha = 0.08f)
-            )
-        )
-
         Box(
             modifier = Modifier
                 .padding(horizontal = 16.dp)
                 .fillMaxWidth()
                 .clip(dockShape)
-                .background(brush = glassBgGradient)
-                .border(width = 1.2.dp, brush = glassBorderGradient, shape = dockShape)
-                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.08f))
+                    )
+                )
+                .border(
+                    1.2.dp,
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.75f),
+                            Color.White.copy(alpha = 0.15f),
+                            Color.White.copy(alpha = 0.35f)
+                        )
+                    ),
+                    dockShape
+                )
+                .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 dockApps.forEach { app ->
-                    AppIcon(app = app, onClick = { onAppClick(app) }, showLabel = false, iconSizeDp = 52)
+                    AppIcon(app = app, onClick = { onAppClick(app) }, showLabel = false, iconSizeDp = 48)
                 }
             }
         }
     }
 }
 
-/**
- * Bottom Bar in Customization Mode (Wallpaper | Developer | Widgets | Settings)
- */
 @Composable
 fun BottomCustomizationMenu(
     onWallpaperClick: () -> Unit,
@@ -302,11 +290,8 @@ fun BottomCustomizationMenu(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 24.dp)
+        modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
     ) {
-        // Small pill line handle
         Box(
             modifier = Modifier
                 .width(40.dp)
@@ -314,27 +299,21 @@ fun BottomCustomizationMenu(
                 .clip(RoundedCornerShape(2.dp))
                 .background(Color.White.copy(alpha = 0.4f))
         )
-
         Spacer(modifier = Modifier.height(16.dp))
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            CustomizationIconButton(icon = "🖼️", label = "Wallpaper", onClick = onWallpaperClick)
-            CustomizationIconButton(icon = "🧊", label = "Developer", onClick = onDeveloperClick)
-            CustomizationIconButton(icon = "🗂️", label = "Widgets", onClick = onWidgetsClick)
-            CustomizationIconButton(icon = "⚙️", label = "Settings", onClick = onSettingsClick)
+            CustomizationIconButton("🖼️", "Wallpaper", onWallpaperClick)
+            CustomizationIconButton("🧊", "Developer", onDeveloperClick)
+            CustomizationIconButton("🗂️", "Widgets", onWidgetsClick)
+            CustomizationIconButton("⚙️", "Settings", onSettingsClick)
         }
     }
 }
 
 @Composable
-fun CustomizationIconButton(
-    icon: String,
-    label: String,
-    onClick: () -> Unit
-) {
+fun CustomizationIconButton(icon: String, label: String, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable { onClick() }
@@ -351,15 +330,9 @@ fun CustomizationIconButton(
                 .border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = icon, fontSize = 22.sp)
+            Text(icon, fontSize = 22.sp)
         }
-
         Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = label,
-            color = Color.White,
-            fontSize = 12.sp
-        )
+        Text(label, color = Color.White, fontSize = 12.sp)
     }
 }
