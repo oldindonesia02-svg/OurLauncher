@@ -15,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,7 +43,7 @@ fun HomeScreenSettingsSheet(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                 .background(Color(0xFF1C1C1E))
-                .clickable(enabled = false) {} // block dismiss when tapping sheet
+                .clickable(enabled = false) {}
                 .padding(bottom = 32.dp)
         ) {
             // Handle bar
@@ -86,24 +85,30 @@ fun HomeScreenSettingsSheet(
 
             // Group 1
             SettingsGroup {
-                SettingsNavRow("Transition effects") {}
+                SettingsNavRow(title = "Transition effects")
                 SettingsDivider()
-                SettingsNavRow("Set default screen") {}
+                SettingsNavRow(title = "Set default screen")
                 SettingsDivider()
-                SettingsValueRow("Show label", if (showLabel) "On" else "Off") {
-                    showLabel = !showLabel
-                }
+                SettingsValueRow(
+                    title = "Show label",
+                    value = if (showLabel) "On" else "Off",
+                    onClick = { showLabel = !showLabel }
+                )
                 SettingsDivider()
-                SettingsToggleRow("Liquid folder", liquidFolder) { liquidFolder = it }
+                SettingsToggleRow(
+                    title = "Liquid folder",
+                    checked = liquidFolder,
+                    onCheckedChange = { liquidFolder = it }
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             // Group 2
             SettingsGroup {
-                SettingsLinkRow("Regenerate all icons") {}
+                SettingsLinkRow(title = "Regenerate all icons", onClick = {})
                 SettingsDivider()
-                SettingsLinkRow("More settings") { onOpenMoreSettings() }
+                SettingsLinkRow(title = "More settings", onClick = onOpenMoreSettings)
             }
         }
     }
@@ -134,7 +139,6 @@ fun SettingsScreen(
                 .fillMaxWidth()
                 .padding(top = 48.dp, start = 16.dp, end = 16.dp, bottom = 8.dp)
         ) {
-            // Back button
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -149,7 +153,6 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Search bar
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -178,7 +181,6 @@ fun SettingsScreen(
                 modifier = Modifier.padding(bottom = 16.dp, start = 4.dp)
             )
 
-            // ── General ──
             SettingsGroup {
                 SettingsToggleRow(
                     title = "Disable What's New",
@@ -190,14 +192,23 @@ fun SettingsScreen(
 
             SettingsSectionHeader("SOUNDS AND VIBRATION")
             SettingsGroup {
-                SettingsNavRow("Sounds and vibration", "Switch feedback and vibration settings") {}
+                SettingsNavRow(
+                    title = "Sounds and vibration",
+                    subtitle = "Switch feedback and vibration settings"
+                )
             }
 
             SettingsSectionHeader("ACTIONS")
             SettingsGroup {
-                SettingsNavRow("Swipe actions", "Customize gesture swipe behaviors") {}
+                SettingsNavRow(
+                    title = "Swipe actions",
+                    subtitle = "Customize gesture swipe behaviors"
+                )
                 SettingsDivider()
-                SettingsNavRow("Control center", "Configure control center layout and options") {}
+                SettingsNavRow(
+                    title = "Control center",
+                    subtitle = "Configure control center layout and options"
+                )
                 SettingsDivider()
                 SettingsToggleRow(
                     title = "Show assistant",
@@ -223,65 +234,101 @@ fun SettingsScreen(
                     onCheckedChange = { fakeFingerprint = it }
                 )
                 SettingsDivider()
-                SettingsNavRow("Customize Lock Screen", "Test stretching lock screen clock") {}
+                SettingsNavRow(
+                    title = "Customize Lock Screen",
+                    subtitle = "Test stretching lock screen clock"
+                )
                 SettingsDivider()
-                SettingsNavRow("Services", "Manage additional services and integrations") {}
+                SettingsNavRow(
+                    title = "Services",
+                    subtitle = "Manage additional services and integrations"
+                )
                 SettingsDivider()
-                SettingsNavRow("Passcode", "Set up passcode for folder protection") {}
+                SettingsNavRow(
+                    title = "Passcode",
+                    subtitle = "Set up passcode for folder protection"
+                )
             }
 
             SettingsSectionHeader("CUSTOMIZATION")
             SettingsGroup {
-                SettingsNavRow("Appearance", "Dark theme and custom fonts") {}
+                SettingsNavRow(title = "Appearance", subtitle = "Dark theme and custom fonts")
                 SettingsDivider()
-                SettingsNavRow("App icons", "Opacity, shape, icon pack and icon corners") {}
+                SettingsNavRow(title = "App icons", subtitle = "Opacity, shape, icon pack and icon corners")
                 SettingsDivider()
-                SettingsNavRow("App Open Animation", "Toggle animation, duration and custom bezier curves") {}
+                SettingsNavRow(title = "App Open Animation", subtitle = "Toggle animation, duration and custom bezier curves")
                 SettingsDivider()
-                SettingsNavRow("Dock", "Dock padding, gap and corner radius") {}
+                SettingsNavRow(title = "Dock", subtitle = "Dock padding, gap and corner radius")
                 SettingsDivider()
-                SettingsNavRow("Highlights", "Highlight style and light direction") {}
+                SettingsNavRow(title = "Highlights", subtitle = "Highlight style and light direction")
                 SettingsDivider()
-                SettingsNavRow("Liquid Glass", "Adjust transparency, blur and lens refraction") {}
+                SettingsNavRow(title = "Liquid Glass", subtitle = "Adjust transparency, blur and lens refraction")
                 SettingsDivider()
-                SettingsNavRow("Search Bar Position", "Adjust the vertical offset of the search pill") {}
+                SettingsNavRow(title = "Search Bar Position", subtitle = "Adjust the vertical offset of the search pill")
             }
 
             SettingsSectionHeader("GRAPHIC")
             SettingsGroup {
-                GraphicsLevelRow("Ultra", "Liquid Glass with all animations and full graphics enabled", graphicsLevel) { graphicsLevel = it }
+                GraphicsLevelRow(
+                    level = "Ultra",
+                    description = "Liquid Glass with all animations and full graphics enabled",
+                    selected = graphicsLevel,
+                    onSelect = { graphicsLevel = it }
+                )
                 SettingsDivider()
-                GraphicsLevelRow("High", "Full graphics with all animations, but disables backdrop blur on folders", graphicsLevel) { graphicsLevel = it }
+                GraphicsLevelRow(
+                    level = "High",
+                    description = "Full graphics with all animations, but disables backdrop blur on folders",
+                    selected = graphicsLevel,
+                    onSelect = { graphicsLevel = it }
+                )
                 SettingsDivider()
-                GraphicsLevelRow("Medium", "Disables Liquid Glass (uses simple blur instead) and reduces GPU usage for highlights", graphicsLevel) { graphicsLevel = it }
+                GraphicsLevelRow(
+                    level = "Medium",
+                    description = "Disables Liquid Glass (uses simple blur instead) and reduces GPU usage for highlights",
+                    selected = graphicsLevel,
+                    onSelect = { graphicsLevel = it }
+                )
                 SettingsDivider()
-                GraphicsLevelRow("Low", "Disables all blur, liquid glass, highlights, and heavy graphic effects", graphicsLevel) { graphicsLevel = it }
+                GraphicsLevelRow(
+                    level = "Low",
+                    description = "Disables all blur, liquid glass, highlights, and heavy graphic effects",
+                    selected = graphicsLevel,
+                    onSelect = { graphicsLevel = it }
+                )
                 SettingsDivider()
-                SettingsNavRow("Other graphic settings", "Configure uninstall & remove animation effects") {}
+                SettingsNavRow(
+                    title = "Other graphic settings",
+                    subtitle = "Configure uninstall & remove animation effects"
+                )
             }
 
             SettingsSectionHeader("ABOUT")
             SettingsGroup {
-                SettingsNavRow("OurLauncher", "Version 1.0.0") {}
+                SettingsNavRow(title = "OurLauncher", subtitle = "Version 1.0.0")
                 SettingsDivider()
-                SettingsNavRow("Updates", "Check for new versions") {}
+                SettingsNavRow(title = "Updates", subtitle = "Check for new versions")
                 SettingsDivider()
-                SettingsNavRow("Support Development", "Buy us a coffee ☕") {}
+                SettingsNavRow(title = "Support Development", subtitle = "Buy us a coffee ☕")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Reset button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color(0xFF2C2C2E))
-                    .clickable { /* reset later */ }
+                    .clickable { }
                     .padding(vertical = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Reset Settings", color = Color(0xFFFF453A), fontSize = 17.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    text = "Reset Settings",
+                    color = Color(0xFFFF453A),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
 
             Spacer(modifier = Modifier.height(48.dp))
@@ -328,7 +375,11 @@ fun SettingsDivider() {
 }
 
 @Composable
-fun SettingsNavRow(title: String, subtitle: String? = null, onClick: () -> Unit) {
+fun SettingsNavRow(
+    title: String,
+    subtitle: String? = null,
+    onClick: () -> Unit = {}
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -337,18 +388,21 @@ fun SettingsNavRow(title: String, subtitle: String? = null, onClick: () -> Unit)
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 17.sp)
+            Text(text = title, color = Color.White, fontSize = 17.sp)
             if (subtitle != null) {
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                Text(text = subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
             }
         }
-        Text("›", color = Color.White.copy(alpha = 0.3f), fontSize = 22.sp)
+        Text(text = "›", color = Color.White.copy(alpha = 0.3f), fontSize = 22.sp)
     }
 }
 
 @Composable
-fun SettingsLinkRow(title: String, onClick: () -> Unit) {
+fun SettingsLinkRow(
+    title: String,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -356,13 +410,22 @@ fun SettingsLinkRow(title: String, onClick: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, color = Color(0xFF0A84FF), fontSize = 17.sp, modifier = Modifier.weight(1f))
-        Text("›", color = Color.White.copy(alpha = 0.3f), fontSize = 22.sp)
+        Text(
+            text = title,
+            color = Color(0xFF0A84FF),
+            fontSize = 17.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Text(text = "›", color = Color.White.copy(alpha = 0.3f), fontSize = 22.sp)
     }
 }
 
 @Composable
-fun SettingsValueRow(title: String, value: String, onClick: () -> Unit) {
+fun SettingsValueRow(
+    title: String,
+    value: String,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -370,10 +433,10 @@ fun SettingsValueRow(title: String, value: String, onClick: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, color = Color.White, fontSize = 17.sp, modifier = Modifier.weight(1f))
-        Text(value, color = Color.White.copy(alpha = 0.4f), fontSize = 17.sp)
+        Text(text = title, color = Color.White, fontSize = 17.sp, modifier = Modifier.weight(1f))
+        Text(text = value, color = Color.White.copy(alpha = 0.4f), fontSize = 17.sp)
         Spacer(modifier = Modifier.width(4.dp))
-        Text("‹ ›", color = Color.White.copy(alpha = 0.3f), fontSize = 14.sp)
+        Text(text = "‹ ›", color = Color.White.copy(alpha = 0.3f), fontSize = 14.sp)
     }
 }
 
@@ -391,10 +454,10 @@ fun SettingsToggleRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 17.sp)
+            Text(text = title, color = Color.White, fontSize = 17.sp)
             if (subtitle != null) {
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                Text(text = subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
             }
         }
         Switch(
@@ -425,12 +488,17 @@ fun GraphicsLevelRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(level, color = Color.White, fontSize = 17.sp)
+            Text(text = level, color = Color.White, fontSize = 17.sp)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(description, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+            Text(text = description, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
         }
         if (selected == level) {
-            Text("✓", color = Color(0xFF0A84FF), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = "✓",
+                color = Color(0xFF0A84FF),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
