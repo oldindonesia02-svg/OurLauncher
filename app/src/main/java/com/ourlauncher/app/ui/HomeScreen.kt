@@ -37,7 +37,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectVerticalDragGestures(onVerticalDrag = { _, dragAmount ->
+                detectVerticalDragGestures(onVerticalDrag = { change: androidx.compose.ui.input.pointer.PointerInputChange, dragAmount: Float ->
                     if (dragAmount < -20) onOpenDrawer()
                 })
             }
