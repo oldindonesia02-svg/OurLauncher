@@ -1,19 +1,34 @@
 package com.ourlauncher.app.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 
 @Composable
@@ -29,31 +44,72 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onVerticalDrag = { _: PointerInputChange, dragAmount: Float ->
-                        if (dragAmount < -20f) {
-                            onOpenDrawer() // Swipe UP opens drawer
-                        }
-                    }
-                )
+                detectVerticalDragGestures { _: PointerInputChange, dragAmount: Float ->
+                    if (dragAmount < -15f) onOpenDrawer() // Swipe UP anywhere opens drawer
+                }
             }
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
+            
+            // App Grid
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
-                contentPadding = PaddingValues(top = 64.dp, start = 16.dp, end = 16.dp),
+                contentPadding = PaddingValues(top = 60.dp, start = 16.dp, end = 16.dp),
                 userScrollEnabled = false,
                 modifier = Modifier
-                    .fillMaxSize()
                     .weight(1f)
+                    .fillMaxWidth()
             ) {
                 items(gridApps) { app ->
                     AppIcon(app = app, onClick = { onAppClick(app) })
                 }
             }
 
-            SearchPill(onClick = onOpenDrawer, modifier = Modifier.padding(bottom = 8.dp))
-            Dock(pinnedApps = dockApps, onAppClick = onAppClick)
+            // Void Bottom Layout
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 20.dp)
+            ) {
+                // Glass Search Pill
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                        .clickable { onOpenDrawer() }
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                ) {
+                    Text(text = "search", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Glass Liquid Dock
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.08f))
+                            )
+                        )
+                        .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(32.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        dockApps.forEach { app ->
+                            AppIcon(app = app, onClick = { onAppClick(app) }, showLabel = false)
+                        }
+                    }
+                }
+            }
         }
     }
 }
