@@ -38,6 +38,7 @@ class MainActivity : ComponentActivity() {
                         apps = apps,
                         showLabels = showLabels,
                         onAppClick = { app -> repository.launchApp(app) },
+                        onAppClickWithBounds = { app, bounds -> repository.launchApp(app, bounds) },
                         onOpenDrawer = { screen = Screen.DRAWER },
                         onOpenSettings = { screen = Screen.SETTINGS }
                     )
