@@ -1,5 +1,6 @@
 package com.ourlauncher.app.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,6 +9,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
@@ -17,122 +20,67 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-@Composable
-fun HomeScreenSettingsSheet(
-    onDismiss: () -> Unit,
-    onOpenMoreSettings: () -> Unit
-) {
-    var showLabel by remember { mutableStateOf(true) }
-    var liquidFolder by remember { mutableStateOf(true) }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
-            .clickable { onDismiss() }
-    ) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                .background(Color(0xFF1C1C1E))
-                .clickable(enabled = false) {}
-                .padding(bottom = 32.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(top = 10.dp, bottom = 8.dp)
-                    .width(36.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.3f))
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "✕",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    modifier = Modifier
-                        .clickable { onDismiss() }
-                        .padding(8.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Home screen settings",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            SettingsGroup {
-                SettingsNavRow("Transition effects")
-                SettingsDivider()
-                SettingsNavRow("Set default screen")
-                SettingsDivider()
-                SettingsValueRow(
-                    title = "Show label",
-                    value = if (showLabel) "On" else "Off",
-                    onClick = { showLabel = !showLabel }
-                )
-                SettingsDivider()
-                SettingsToggleRow(
-                    title = "Liquid folder",
-                    checked = liquidFolder,
-                    onCheckedChange = { liquidFolder = it }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            SettingsGroup {
-                SettingsLinkRow("Regenerate all icons", onClick = {})
-                SettingsDivider()
-                SettingsLinkRow("More settings", onClick = onOpenMoreSettings)
-            }
-        }
-    }
-}
-
+/* ─────────────────────────────────────────────
+   FULL SETTINGS SCREEN WITH ALL SUB-PAGES
+   ───────────────────────────────────────────── */
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     dockRadius: Float = 32f,
     onDockRadiusChange: (Float) -> Unit = {},
     showDockBg: Boolean = true,
-    onShowDockBgChange: (Boolean) -> Unit = {}
+    onShowDockBgChange: (Boolean) -> Unit = {},
+    searchOffset: Float = 0f,
+    onSearchOffsetChange: (Float) -> Unit = {}
 ) {
+    // Current Active Sub-page ("main", "appearance", "animation", "icons", "dock", "search_pos")
     var currentSubPage by remember { mutableStateOf("main") }
 
+    // Toggle States
     var disableWhatsNew by remember { mutableStateOf(false) }
     var showAssistant by remember { mutableStateOf(true) }
     var lockScreen by remember { mutableStateOf(false) }
     var fakeFingerprint by remember { mutableStateOf(false) }
     var graphicsLevel by remember { mutableStateOf("Medium") }
 
-    var iconOpacity by remember { mutableStateOf(100f) }
-    var glassBlur by remember { mutableStateOf(20f) }
+    // Appearance & Font States
+    var selectedFont by remember { mutableStateOf("sans-serif") }
+
+    // App Open Animation Bezier Curve States
+    var animEnabled by remember { mutableStateOf(true) }
+    var advancedTexture by remember { mutableStateOf(false) }
+    var animDuration by remember { mutableStateOf(300f) }
+    var tensionX1 by remember { mutableStateOf(0.25f) }
+    var velocityY1 by remember { mutableStateOf(0.50f) }
+    var tensionX2 by remember { mutableStateOf(0.00f) }
+    var velocityY2 by remember { mutableStateOf(1.00f) }
+
+    // Icon Customization States
+    var iconTab by remember { mutableStateOf("General") }
+    var iconThemeStyle by remember { mutableStateOf("Standard") }
+    var iconCornerRadius by remember { mutableStateOf(27f) }
+    var blurDp by remember { mutableStateOf(0.5f) }
+    var falloffVal by remember { mutableStateOf(1.5f) }
+    var widthDp by remember { mutableStateOf(1.5f) }
+    var intensityVal by remember { mutableStateOf(100f) }
+    var angleVal by remember { mutableStateOf(75f) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
+        // Top Bar
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -161,9 +109,11 @@ fun SettingsScreen(
 
             Text(
                 text = when (currentSubPage) {
-                    "dock" -> "Dock Customization"
-                    "icons" -> "App Icons Settings"
-                    "glass" -> "Liquid Glass Settings"
+                    "appearance" -> "Appearance"
+                    "animation" -> "App Open Animation"
+                    "icons" -> "App icons"
+                    "dock" -> "Dock"
+                    "search_pos" -> "Search Bar Position"
                     else -> "Settings"
                 },
                 color = Color.White,
@@ -173,270 +123,247 @@ fun SettingsScreen(
         }
 
         when (currentSubPage) {
-            "dock" -> {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    SettingsGroup {
-                        SettingsToggleRow("Show dock background", null, showDockBg, onShowDockBgChange)
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Dock corner radius: ${dockRadius.toInt()}dp", color = Color.White, fontSize = 16.sp)
-                            Slider(
-                                value = dockRadius,
-                                onValueChange = onDockRadiusChange,
-                                valueRange = 8f..50f,
-                                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-                            )
-                        }
-                    }
-                }
-            }
 
-            "icons" -> {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Icon opacity: ${iconOpacity.toInt()}%", color = Color.White, fontSize = 16.sp)
-                            Slider(
-                                value = iconOpacity,
-                                onValueChange = { iconOpacity = it },
-                                valueRange = 20f..100f,
-                                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-                            )
-                        }
-                    }
-                }
-            }
-
-            "glass" -> {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Glass blur intensity: ${glassBlur.toInt()}", color = Color.White, fontSize = 16.sp)
-                            Slider(
-                                value = glassBlur,
-                                onValueChange = { glassBlur = it },
-                                valueRange = 0f..50f,
-                                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-                            )
-                        }
-                    }
-                }
-            }
-
-            else -> {
+            /* ── 1. APPEARANCE & FONT FAMILY SCREEN (Screenshot #6) ── */
+            "appearance" -> {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(16.dp)
                 ) {
+                    SettingsSectionHeader("APPEARANCE")
                     SettingsGroup {
-                        SettingsToggleRow(
-                            title = "Disable What's New",
-                            subtitle = "Never show What's New screen after launcher updates",
-                            checked = disableWhatsNew,
-                            onCheckedChange = { disableWhatsNew = it }
-                        )
+                        SettingsNavRow("Theme", "Dark") {}
+                        SettingsDivider()
+                        SettingsNavRow("Color Tone", "Tonal Spot") {}
                     }
 
-                    SettingsSectionHeader("ACTIONS")
+                    SettingsSectionHeader("FONT FAMILY")
                     SettingsGroup {
-                        SettingsNavRow("Swipe actions", "Customize gesture swipe behaviors") {}
-                        SettingsDivider()
-                        SettingsToggleRow(
-                            title = "Show assistant",
-                            subtitle = "Display assistant button next to search bar",
-                            checked = showAssistant,
-                            onCheckedChange = { showAssistant = it }
-                        )
-                    }
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color.White.copy(alpha = 0.2f))
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text("Default", color = Color.White, fontSize = 14.sp)
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF2C2C2E))
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text("Epstein Files Libre Barcode", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+                                }
+                            }
 
-                    SettingsSectionHeader("SECURITY")
-                    SettingsGroup {
-                        SettingsToggleRow(
-                            title = "Lock Screen",
-                            subtitle = "Require passcode when opening launcher",
-                            checked = lockScreen,
-                            onCheckedChange = { lockScreen = it }
-                        )
-                        SettingsDivider()
-                        SettingsToggleRow(
-                            title = "Fake fingerprint scanner",
-                            subtitle = "Add a fake fingerprint scanner to the lockscreen",
-                            checked = fakeFingerprint,
-                            onCheckedChange = { fakeFingerprint = it }
-                        )
-                    }
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                    SettingsSectionHeader("CUSTOMIZATION")
-                    SettingsGroup {
-                        SettingsNavRow("App icons", "Opacity, shape, icon pack and icon corners") { currentSubPage = "icons" }
-                        SettingsDivider()
-                        SettingsNavRow("Dock", "Dock padding, gap and corner radius") { currentSubPage = "dock" }
-                        SettingsDivider()
-                        SettingsNavRow("Liquid Glass", "Adjust transparency, blur and lens refraction") { currentSubPage = "glass" }
-                    }
+                            Text("🔍 Search font...", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp)
 
-                    SettingsSectionHeader("GRAPHIC")
-                    SettingsGroup {
-                        GraphicsLevelRow("Ultra", "Liquid Glass with all animations enabled", graphicsLevel) { graphicsLevel = it }
-                        SettingsDivider()
-                        GraphicsLevelRow("Medium", "Disables Liquid Glass (uses simple blur)", graphicsLevel) { graphicsLevel = it }
-                        SettingsDivider()
-                        GraphicsLevelRow("Low", "Disables all blur and heavy graphic effects", graphicsLevel) { graphicsLevel = it }
-                    }
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                            val fonts = listOf("sans-serif", "sans-serif-medium", "sans-serif-condensed", "ABeeZee", "ADLaM Display")
+                            fonts.forEach { font ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedFont = font }
+                                        .padding(vertical = 8.dp)
+                                ) {
+                                    RadioButton(
+                                        selected = selectedFont == font,
+                                        onClick = { selectedFont = font },
+                                        colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF), unselectedColor = Color.White.copy(alpha = 0.4f))
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(text = font, color = Color.White, fontSize = 16.sp)
+                                }
+                            }
+                        }
+                    }
                 }
             }
-        }
-    }
-}
 
-@Composable
-fun SettingsSectionHeader(title: String) {
-    Text(
-        text = title,
-        color = Color.White.copy(alpha = 0.4f),
-        fontSize = 13.sp,
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 8.dp)
-    )
-}
+            /* ── 2. APP OPEN ANIMATION BEZIER GRAPH SCREEN (Screenshots #9 & #10) ── */
+            "animation" -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp)
+                ) {
+                    SettingsSectionHeader("APP OPEN ANIMATION CONFIGURATION")
+                    SettingsGroup {
+                        SettingsToggleRow("Enable Animation", "If disabled, apps will launch instantly without scaling", animEnabled) { animEnabled = it }
+                        SettingsDivider()
+                        SettingsToggleRow("Advanced Texture", "Scales down and blurs workspace in sync with app sizing", advancedTexture) { advancedTexture = it }
+                    }
 
-@Composable
-fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFF1C1C1E))
-            .padding(vertical = 4.dp),
-        content = content
-    )
-}
+                    SettingsSectionHeader("SPEED & TIMING")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Animation Duration", color = Color.White, fontSize = 15.sp)
+                                Text("${animDuration.toInt()} ms", color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = animDuration,
+                                onValueChange = { animDuration = it },
+                                valueRange = 100f..800f,
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF))
+                            )
+                        }
+                    }
 
-@Composable
-fun SettingsDivider() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp)
-            .height(0.5.dp)
-            .background(Color.White.copy(alpha = 0.1f))
-    )
-}
+                    SettingsSectionHeader("POSITION MOVEMENT CURVE")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            // BEZIER CURVE GRAPH CANVAS
+                            BezierCurveCanvas(x1 = tensionX1, y1 = velocityY1, x2 = tensionX2, y2 = velocityY2)
 
-@Composable
-fun SettingsNavRow(
-    title: String,
-    subtitle: String? = null,
-    onClick: () -> Unit = {}
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = Color.White, fontSize = 17.sp)
-            if (subtitle != null) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(text = subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // X1 Slider
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Initial Tension (X1)", color = Color.White, fontSize = 15.sp)
+                                Text(String.format("%.2f", tensionX1), color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(value = tensionX1, onValueChange = { tensionX1 = it }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF)))
+
+                            // Y1 Slider
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Initial Velocity (Y1)", color = Color.White, fontSize = 15.sp)
+                                Text(String.format("%.2f", velocityY1), color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(value = velocityY1, onValueChange = { velocityY1 = it }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF)))
+
+                            // X2 Slider
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Final Tension (X2)", color = Color.White, fontSize = 15.sp)
+                                Text(String.format("%.2f", tensionX2), color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(value = tensionX2, onValueChange = { tensionX2 = it }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF)))
+
+                            // Y2 Slider
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Final Velocity (Y2)", color = Color.White, fontSize = 15.sp)
+                                Text(String.format("%.2f", velocityY2), color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(value = velocityY2, onValueChange = { velocityY2 = it }, valueRange = 0f..1.5f, colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF)))
+                        }
+                    }
+                }
             }
-        }
-        Text(text = "›", color = Color.White.copy(alpha = 0.3f), fontSize = 22.sp)
-    }
-}
 
-@Composable
-fun SettingsLinkRow(title: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = title, color = Color(0xFF0A84FF), fontSize = 17.sp, modifier = Modifier.weight(1f))
-        Text(text = "›", color = Color.White.copy(alpha = 0.3f), fontSize = 22.sp)
-    }
-}
+            /* ── 3. APP ICONS CUSTOMIZE SHEET (Screenshots #7 & #8) ── */
+            "icons" -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color(0xFF1C1C1E))
+                            .padding(20.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Customize", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
 
-@Composable
-fun SettingsValueRow(title: String, value: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = title, color = Color.White, fontSize = 17.sp, modifier = Modifier.weight(1f))
-        Text(text = value, color = Color.White.copy(alpha = 0.4f), fontSize = 17.sp)
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(text = "‹ ›", color = Color.White.copy(alpha = 0.3f), fontSize = 14.sp)
-    }
-}
+                            Spacer(modifier = Modifier.height(16.dp))
 
-@Composable
-fun SettingsToggleRow(
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = Color.White, fontSize = 17.sp)
-            if (subtitle != null) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(text = subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
-            }
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFF0A84FF),
-                uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
-            )
-        )
-    }
-}
+                            // General vs Themes Tabs
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF2C2C2E))
+                                    .padding(4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (iconTab == "General") Color.White.copy(alpha = 0.2f) else Color.Transparent)
+                                        .clickable { iconTab = "General" }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("General", color = Color.White, fontSize = 14.sp)
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (iconTab == "Themes") Color.White.copy(alpha = 0.2f) else Color.Transparent)
+                                        .clickable { iconTab = "Themes" }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Themes", color = Color.White, fontSize = 14.sp)
+                                }
+                            }
 
-@Composable
-fun GraphicsLevelRow(
-    level: String,
-    description: String,
-    selected: String,
-    onSelect: (String) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onSelect(level) }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = level, color = Color.White, fontSize = 17.sp)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(text = description, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
-        }
-        if (selected == level) {
-            Text(text = "✓", color = Color(0xFF0A84FF), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
-    }
-}
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            if (iconTab == "General") {
+                                // General Tab Icon Styles (Standard, Dark, Transparent, Tinted)
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                    val styles = listOf("Standard", "Dark", "Transparent", "Tinted")
+                                    styles.forEach { style ->
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(54.dp)
+                                                    .clip(RoundedCornerShape(16.dp))
+                                                    .background(
+                                                        when (style) {
+                                                            "Dark" -> Color(0xFF121212)
+                                                            "Transparent" -> Color.White.copy(alpha = 0.15f)
+                                                            "Tinted" -> Color(0xFF900C3F)
+                                                            else -> Color(0xFF333333)
+                                                        }
+                                                    )
+                                                    .border(
+                                                        if (iconThemeStyle == style) 2.dp else 1.dp,
+                                                        if (iconThemeStyle == style) Color(0xFF0A84FF) else Color.White.copy(alpha = 0.2f),
+                                                        RoundedCornerShape(16.dp)
+                                                    )
+                                                    .clickable { iconThemeStyle = style },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text("⬡", color = Color.White, fontSize = 20.sp)
+                                            }
+                                            Spacer(modifier = Modifier.height(6.dp))
+                                            Text(style, color = if (iconThemeStyle == style) Color(0xFF0A84FF) else Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(20.dp))
+
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Corner Radius", color = Color.White, fontSize = 15.sp)
+                                    Text("${iconCornerRadius.toInt()}%", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+                                }
+                                Slider(
+                                    value = iconCornerRadius,
+                                    onValueChange = { iconCornerRadius = it },
+                                    valueRange = 0f..50f,
+                                    colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF))
+                                )
+                            } else {
+                                // Themes Tab Tweak Settings
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Text("Tweak Settings", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+
+                                    Spacer(mod
