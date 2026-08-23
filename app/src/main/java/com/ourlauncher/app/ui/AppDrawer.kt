@@ -1,79 +1,104 @@
 package com.ourlauncher.app.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
-import com.ourlauncher.app.R
 
-/**
- * Full app list + live search. `onDismiss` is wired to the system back gesture
- * for now (BackHandler); a swipe-down-to-close gesture is a nice Phase 2 add-on.
- */
 @Composable
-fun AppDrawerScreen(
+fun HomeScreen(
     apps: List<AppInfo>,
     onAppClick: (AppInfo) -> Unit,
-    onDismiss: () -> Unit
+    onOpenDrawer: () -> Unit
 ) {
-    androidx.activity.compose.BackHandler(onBack = onDismiss)
+    val dockApps = apps.take(4)
+    val gridApps = apps.drop(4).take(20)
 
-    var query by remember { mutableStateOf("") }
-    val filtered = remember(query, apps) {
-        if (query.isBlank()) apps
-        else apps.filter { it.label.contains(query, ignoreCase = true) }
-    }
-
-    androidx.compose.foundation.layout.Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.9f))
-            .padding(top = 48.dp, start = 16.dp, end = 16.dp)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { _: PointerInputChange, dragAmount: Float ->
+                    if (dragAmount < -20) onOpenDrawer() // Swipe UP opens drawer
+                }
+            }
     ) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            placeholder = { Text(stringRes()) },
-            singleLine = true,
-            shape = RoundedCornerShape(50),
-            colors = TextFieldDefaults.colors(
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                focusedContainerColor = Color.White.copy(alpha = 0.08f),
-                unfocusedContainerColor = Color.White.copy(alpha = 0.08f)
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            
+            // 1. App Grid (Top Area)
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                contentPadding = PaddingValues(top = 64.dp, start = 16.dp, end = 16.dp),
+                userScrollEnabled = false,
+                modifier = Modifier.weight(1f).fillMaxWidth()
+            ) {
+                items(gridApps) { app ->
+                    AppIcon(app = app, onClick = { onAppClick(app) })
+                }
+            }
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(filtered, key = { it.packageName + it.componentClassName }) { app ->
-                AppIcon(app = app, onClick = { onAppClick(app) }, labelColor = Color.White)
+            // 2. Void Style Bottom Area
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp)
+            ) {
+                // Small Pill Search
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                        .clickable { onOpenDrawer() }
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                ) {
+                    Text("search", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Glass Dock
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.2f), Color.White.copy(alpha = 0.05f))
+                            )
+                        )
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(32.dp))
+                        .padding(horizontal = 12.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        dockApps.forEach { app ->
+                            AppIcon(app = app, onClick = { onAppClick(app) })
+                        }
+                    }
+                }
             }
         }
     }
 }
-
-@Composable
-private fun stringRes(): String =
-    androidx.compose.ui.res.stringResource(id = R.string.search_hint)
