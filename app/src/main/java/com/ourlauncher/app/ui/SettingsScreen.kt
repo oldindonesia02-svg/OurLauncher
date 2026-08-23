@@ -1,540 +1,154 @@
 package com.ourlauncher.app.ui
 
-import android.app.WallpaperManager
-import android.content.Intent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ourlauncher.app.AppInfo
-import com.ourlauncher.app.SettingsManager
 
 @Composable
-fun HomeScreen(
-    apps: List<AppInfo>,
-    onAppClick: (AppInfo) -> Unit,
-    onOpenDrawer: () -> Unit
-) {
-    val context = LocalContext.current
-    val settingsManager = remember { SettingsManager(context) }
-
-    var isEditMode by remember { mutableStateOf(false) }
-    var isPreviewHidden by remember { mutableStateOf(false) }
-    var showHomeSettings by remember { mutableStateOf(false) }
-    var showDockPopup by remember { mutableStateOf(false) }
-    var showFullSettings by remember { mutableStateOf(false) }
-
-    var dockRadius by remember { mutableStateOf(settingsManager.dockRadius) }
-    var showDockBg by remember { mutableStateOf(settingsManager.showDockBg) }
-    var searchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
-    var selectedEffect by remember { mutableStateOf("Crossfade") }
-
-    val dockApps = apps.take(4)
-    val gridApps = apps.drop(4).take(11)
-
-    if (showFullSettings) {
-        SettingsScreen(
-            onBack = { showFullSettings = false },
-            dockRadius = dockRadius,
-            onDockRadiusChange = {
-                dockRadius = it
-                settingsManager.dockRadius = it
-            },
-            showDockBg = showDockBg,
-            onShowDockBgChange = {
-                showDockBg = it
-                settingsManager.showDockBg = it
-            },
-            searchOffset = searchOffset,
-            onSearchOffsetChange = {
-                searchOffset = it
-                settingsManager.searchOffset = it
+fun HomeScreenSettingsSheet(onDismiss: () -> Unit = {}, onOpenMoreSettings: () -> Unit = {}) {
+    var showLabel by remember { mutableStateOf(true) }
+    var liquidFolder by remember { mutableStateOf(true) }
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(0.45f)).clickable { onDismiss() }) {
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(Color(0xFF1C1C1E)).padding(16.dp)) {
+            Box(Modifier.align(Alignment.CenterHorizontally).size(36.dp, 4.dp).background(Color.White.copy(0.3f), CircleShape))
+            Text("Home screen settings", Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(vertical = 12.dp))
+            SettingsGroup {
+                SettingsValueRow("Show label", if (showLabel) "On" else "Off") { showLabel = !showLabel }
+                SettingsDivider()
+                SettingsToggleRow("Liquid folder", null, liquidFolder) { liquidFolder = it }
             }
-        )
-        return
+            Spacer(Modifier.height(12.dp))
+            SettingsGroup {
+                SettingsLinkRow("More settings") { onOpenMoreSettings() }
+            }
+        }
     }
+}
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures(onLongPress = { isEditMode = true })
-            }
-            .pointerInput(Unit) {
-                detectVerticalDragGestures { _: PointerInputChange, dragAmount: Float ->
-                    if (!isEditMode && dragAmount < -15f) onOpenDrawer()
-                }
-            }
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+@Composable
+fun SettingsScreen(
+    onBack: () -> Unit = {},
+    dockRadius: Float = 32f, onDockRadiusChange: (Float) -> Unit = {},
+    showDockBg: Boolean = true, onShowDockBgChange: (Boolean) -> Unit = {},
+    searchOffset: Float = 0f, onSearchOffsetChange: (Float) -> Unit = {}
+) {
+    var currentSubPage by remember { mutableStateOf("main") }
+    var font by remember { mutableStateOf("sans-serif") }
+    var animDur by remember { mutableStateOf(300f) }
+    var px1 by remember { mutableStateOf(0.25f) }; var py1 by remember { mutableStateOf(0.5f) }
+    var px2 by remember { mutableStateOf(0f) }; var py2 by remember { mutableStateOf(1f) }
 
-            if (isEditMode) {
-                TopEditBar(
-                    isPreviewHidden = isPreviewHidden,
-                    onCancel = { isEditMode = false; isPreviewHidden = false },
-                    onTogglePreview = { isPreviewHidden = !isPreviewHidden },
-                    onDone = { isEditMode = false; isPreviewHidden = false }
-                )
-            } else {
-                Spacer(modifier = Modifier.height(44.dp))
-            }
+    Column(Modifier.fillMaxSize().background(Color.Black)) {
+        Row(Modifier.fillMaxWidth().padding(top = 48.dp, start = 16.dp, end = 16.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(0.12f)).clickable {
+                if (currentSubPage != "main") currentSubPage = "main" else onBack()
+            }, contentAlignment = Alignment.Center) { Text("‹", color = Color(0xFF0A84FF), fontSize = 28.sp) }
+            Spacer(Modifier.width(12.dp))
+            Text(currentSubPage.replaceFirstChar { it.uppercase() }, Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                userScrollEnabled = false,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                item {
-                    LiquidGlassFolderItem(
-                        onFolderClick = onOpenDrawer,
-                        isEditMode = isEditMode && !isPreviewHidden
-                    )
-                }
-
-                items(gridApps) { app ->
-                    Box {
-                        AppIcon(app = app, onClick = { if (!isEditMode) onAppClick(app) })
-                        if (isEditMode && !isPreviewHidden) {
-                            Box(
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .align(Alignment.TopEnd)
-                                    .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.6f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
-                            )
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            when (currentSubPage) {
+                "appearance" -> {
+                    SettingsSectionHeader("FONT FAMILY")
+                    SettingsGroup {
+                        listOf("sans-serif", "sans-serif-medium", "ABeeZee", "ADLaM Display").forEach { f ->
+                            Row(Modifier.fillMaxWidth().clickable { font = f }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(selected = font == f, onClick = { font = f }, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF)))
+                                Text(f, Color.White, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
+                            }
                         }
                     }
                 }
-            }
-
-            if (isEditMode && !isPreviewHidden) {
-                BottomCustomizationMenu(
-                    onWallpaperClick = {
-                        try {
-                            val intent = Intent(Intent.ACTION_SET_WALLPAPER)
-                            context.startActivity(Intent.createChooser(intent, "Select Wallpaper"))
-                        } catch (e: Exception) {
-                            val intent = Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER)
-                            context.startActivity(intent)
+                "animation" -> {
+                    SettingsSectionHeader("SPEED & TIMING")
+                    SettingsGroup {
+                        Column(Modifier.padding(16.dp)) {
+                            Text("Duration: ${animDur.toInt()} ms", Color.White)
+                            Slider(value = animDur, onValueChange = { animDur = it }, valueRange = 100f..800f)
                         }
-                    },
-                    onDeveloperClick = {},
-                    onWidgetsClick = { showDockPopup = true },
-                    onSettingsClick = { showHomeSettings = true }
-                )
-            } else {
-                VoidBottomBar(
-                    dockApps = dockApps,
-                    onAppClick = onAppClick,
-                    onOpenDrawer = onOpenDrawer,
-                    onSettingsClick = { isEditMode = true },
-                    dockRadius = dockRadius,
-                    showDockBg = showDockBg,
-                    searchOffset = searchOffset
-                )
-            }
-        }
-
-        if (showDockPopup) {
-            DockCustomizationPopup(
-                showDockBg = showDockBg,
-                onShowDockBgChange = {
-                    showDockBg = it
-                    settingsManager.showDockBg = it
-                },
-                dockRadius = dockRadius,
-                onDockRadiusChange = {
-                    dockRadius = it
-                    settingsManager.dockRadius = it
-                },
-                searchOffset = searchOffset,
-                onSearchOffsetChange = {
-                    searchOffset = it
-                    settingsManager.searchOffset = it
-                },
-                onClose = { showDockPopup = false }
-            )
-        }
-
-        if (showHomeSettings) {
-            HomeScreenSettingsSheet(
-                onDismiss = { showHomeSettings = false },
-                onOpenMoreSettings = {
-                    showHomeSettings = false
-                    showFullSettings = true
-                },
-                selectedEffect = selectedEffect,
-                onEffectSelect = { selectedEffect = it }
-            )
-        }
-    }
-}
-
-@Composable
-fun LiquidGlassFolderItem(
-    onFolderClick: () -> Unit,
-    isEditMode: Boolean
-) {
-    Box {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.08f))
-                    )
-                )
-                .border(
-                    1.dp,
-                    Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.15f))
-                    ),
-                    RoundedCornerShape(18.dp)
-                )
-                .clickable { onFolderClick() }
-                .padding(8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF9D00FF))
-                )
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFF5500))
-                )
-            }
-        }
-
-        if (isEditMode) {
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .align(Alignment.TopEnd)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.6f))
-                    .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
-            )
-        }
-    }
-}
-
-@Composable
-fun DockCustomizationPopup(
-    showDockBg: Boolean,
-    onShowDockBgChange: (Boolean) -> Unit,
-    dockRadius: Float,
-    onDockRadiusChange: (Float) -> Unit,
-    searchOffset: Float,
-    onSearchOffsetChange: (Float) -> Unit,
-    onClose: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.5f))
-            .clickable { onClose() },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(20.dp)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(28.dp))
-                .background(Color(0xFF1C1C1E))
-                .clickable(enabled = false) {}
-                .padding(20.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Reset",
-                    color = Color(0xFF0A84FF),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable {
-                        onDockRadiusChange(32f)
-                        onShowDockBgChange(true)
-                        onSearchOffsetChange(0f)
                     }
-                )
-                Text(
-                    text = "Dock customization",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "✕",
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 18.sp,
-                    modifier = Modifier.clickable { onClose() }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFF2C2C2E))
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("Show dock background", color = Color.White, fontSize = 15.sp)
-                    Text("Show or hide the dock's glass backdrop", color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+                    SettingsSectionHeader("POSITION BEZIER CURVE")
+                    SettingsGroup {
+                        Column(Modifier.padding(16.dp)) {
+                            BezierCanvas(px1, py1, px2, py2)
+                            CurveSlider("Tension X1", px1) { px1 = it }
+                            CurveSlider("Velocity Y1", py1) { py1 = it }
+                            CurveSlider("Tension X2", px2) { px2 = it }
+                            CurveSlider("Velocity Y2", py2) { py2 = it }
+                        }
+                    }
                 }
-                Switch(
-                    checked = showDockBg,
-                    onCheckedChange = onShowDockBgChange,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = Color(0xFF0A84FF)
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFF2C2C2E))
-                    .padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Dock corner radius", color = Color.White, fontSize = 15.sp)
-                    Text("${((dockRadius / 50f) * 100).toInt()}%", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+                "icons" -> {
+                    SettingsSectionHeader("ICON PACK")
+                    SettingsGroup {
+                        Column(Modifier.padding(16.dp)) {
+                            Text("Corner Radius: ${dockRadius.toInt()}%", Color.White)
+                            Slider(value = dockRadius, onValueChange = onDockRadiusChange, valueRange = 0f..50f)
+                        }
+                    }
                 }
-                Slider(
-                    value = dockRadius,
-                    onValueChange = onDockRadiusChange,
-                    valueRange = 8f..50f,
-                    colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF))
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFF2C2C2E))
-                    .padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Dock vertical offset", color = Color.White, fontSize = 15.sp)
-                    Text("${searchOffset.toInt()} dp", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+                "dock" -> {
+                    SettingsGroup {
+                        SettingsToggleRow("Show dock background", null, showDockBg, onShowDockBgChange)
+                        SettingsDivider()
+                        Column(Modifier.padding(16.dp)) {
+                            Text("Dock Radius: ${dockRadius.toInt()}dp", Color.White)
+                            Slider(value = dockRadius, onValueChange = onDockRadiusChange, valueRange = 8f..50f)
+                        }
+                    }
                 }
-                Slider(
-                    value = searchOffset,
-                    onValueChange = onSearchOffsetChange,
-                    valueRange = -30f..30f,
-                    colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF))
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF0A84FF))
-                    .clickable { onClose() }
-                    .padding(vertical = 14.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Apply", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                else -> {
+                    SettingsSectionHeader("CUSTOMIZATION")
+                    SettingsGroup {
+                        SettingsNavRow("Appearance", "Theme & Fonts") { currentSubPage = "appearance" }
+                        SettingsDivider()
+                        SettingsNavRow("App icons", "Shape & Icon Pack") { currentSubPage = "icons" }
+                        SettingsDivider()
+                        SettingsNavRow("App Open Animation", "Duration & Bezier Curves") { currentSubPage = "animation" }
+                        SettingsDivider()
+                        SettingsNavRow("Dock", "Padding & Corner Radius") { currentSubPage = "dock" }
+                    }
+                }
             }
         }
     }
 }
 
-@Composable
-fun TopEditBar(
-    isPreviewHidden: Boolean,
-    onCancel: () -> Unit,
-    onTogglePreview: () -> Unit,
-    onDone: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 48.dp, start = 20.dp, end = 20.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color.White.copy(alpha = 0.18f))
-                .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-                .clickable { onCancel() }
-                .padding(horizontal = 20.dp, vertical = 8.dp)
-        ) {
-            Text("Cancel", color = Color.White, fontSize = 15.sp)
-        }
-
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.18f))
-                .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
-                .clickable { onTogglePreview() },
-            contentAlignment = Alignment.Center
-        ) {
-            Text(if (isPreviewHidden) "👁️" else "👁", fontSize = 16.sp)
-        }
-
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF007AFF))
-                .clickable { onDone() }
-                .padding(horizontal = 24.dp, vertical = 8.dp)
-        ) {
-            Text("Done", color = Color.White, fontSize = 15.sp)
+@Composable fun BezierCanvas(x1: Float, y1: Float, x2: Float, y2: Float) {
+    Box(Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF141418)).padding(12.dp)) {
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width; val h = size.height
+            val cp1 = Offset(w * x1, h * (1f - y1)); val cp2 = Offset(w * x2, h * (1f - y2))
+            val path = Path().apply { moveTo(0f, h); cubicTo(cp1.x, cp1.y, cp2.x, cp2.y, w, 0f) }
+            drawPath(path, Color(0xFF0A84FF), style = Stroke(4f))
+            drawCircle(Color.Green, 6f, cp1); drawCircle(Color.Red, 6f, cp2)
         }
     }
 }
 
-@Composable
-fun VoidBottomBar(
-    dockApps: List<AppInfo>,
-    onAppClick: (AppInfo) -> Unit,
-    onOpenDrawer: () -> Unit,
-    onSettingsClick: () -> Unit,
-    dockRadius: Float,
-    showDockBg: Boolean,
-    searchOffset: Float
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.offset(y = searchOffset.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.08f))
-                        )
-                    )
-                    .border(
-                        1.dp,
-                        Brush.verticalGradient(
-                            listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.15f))
-                        ),
-                        RoundedCornerShape(24.dp)
-                    )
-                    .clickable { onOpenDrawer() }
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-            ) {
-                Text("search", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
-            }
+@Composable fun CurveSlider(label: String, valIn: Float, onChange: (Float) -> Unit) {
+    Column(Modifier.padding(vertical = 4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(label, Color.White, fontSize = 13.sp); Text(String.format("%.2f", valIn), Color(0xFF0A84FF), fontSize = 13.sp) }
+        Slider(value = valIn, onValueChange = onChange, valueRange = 0f..1.5f)
+    }
+}
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.15f))
-                    .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
-                    .clickable { onSettingsClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("⬡", color = Color.White, fontSize = 16.sp)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        val dockShape = RoundedCornerShape(dockRadius.dp)
-        val glassBorder = Brush.verticalGradient(
-            listOf(Color.White.copy(alpha = 0.75f), Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.35f))
-        )
-        val glassBg = Brush.verticalGradient(
-            listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.08f))
-        )
-
-        Box(
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .fillMaxWidth()
-                .clip(dockShape)
-                .then(
-         
+@Composable fun SettingsSectionHeader(t: String) { Text(t, Color.White.copy(0.4f), fontSize = 12.sp, modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 6.dp)) }
+@Composable fun SettingsGroup(c: @Composable ColumnScope.() -> Unit) { Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFF1C1C1E)).padding(4.dp), content = c) }
+@Composable fun SettingsDivider() { Box(Modifier.fillMaxWidth().padding(start = 16.dp).height(0.5.dp).background(Color.White.copy(0.1f))) }
+@Composable fun SettingsNavRow(t: String, s: String? = null, onClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(t, Color.White, fontSize = 16.sp); if (s != null) Text(s, Color.White.copy(0.4f), fontSize = 12.sp) }; Text("›", Color.White.copy(0.3f), fontSize = 20.sp) } }
+@Composable fun SettingsLinkRow(t: String, onClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(14.dp)) { Text(t, Color(0xFF0A84FF), fontSize = 16.sp) } }
+@Composable fun SettingsValueRow(t: String, v: String, onClick: () -> Unit = {}) { Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(14.dp)) { Text(t, Color.White, Modifier.weight(1f)); Text(v, Color.White.copy(0.4f)) } }
+@Composable fun SettingsToggleRow(t: String, s: String? = null, checked: Boolean = false, onChange: (Boolean) -> Unit = {}) { Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(t, Color.White, fontSize = 16.sp); if (s != null) Text(s, Color.White.copy(0.4f), fontSize = 12.sp) }; Switch(checked = checked, onCheckedChange = onChange) } }
