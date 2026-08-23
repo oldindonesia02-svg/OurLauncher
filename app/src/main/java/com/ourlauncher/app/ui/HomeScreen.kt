@@ -45,13 +45,12 @@ fun HomeScreen(
             .fillMaxSize()
             .pointerInput(Unit) {
                 detectVerticalDragGestures { _: PointerInputChange, dragAmount: Float ->
-                    if (dragAmount < -15f) onOpenDrawer() // Swipe UP anywhere opens drawer
+                    if (dragAmount < -15f) onOpenDrawer() // Swipe UP opens drawer
                 }
             }
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             
-            // App Grid
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 contentPadding = PaddingValues(top = 60.dp, start = 16.dp, end = 16.dp),
@@ -60,12 +59,11 @@ fun HomeScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                items(gridApps) { app ->
+                items(gridApps, key = { it.packageName }) { app ->
                     AppIcon(app = app, onClick = { onAppClick(app) })
                 }
             }
 
-            // Void Bottom Layout
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
@@ -76,36 +74,59 @@ fun HomeScreen(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(24.dp))
-                        .background(Color.White.copy(alpha = 0.15f))
-                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.08f))
+                            )
+                        )
+                        .border(
+                            1.dp,
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.15f))
+                            ),
+                            RoundedCornerShape(24.dp)
+                        )
                         .clickable { onOpenDrawer() }
                         .padding(horizontal = 24.dp, vertical = 8.dp)
                 ) {
-                    Text(text = "search", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                    Text(text = "search", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Glass Liquid Dock
+                // 🧪 ULTRA LIQUID GLASS DOCK (iOS 18 / Void Style Refraction)
+                val dockShape = RoundedCornerShape(32.dp)
+                
+                // Multi-layered glossy light reflections
+                val glassBorderGradient = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.75f), // Top light shine edge
+                        Color.White.copy(alpha = 0.15f), // Subtle middle edge
+                        Color.White.copy(alpha = 0.35f)  // Soft bottom highlight
+                    )
+                )
+                val glassBgGradient = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.28f), // Glass top sheen
+                        Color.White.copy(alpha = 0.08f)  // Translucent body
+                    )
+                )
+
                 Box(
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(32.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.08f))
-                            )
-                        )
-                        .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(32.dp))
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                        .clip(dockShape)
+                        .background(brush = glassBgGradient)
+                        .border(width = 1.2.dp, brush = glassBorderGradient, shape = dockShape)
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         dockApps.forEach { app ->
-                            AppIcon(app = app, onClick = { onAppClick(app) }, showLabel = false)
+                            AppIcon(app = app, onClick = { onAppClick(app) }, showLabel = false, iconSizeDp = 52)
                         }
                     }
                 }
