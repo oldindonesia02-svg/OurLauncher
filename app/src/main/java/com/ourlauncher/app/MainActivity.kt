@@ -12,32 +12,60 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.ourlauncher.app.ui.AppDrawer
 import com.ourlauncher.app.ui.HomeScreen
+import com.ourlauncher.app.ui.SettingsScreen
+
+private enum class Screen { HOME, DRAWER, SETTINGS }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         val repository = AppRepository(this)
+        val settingsManager = SettingsManager(this)
 
         setContent {
-            var isDrawerOpen by remember { mutableStateOf(false) }
+            var screen by remember { mutableStateOf(Screen.HOME) }
             val apps = remember { repository.getInstalledApps() }
 
-            Box(modifier = Modifier.fillMaxSize()) {
-                HomeScreen(
-                    apps = apps,
-                    onAppClick = { app -> repository.launchApp(app) },
-                    onOpenDrawer = { isDrawerOpen = true }
-                )
+            var showLabels by remember { mutableStateOf(settingsManager.showLabels) }
+            var dockRadius by remember { mutableStateOf(settingsManager.dockRadius) }
+            var showDockBg by remember { mutableStateOf(settingsManager.showDockBg) }
+            var searchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
 
-                if (isDrawerOpen) {
-                    AppDrawer(
+            Box(modifier = Modifier.fillMaxSize()) {
+                when (screen) {
+                    Screen.HOME -> HomeScreen(
+                        apps = apps,
+                        showLabels = showLabels,
+                        onAppClick = { app -> repository.launchApp(app) },
+                        onOpenDrawer = { screen = Screen.DRAWER },
+                        onOpenSettings = { screen = Screen.SETTINGS }
+                    )
+                    Screen.DRAWER -> AppDrawer(
                         apps = apps,
                         onAppClick = { app ->
                             repository.launchApp(app)
-                            isDrawerOpen = false
+                            screen = Screen.HOME
                         },
-                        onCloseDrawer = { isDrawerOpen = false }
+                        onCloseDrawer = { screen = Screen.HOME }
+                    )
+                    Screen.SETTINGS -> SettingsScreen(
+                        onBack = { screen = Screen.HOME },
+                        dockRadius = dockRadius,
+                        onDockRadiusChange = {
+                            dockRadius = it
+                            settingsManager.dockRadius = it
+                        },
+                        showDockBg = showDockBg,
+                        onShowDockBgChange = {
+                            showDockBg = it
+                            settingsManager.showDockBg = it
+                        },
+                        searchOffset = searchOffset,
+                        onSearchOffsetChange = {
+                            searchOffset = it
+                            settingsManager.searchOffset = it
+                        }
                     )
                 }
             }
