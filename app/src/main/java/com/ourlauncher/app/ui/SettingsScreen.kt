@@ -31,11 +31,223 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /* ─────────────────────────────────────────────
+   HOME SCREEN SETTINGS (Bottom Sheet Popup)
+   ───────────────────────────────────────────── */
+@Composable
+fun HomeScreenSettingsSheet(
+    onDismiss: () -> Unit = {},
+    onOpenMoreSettings: () -> Unit = {},
+    selectedEffect: String = "Crossfade",
+    onEffectSelect: (String) -> Unit = {}
+) {
+    var showLabel by remember { mutableStateOf(true) }
+    var liquidFolder by remember { mutableStateOf(true) }
+    var showTransitionPicker by remember { mutableStateOf(false) }
+
+    if (showTransitionPicker) {
+        TransitionEffectsSheet(
+            selectedEffect = selectedEffect,
+            onEffectSelect = {
+                onEffectSelect(it)
+                showTransitionPicker = false
+            },
+            onDismiss = { showTransitionPicker = false }
+        )
+        return
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.45f))
+            .clickable { onDismiss() }
+    ) {
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                .background(Color(0xFF1C1C1E))
+                .clickable(enabled = false) {}
+                .padding(bottom = 32.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 10.dp, bottom = 8.dp)
+                    .width(36.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.3f))
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "✕",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    modifier = Modifier
+                        .clickable { onDismiss() }
+                        .padding(8.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Home screen settings",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SettingsGroup {
+                SettingsNavRow("Transition effects") { showTransitionPicker = true }
+                SettingsDivider()
+                SettingsNavRow("Set default screen")
+                SettingsDivider()
+                SettingsValueRow(
+                    title = "Show label",
+                    value = if (showLabel) "On" else "Off",
+                    onClick = { showLabel = !showLabel }
+                )
+                SettingsDivider()
+                SettingsToggleRow(
+                    title = "Liquid folder",
+                    checked = liquidFolder,
+                    onCheckedChange = { liquidFolder = it }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            SettingsGroup {
+                SettingsLinkRow("Regenerate all icons", onClick = {})
+                SettingsDivider()
+                SettingsLinkRow("More settings", onClick = onOpenMoreSettings)
+            }
+        }
+    }
+}
+
+/* ─────────────────────────────────────────────
+   TRANSITION EFFECTS PICKER
+   ───────────────────────────────────────────── */
+@Composable
+fun TransitionEffectsSheet(
+    selectedEffect: String = "Crossfade",
+    onEffectSelect: (String) -> Unit = {},
+    onDismiss: () -> Unit = {}
+) {
+    val effects = listOf("Slide", "Crossfade", "Tumble", "Rotate", "Cube")
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                .background(Color(0xFF1C1C1E))
+                .clickable(enabled = false) {}
+                .padding(20.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(bottom = 16.dp)
+                    .width(36.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color.White.copy(alpha = 0.3f))
+            )
+
+            Text(
+                text = "Transition effects",
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                effects.forEach { effect ->
+                    val isSelected = effect.lowercase() == selectedEffect.lowercase()
+                    Box(
+                        modifier = Modifier
+                            .size(width = 100.dp, height = 130.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color(0xFF2C2C2E))
+                            .then(
+                                if (isSelected) {
+                                    Modifier.border(2.dp, Color(0xFF0A84FF), RoundedCornerShape(18.dp))
+                                } else Modifier
+                            )
+                            .clickable { onEffectSelect(effect) }
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = when (effect) {
+                                    "Slide" -> "❙ ❙ ❙"
+                                    "Crossfade" -> "❨ ❩"
+                                    "Tumble" -> "⬞"
+                                    "Rotate" -> "⟳"
+                                    else -> "🧊"
+                                },
+                                color = if (isSelected) Color(0xFF0A84FF) else Color.White.copy(alpha = 0.6f),
+                                fontSize = 24.sp
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = effect,
+                                color = if (isSelected) Color(0xFF0A84FF) else Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF0A84FF))
+                    .clickable { onDismiss() }
+                    .padding(vertical = 14.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Done", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+/* ─────────────────────────────────────────────
    FULL SETTINGS SCREEN WITH ALL SUB-PAGES
    ───────────────────────────────────────────── */
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit,
+    onBack: () -> Unit = {},
     dockRadius: Float = 32f,
     onDockRadiusChange: (Float) -> Unit = {},
     showDockBg: Boolean = true,
@@ -43,31 +255,43 @@ fun SettingsScreen(
     searchOffset: Float = 0f,
     onSearchOffsetChange: (Float) -> Unit = {}
 ) {
-    // Current Active Sub-page ("main", "appearance", "animation", "icons", "dock", "search_pos")
     var currentSubPage by remember { mutableStateOf("main") }
 
-    // Toggle States
     var disableWhatsNew by remember { mutableStateOf(false) }
     var showAssistant by remember { mutableStateOf(true) }
     var lockScreen by remember { mutableStateOf(false) }
     var fakeFingerprint by remember { mutableStateOf(false) }
     var graphicsLevel by remember { mutableStateOf("Medium") }
 
-    // Appearance & Font States
     var selectedFont by remember { mutableStateOf("sans-serif") }
 
-    // App Open Animation Bezier Curve States
     var animEnabled by remember { mutableStateOf(true) }
     var advancedTexture by remember { mutableStateOf(false) }
     var animDuration by remember { mutableStateOf(300f) }
-    var tensionX1 by remember { mutableStateOf(0.25f) }
-    var velocityY1 by remember { mutableStateOf(0.50f) }
-    var tensionX2 by remember { mutableStateOf(0.00f) }
-    var velocityY2 by remember { mutableStateOf(1.00f) }
 
-    // Icon Customization States
+    var posX1 by remember { mutableStateOf(0.25f) }
+    var posY1 by remember { mutableStateOf(0.50f) }
+    var posX2 by remember { mutableStateOf(0.00f) }
+    var posY2 by remember { mutableStateOf(1.00f) }
+
+    var widthX1 by remember { mutableStateOf(0.15f) }
+    var widthY1 by remember { mutableStateOf(0.10f) }
+    var widthX2 by remember { mutableStateOf(0.15f) }
+    var widthY2 by remember { mutableStateOf(1.00f) }
+
+    var heightX1 by remember { mutableStateOf(0.30f) }
+    var heightY1 by remember { mutableStateOf(0.10f) }
+    var heightX2 by remember { mutableStateOf(0.15f) }
+    var heightY2 by remember { mutableStateOf(1.00f) }
+
+    var cornerX1 by remember { mutableStateOf(0.30f) }
+    var cornerY1 by remember { mutableStateOf(0.00f) }
+    var cornerX2 by remember { mutableStateOf(1.23f) }
+    var cornerY2 by remember { mutableStateOf(0.26f) }
+
     var iconTab by remember { mutableStateOf("General") }
     var iconThemeStyle by remember { mutableStateOf("Standard") }
+    var themeType by remember { mutableStateOf("Highlight") }
     var iconCornerRadius by remember { mutableStateOf(27f) }
     var blurDp by remember { mutableStateOf(0.5f) }
     var falloffVal by remember { mutableStateOf(1.5f) }
@@ -80,7 +304,6 @@ fun SettingsScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Top Bar
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -123,8 +346,6 @@ fun SettingsScreen(
         }
 
         when (currentSubPage) {
-
-            /* ── 1. APPEARANCE & FONT FAMILY SCREEN (Screenshot #6) ── */
             "appearance" -> {
                 Column(
                     modifier = Modifier
@@ -190,7 +411,6 @@ fun SettingsScreen(
                 }
             }
 
-            /* ── 2. APP OPEN ANIMATION BEZIER GRAPH SCREEN (Screenshots #9 & #10) ── */
             "animation" -> {
                 Column(
                     modifier = Modifier
@@ -224,146 +444,20 @@ fun SettingsScreen(
                     SettingsSectionHeader("POSITION MOVEMENT CURVE")
                     SettingsGroup {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            // BEZIER CURVE GRAPH CANVAS
-                            BezierCurveCanvas(x1 = tensionX1, y1 = velocityY1, x2 = tensionX2, y2 = velocityY2)
-
+                            BezierCurveCanvas(x1 = posX1, y1 = posY1, x2 = posX2, y2 = posY2)
                             Spacer(modifier = Modifier.height(16.dp))
-
-                            // X1 Slider
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Initial Tension (X1)", color = Color.White, fontSize = 15.sp)
-                                Text(String.format("%.2f", tensionX1), color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Slider(value = tensionX1, onValueChange = { tensionX1 = it }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF)))
-
-                            // Y1 Slider
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Initial Velocity (Y1)", color = Color.White, fontSize = 15.sp)
-                                Text(String.format("%.2f", velocityY1), color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Slider(value = velocityY1, onValueChange = { velocityY1 = it }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF)))
-
-                            // X2 Slider
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Final Tension (X2)", color = Color.White, fontSize = 15.sp)
-                                Text(String.format("%.2f", tensionX2), color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Slider(value = tensionX2, onValueChange = { tensionX2 = it }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF)))
-
-                            // Y2 Slider
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Final Velocity (Y2)", color = Color.White, fontSize = 15.sp)
-                                Text(String.format("%.2f", velocityY2), color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Slider(value = velocityY2, onValueChange = { velocityY2 = it }, valueRange = 0f..1.5f, colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF)))
+                            CurveSliderRow("Initial Tension (X1)", "Delays the start of movement", posX1) { posX1 = it }
+                            CurveSliderRow("Initial Velocity (Y1)", "Controls initial burst of speed", posY1) { posY1 = it }
+                            CurveSliderRow("Final Tension (X2)", "Delays the end of movement", posX2) { posX2 = it }
+                            CurveSliderRow("Final Velocity (Y2)", "Values > 1.0 create overshoot/bounce", posY2) { posY2 = it }
                         }
                     }
-                }
-            }
 
-            /* ── 3. APP ICONS CUSTOMIZE SHEET (Screenshots #7 & #8) ── */
-            "icons" -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(Color(0xFF1C1C1E))
-                            .padding(20.dp)
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Customize", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-
+                    SettingsSectionHeader("WIDTH SCALING CURVE")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            BezierCurveCanvas(x1 = widthX1, y1 = widthY1, x2 = widthX2, y2 = widthY2)
                             Spacer(modifier = Modifier.height(16.dp))
-
-                            // General vs Themes Tabs
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF2C2C2E))
-                                    .padding(4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(if (iconTab == "General") Color.White.copy(alpha = 0.2f) else Color.Transparent)
-                                        .clickable { iconTab = "General" }
-                                        .padding(vertical = 8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("General", color = Color.White, fontSize = 14.sp)
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(if (iconTab == "Themes") Color.White.copy(alpha = 0.2f) else Color.Transparent)
-                                        .clickable { iconTab = "Themes" }
-                                        .padding(vertical = 8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Themes", color = Color.White, fontSize = 14.sp)
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            if (iconTab == "General") {
-                                // General Tab Icon Styles (Standard, Dark, Transparent, Tinted)
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                    val styles = listOf("Standard", "Dark", "Transparent", "Tinted")
-                                    styles.forEach { style ->
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(54.dp)
-                                                    .clip(RoundedCornerShape(16.dp))
-                                                    .background(
-                                                        when (style) {
-                                                            "Dark" -> Color(0xFF121212)
-                                                            "Transparent" -> Color.White.copy(alpha = 0.15f)
-                                                            "Tinted" -> Color(0xFF900C3F)
-                                                            else -> Color(0xFF333333)
-                                                        }
-                                                    )
-                                                    .border(
-                                                        if (iconThemeStyle == style) 2.dp else 1.dp,
-                                                        if (iconThemeStyle == style) Color(0xFF0A84FF) else Color.White.copy(alpha = 0.2f),
-                                                        RoundedCornerShape(16.dp)
-                                                    )
-                                                    .clickable { iconThemeStyle = style },
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text("⬡", color = Color.White, fontSize = 20.sp)
-                                            }
-                                            Spacer(modifier = Modifier.height(6.dp))
-                                            Text(style, color = if (iconThemeStyle == style) Color(0xFF0A84FF) else Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(20.dp))
-
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text("Corner Radius", color = Color.White, fontSize = 15.sp)
-                                    Text("${iconCornerRadius.toInt()}%", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
-                                }
-                                Slider(
-                                    value = iconCornerRadius,
-                                    onValueChange = { iconCornerRadius = it },
-                                    valueRange = 0f..50f,
-                                    colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF0A84FF))
-                                )
-                            } else {
-                                // Themes Tab Tweak Settings
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    Text("Tweak Settings", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-
-                                    Spacer(mod
+                            CurveSliderRow("Initial Tension (X1)", "Delays the start of width growth", widthX1) { widthX1 = it }
+                            CurveSliderRow("Initial Velocity (Y1)", "Controls initial burst of width growth", widthY1) { widthY1 = it }
+                            CurveSliderRow("Final Tension (X2)", "Delays the en
