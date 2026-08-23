@@ -22,9 +22,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/* ─────────────────────────────────────────────
-   HOME SCREEN SETTINGS (bottom sheet popup)
-   ───────────────────────────────────────────── */
 @Composable
 fun HomeScreenSettingsSheet(
     onDismiss: () -> Unit,
@@ -84,9 +81,9 @@ fun HomeScreenSettingsSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             SettingsGroup {
-                SettingsNavRow(title = "Transition effects")
+                SettingsNavRow("Transition effects")
                 SettingsDivider()
-                SettingsNavRow(title = "Set default screen")
+                SettingsNavRow("Set default screen")
                 SettingsDivider()
                 SettingsValueRow(
                     title = "Show label",
@@ -104,22 +101,22 @@ fun HomeScreenSettingsSheet(
             Spacer(modifier = Modifier.height(12.dp))
 
             SettingsGroup {
-                SettingsLinkRow(title = "Regenerate all icons", onClick = {})
+                SettingsLinkRow("Regenerate all icons", onClick = {})
                 SettingsDivider()
-                SettingsLinkRow(title = "More settings", onClick = onOpenMoreSettings)
+                SettingsLinkRow("More settings", onClick = onOpenMoreSettings)
             }
         }
     }
 }
 
-/* ─────────────────────────────────────────────
-   FULL SETTINGS SCREEN WITH SUB-NAVIGATION
-   ───────────────────────────────────────────── */
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    dockRadius: Float = 32f,
+    onDockRadiusChange: (Float) -> Unit = {},
+    showDockBg: Boolean = true,
+    onShowDockBgChange: (Boolean) -> Unit = {}
 ) {
-    // Current Active Sub-page ("main", "dock", "icons", "glass", "gestures")
     var currentSubPage by remember { mutableStateOf("main") }
 
     var disableWhatsNew by remember { mutableStateOf(false) }
@@ -128,24 +125,14 @@ fun SettingsScreen(
     var fakeFingerprint by remember { mutableStateOf(false) }
     var graphicsLevel by remember { mutableStateOf("Medium") }
 
-    // Dock Customization States
-    var dockRadius by remember { mutableStateOf(32f) }
-    var showDockBg by remember { mutableStateOf(true) }
-
-    // Icon Customization States
     var iconOpacity by remember { mutableStateOf(100f) }
-    var iconCornerRadius by remember { mutableStateOf(16f) }
-
-    // Liquid Glass States
     var glassBlur by remember { mutableStateOf(20f) }
-    var glassRefraction by remember { mutableStateOf(75f) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Top Header Navigation Bar
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -160,9 +147,9 @@ fun SettingsScreen(
                     .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape)
                     .clickable {
                         if (currentSubPage != "main") {
-                            currentSubPage = "main" // Go back to main settings list
+                            currentSubPage = "main"
                         } else {
-                            onBack() // Exit settings back to home
+                            onBack()
                         }
                     },
                 contentAlignment = Alignment.Center
@@ -177,7 +164,6 @@ fun SettingsScreen(
                     "dock" -> "Dock Customization"
                     "icons" -> "App Icons Settings"
                     "glass" -> "Liquid Glass Settings"
-                    "gestures" -> "Swipe Actions"
                     else -> "Settings"
                 },
                 color = Color.White,
@@ -186,13 +172,11 @@ fun SettingsScreen(
             )
         }
 
-        // SCREEN ROUTING
         when (currentSubPage) {
-            // ── DOCK SUB-PAGE ──
             "dock" -> {
                 Column(modifier = Modifier.padding(16.dp)) {
                     SettingsGroup {
-                        SettingsToggleRow("Show dock background", null, showDockBg) { showDockBg = it }
+                        SettingsToggleRow("Show dock background", null, showDockBg, onShowDockBgChange)
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     SettingsGroup {
@@ -200,7 +184,7 @@ fun SettingsScreen(
                             Text("Dock corner radius: ${dockRadius.toInt()}dp", color = Color.White, fontSize = 16.sp)
                             Slider(
                                 value = dockRadius,
-                                onValueChange = { dockRadius = it },
+                                onValueChange = onDockRadiusChange,
                                 valueRange = 8f..50f,
                                 colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
                             )
@@ -209,7 +193,6 @@ fun SettingsScreen(
                 }
             }
 
-            // ── APP ICONS SUB-PAGE ──
             "icons" -> {
                 Column(modifier = Modifier.padding(16.dp)) {
                     SettingsGroup {
@@ -223,22 +206,9 @@ fun SettingsScreen(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Icon corner radius: ${iconCornerRadius.toInt()}dp", color = Color.White, fontSize = 16.sp)
-                            Slider(
-                                value = iconCornerRadius,
-                                onValueChange = { iconCornerRadius = it },
-                                valueRange = 0f..30f,
-                                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-                            )
-                        }
-                    }
                 }
             }
 
-            // ── LIQUID GLASS SUB-PAGE ──
             "glass" -> {
                 Column(modifier = Modifier.padding(16.dp)) {
                     SettingsGroup {
@@ -252,22 +222,9 @@ fun SettingsScreen(
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Lens refraction shine: ${glassRefraction.toInt()}%", color = Color.White, fontSize = 16.sp)
-                            Slider(
-                                value = glassRefraction,
-                                onValueChange = { glassRefraction = it },
-                                valueRange = 10f..100f,
-                                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-                            )
-                        }
-                    }
                 }
             }
 
-            // ── MAIN SETTINGS LIST ──
             else -> {
                 Column(
                     modifier = Modifier
@@ -284,16 +241,9 @@ fun SettingsScreen(
                         )
                     }
 
-                    SettingsSectionHeader("SOUNDS AND VIBRATION")
-                    SettingsGroup {
-                        SettingsNavRow("Sounds and vibration", "Switch feedback and vibration settings") {}
-                    }
-
                     SettingsSectionHeader("ACTIONS")
                     SettingsGroup {
-                        SettingsNavRow("Swipe actions", "Customize gesture swipe behaviors") { currentSubPage = "gestures" }
-                        SettingsDivider()
-                        SettingsNavRow("Control center", "Configure control center layout and options") {}
+                        SettingsNavRow("Swipe actions", "Customize gesture swipe behaviors") {}
                         SettingsDivider()
                         SettingsToggleRow(
                             title = "Show assistant",
@@ -322,8 +272,6 @@ fun SettingsScreen(
 
                     SettingsSectionHeader("CUSTOMIZATION")
                     SettingsGroup {
-                        SettingsNavRow("Appearance", "Dark theme and custom fonts") {}
-                        SettingsDivider()
                         SettingsNavRow("App icons", "Opacity, shape, icon pack and icon corners") { currentSubPage = "icons" }
                         SettingsDivider()
                         SettingsNavRow("Dock", "Dock padding, gap and corner radius") { currentSubPage = "dock" }
@@ -346,10 +294,6 @@ fun SettingsScreen(
         }
     }
 }
-
-/* ─────────────────────────────────────────────
-   REUSABLE UI COMPONENTS
-   ───────────────────────────────────────────── */
 
 @Composable
 fun SettingsSectionHeader(title: String) {
