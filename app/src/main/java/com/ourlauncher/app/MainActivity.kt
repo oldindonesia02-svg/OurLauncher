@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
             Box(modifier = Modifier.fillMaxSize()) {
                 HomeScreen(
                     apps = apps,
-                    onAppClick = { app -> repository.launchApp(app.packageName) },
+                    onAppClick = { app -> repository.launchApp(app) },
                     onOpenDrawer = { isDrawerOpen = true }
                 )
 
@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
                     AppDrawer(
                         apps = apps,
                         onAppClick = { app ->
-                            repository.launchApp(app.packageName)
+                            repository.launchApp(app)
                             isDrawerOpen = false
                         },
                         onCloseDrawer = { isDrawerOpen = false }
