@@ -15,12 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.ourlauncher.app.AppInfo
-import com.ourlauncher.app.settings.LauncherSettings
 
 @Composable
 fun HomeScreen(
     apps: List<AppInfo>,
-    settings: LauncherSettings,
+    showLabels: Boolean,
     onAppClick: (AppInfo) -> Unit,
     onOpenDrawer: () -> Unit,
     onOpenSettings: () -> Unit
@@ -52,17 +51,12 @@ fun HomeScreen(
                     .weight(1f)
             ) {
                 items(gridApps) { app ->
-                    AppIcon(
-                        app = app,
-                        onClick = { onAppClick(app) },
-                        showLabel = settings.showLabels,
-                        iconCornerRadius = settings.iconCornerRadius
-                    )
+                    AppIcon(app = app, onClick = { onAppClick(app) }, showLabel = showLabels)
                 }
             }
 
             SearchPill(onClick = onOpenDrawer, modifier = Modifier.padding(bottom = 8.dp))
-            Dock(pinnedApps = dockApps, onAppClick = onAppClick, iconCornerRadius = settings.iconCornerRadius)
+            Dock(pinnedApps = dockApps, onAppClick = onAppClick)
         }
     }
 }
