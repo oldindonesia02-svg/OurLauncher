@@ -67,9 +67,9 @@ fun HomeScreen(
         SettingsScreen(
             onBack = { showFullSettings = false },
             dockRadius = dockRadius,
-            onDockRadiusChange = { dockRadius = it },
+            onDockRadiusChange = { newRadius -> dockRadius = newRadius },
             showDockBg = showDockBg,
-            onShowDockBgChange = { showDockBg = it }
+            onShowDockBgChange = { newBg -> showDockBg = newBg }
         )
         return
     }
@@ -110,7 +110,7 @@ fun HomeScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                items(gridApps, key = { it.packageName }) { app ->
+                items(gridApps) { app ->
                     Box {
                         AppIcon(app = app, onClick = {
                             if (!isEditMode) onAppClick(app)
@@ -132,7 +132,6 @@ fun HomeScreen(
             if (isEditMode && !isPreviewHidden) {
                 BottomCustomizationMenu(
                     onWallpaperClick = {
-                        // Open System Wallpaper Picker Intent
                         try {
                             val intent = Intent(Intent.ACTION_SET_WALLPAPER)
                             context.startActivity(Intent.createChooser(intent, "Select Wallpaper"))
@@ -233,7 +232,6 @@ fun VoidBottomBar(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp)
     ) {
-        // Search Pill
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
@@ -277,7 +275,6 @@ fun VoidBottomBar(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Dynamic Glass Dock
         val dockShape = RoundedCornerShape(dockRadius.dp)
         val glassBorder = Brush.verticalGradient(
             listOf(Color.White.copy(alpha = 0.75f), Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.35f))
