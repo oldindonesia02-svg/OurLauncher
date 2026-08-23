@@ -8,6 +8,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -21,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /* ─────────────────────────────────────────────
-   HOME SCREEN SETTINGS  (bottom sheet popup)
+   HOME SCREEN SETTINGS (bottom sheet popup)
    ───────────────────────────────────────────── */
 @Composable
 fun HomeScreenSettingsSheet(
@@ -46,7 +48,6 @@ fun HomeScreenSettingsSheet(
                 .clickable(enabled = false) {}
                 .padding(bottom = 32.dp)
         ) {
-            // Handle bar
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
@@ -57,7 +58,6 @@ fun HomeScreenSettingsSheet(
                     .background(Color.White.copy(alpha = 0.3f))
             )
 
-            // Title row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -83,7 +83,6 @@ fun HomeScreenSettingsSheet(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Group 1
             SettingsGroup {
                 SettingsNavRow(title = "Transition effects")
                 SettingsDivider()
@@ -104,7 +103,6 @@ fun HomeScreenSettingsSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Group 2
             SettingsGroup {
                 SettingsLinkRow(title = "Regenerate all icons", onClick = {})
                 SettingsDivider()
@@ -115,24 +113,39 @@ fun HomeScreenSettingsSheet(
 }
 
 /* ─────────────────────────────────────────────
-   FULL SETTINGS SCREEN
+   FULL SETTINGS SCREEN WITH SUB-NAVIGATION
    ───────────────────────────────────────────── */
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit
 ) {
+    // Current Active Sub-page ("main", "dock", "icons", "glass", "gestures")
+    var currentSubPage by remember { mutableStateOf("main") }
+
     var disableWhatsNew by remember { mutableStateOf(false) }
     var showAssistant by remember { mutableStateOf(true) }
     var lockScreen by remember { mutableStateOf(false) }
     var fakeFingerprint by remember { mutableStateOf(false) }
     var graphicsLevel by remember { mutableStateOf("Medium") }
 
+    // Dock Customization States
+    var dockRadius by remember { mutableStateOf(32f) }
+    var showDockBg by remember { mutableStateOf(true) }
+
+    // Icon Customization States
+    var iconOpacity by remember { mutableStateOf(100f) }
+    var iconCornerRadius by remember { mutableStateOf(16f) }
+
+    // Liquid Glass States
+    var glassBlur by remember { mutableStateOf(20f) }
+    var glassRefraction by remember { mutableStateOf(75f) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Top bar
+        // Top Header Navigation Bar
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -145,7 +158,13 @@ fun SettingsScreen(
                     .clip(CircleShape)
                     .background(Color.White.copy(alpha = 0.12f))
                     .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape)
-                    .clickable { onBack() },
+                    .clickable {
+                        if (currentSubPage != "main") {
+                            currentSubPage = "main" // Go back to main settings list
+                        } else {
+                            onBack() // Exit settings back to home
+                        }
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Text("‹", color = Color(0xFF0A84FF), fontSize = 28.sp, fontWeight = FontWeight.Bold)
@@ -153,191 +172,183 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(40.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color.White.copy(alpha = 0.1f))
-                    .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Text("Search settings", color = Color.White.copy(alpha = 0.4f), fontSize = 15.sp)
-            }
+            Text(
+                text = when (currentSubPage) {
+                    "dock" -> "Dock Customization"
+                    "icons" -> "App Icons Settings"
+                    "glass" -> "Liquid Glass Settings"
+                    "gestures" -> "Swipe Actions"
+                    else -> "Settings"
+                },
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = "Settings",
-                color = Color.White,
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp, start = 4.dp)
-            )
-
-            SettingsGroup {
-                SettingsToggleRow(
-                    title = "Disable What's New",
-                    subtitle = "Never show What's New screen after launcher updates",
-                    checked = disableWhatsNew,
-                    onCheckedChange = { disableWhatsNew = it }
-                )
+        // SCREEN ROUTING
+        when (currentSubPage) {
+            // ── DOCK SUB-PAGE ──
+            "dock" -> {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SettingsGroup {
+                        SettingsToggleRow("Show dock background", null, showDockBg) { showDockBg = it }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Dock corner radius: ${dockRadius.toInt()}dp", color = Color.White, fontSize = 16.sp)
+                            Slider(
+                                value = dockRadius,
+                                onValueChange = { dockRadius = it },
+                                valueRange = 8f..50f,
+                                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
+                            )
+                        }
+                    }
+                }
             }
 
-            SettingsSectionHeader("SOUNDS AND VIBRATION")
-            SettingsGroup {
-                SettingsNavRow(
-                    title = "Sounds and vibration",
-                    subtitle = "Switch feedback and vibration settings"
-                )
+            // ── APP ICONS SUB-PAGE ──
+            "icons" -> {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Icon opacity: ${iconOpacity.toInt()}%", color = Color.White, fontSize = 16.sp)
+                            Slider(
+                                value = iconOpacity,
+                                onValueChange = { iconOpacity = it },
+                                valueRange = 20f..100f,
+                                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Icon corner radius: ${iconCornerRadius.toInt()}dp", color = Color.White, fontSize = 16.sp)
+                            Slider(
+                                value = iconCornerRadius,
+                                onValueChange = { iconCornerRadius = it },
+                                valueRange = 0f..30f,
+                                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
+                            )
+                        }
+                    }
+                }
             }
 
-            SettingsSectionHeader("ACTIONS")
-            SettingsGroup {
-                SettingsNavRow(
-                    title = "Swipe actions",
-                    subtitle = "Customize gesture swipe behaviors"
-                )
-                SettingsDivider()
-                SettingsNavRow(
-                    title = "Control center",
-                    subtitle = "Configure control center layout and options"
-                )
-                SettingsDivider()
-                SettingsToggleRow(
-                    title = "Show assistant",
-                    subtitle = "Display assistant button next to search bar",
-                    checked = showAssistant,
-                    onCheckedChange = { showAssistant = it }
-                )
+            // ── LIQUID GLASS SUB-PAGE ──
+            "glass" -> {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Glass blur intensity: ${glassBlur.toInt()}", color = Color.White, fontSize = 16.sp)
+                            Slider(
+                                value = glassBlur,
+                                onValueChange = { glassBlur = it },
+                                valueRange = 0f..50f,
+                                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text("Lens refraction shine: ${glassRefraction.toInt()}%", color = Color.White, fontSize = 16.sp)
+                            Slider(
+                                value = glassRefraction,
+                                onValueChange = { glassRefraction = it },
+                                valueRange = 10f..100f,
+                                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
+                            )
+                        }
+                    }
+                }
             }
 
-            SettingsSectionHeader("SECURITY")
-            SettingsGroup {
-                SettingsToggleRow(
-                    title = "Lock Screen",
-                    subtitle = "Require passcode when opening launcher",
-                    checked = lockScreen,
-                    onCheckedChange = { lockScreen = it }
-                )
-                SettingsDivider()
-                SettingsToggleRow(
-                    title = "Fake fingerprint scanner",
-                    subtitle = "Add a fake fingerprint scanner to the lockscreen",
-                    checked = fakeFingerprint,
-                    onCheckedChange = { fakeFingerprint = it }
-                )
-                SettingsDivider()
-                SettingsNavRow(
-                    title = "Customize Lock Screen",
-                    subtitle = "Test stretching lock screen clock"
-                )
-                SettingsDivider()
-                SettingsNavRow(
-                    title = "Services",
-                    subtitle = "Manage additional services and integrations"
-                )
-                SettingsDivider()
-                SettingsNavRow(
-                    title = "Passcode",
-                    subtitle = "Set up passcode for folder protection"
-                )
+            // ── MAIN SETTINGS LIST ──
+            else -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    SettingsGroup {
+                        SettingsToggleRow(
+                            title = "Disable What's New",
+                            subtitle = "Never show What's New screen after launcher updates",
+                            checked = disableWhatsNew,
+                            onCheckedChange = { disableWhatsNew = it }
+                        )
+                    }
+
+                    SettingsSectionHeader("SOUNDS AND VIBRATION")
+                    SettingsGroup {
+                        SettingsNavRow("Sounds and vibration", "Switch feedback and vibration settings") {}
+                    }
+
+                    SettingsSectionHeader("ACTIONS")
+                    SettingsGroup {
+                        SettingsNavRow("Swipe actions", "Customize gesture swipe behaviors") { currentSubPage = "gestures" }
+                        SettingsDivider()
+                        SettingsNavRow("Control center", "Configure control center layout and options") {}
+                        SettingsDivider()
+                        SettingsToggleRow(
+                            title = "Show assistant",
+                            subtitle = "Display assistant button next to search bar",
+                            checked = showAssistant,
+                            onCheckedChange = { showAssistant = it }
+                        )
+                    }
+
+                    SettingsSectionHeader("SECURITY")
+                    SettingsGroup {
+                        SettingsToggleRow(
+                            title = "Lock Screen",
+                            subtitle = "Require passcode when opening launcher",
+                            checked = lockScreen,
+                            onCheckedChange = { lockScreen = it }
+                        )
+                        SettingsDivider()
+                        SettingsToggleRow(
+                            title = "Fake fingerprint scanner",
+                            subtitle = "Add a fake fingerprint scanner to the lockscreen",
+                            checked = fakeFingerprint,
+                            onCheckedChange = { fakeFingerprint = it }
+                        )
+                    }
+
+                    SettingsSectionHeader("CUSTOMIZATION")
+                    SettingsGroup {
+                        SettingsNavRow("Appearance", "Dark theme and custom fonts") {}
+                        SettingsDivider()
+                        SettingsNavRow("App icons", "Opacity, shape, icon pack and icon corners") { currentSubPage = "icons" }
+                        SettingsDivider()
+                        SettingsNavRow("Dock", "Dock padding, gap and corner radius") { currentSubPage = "dock" }
+                        SettingsDivider()
+                        SettingsNavRow("Liquid Glass", "Adjust transparency, blur and lens refraction") { currentSubPage = "glass" }
+                    }
+
+                    SettingsSectionHeader("GRAPHIC")
+                    SettingsGroup {
+                        GraphicsLevelRow("Ultra", "Liquid Glass with all animations enabled", graphicsLevel) { graphicsLevel = it }
+                        SettingsDivider()
+                        GraphicsLevelRow("Medium", "Disables Liquid Glass (uses simple blur)", graphicsLevel) { graphicsLevel = it }
+                        SettingsDivider()
+                        GraphicsLevelRow("Low", "Disables all blur and heavy graphic effects", graphicsLevel) { graphicsLevel = it }
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
             }
-
-            SettingsSectionHeader("CUSTOMIZATION")
-            SettingsGroup {
-                SettingsNavRow(title = "Appearance", subtitle = "Dark theme and custom fonts")
-                SettingsDivider()
-                SettingsNavRow(title = "App icons", subtitle = "Opacity, shape, icon pack and icon corners")
-                SettingsDivider()
-                SettingsNavRow(title = "App Open Animation", subtitle = "Toggle animation, duration and custom bezier curves")
-                SettingsDivider()
-                SettingsNavRow(title = "Dock", subtitle = "Dock padding, gap and corner radius")
-                SettingsDivider()
-                SettingsNavRow(title = "Highlights", subtitle = "Highlight style and light direction")
-                SettingsDivider()
-                SettingsNavRow(title = "Liquid Glass", subtitle = "Adjust transparency, blur and lens refraction")
-                SettingsDivider()
-                SettingsNavRow(title = "Search Bar Position", subtitle = "Adjust the vertical offset of the search pill")
-            }
-
-            SettingsSectionHeader("GRAPHIC")
-            SettingsGroup {
-                GraphicsLevelRow(
-                    level = "Ultra",
-                    description = "Liquid Glass with all animations and full graphics enabled",
-                    selected = graphicsLevel,
-                    onSelect = { graphicsLevel = it }
-                )
-                SettingsDivider()
-                GraphicsLevelRow(
-                    level = "High",
-                    description = "Full graphics with all animations, but disables backdrop blur on folders",
-                    selected = graphicsLevel,
-                    onSelect = { graphicsLevel = it }
-                )
-                SettingsDivider()
-                GraphicsLevelRow(
-                    level = "Medium",
-                    description = "Disables Liquid Glass (uses simple blur instead) and reduces GPU usage for highlights",
-                    selected = graphicsLevel,
-                    onSelect = { graphicsLevel = it }
-                )
-                SettingsDivider()
-                GraphicsLevelRow(
-                    level = "Low",
-                    description = "Disables all blur, liquid glass, highlights, and heavy graphic effects",
-                    selected = graphicsLevel,
-                    onSelect = { graphicsLevel = it }
-                )
-                SettingsDivider()
-                SettingsNavRow(
-                    title = "Other graphic settings",
-                    subtitle = "Configure uninstall & remove animation effects"
-                )
-            }
-
-            SettingsSectionHeader("ABOUT")
-            SettingsGroup {
-                SettingsNavRow(title = "OurLauncher", subtitle = "Version 1.0.0")
-                SettingsDivider()
-                SettingsNavRow(title = "Updates", subtitle = "Check for new versions")
-                SettingsDivider()
-                SettingsNavRow(title = "Support Development", subtitle = "Buy us a coffee ☕")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFF2C2C2E))
-                    .clickable { }
-                    .padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Reset Settings",
-                    color = Color(0xFFFF453A),
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(48.dp))
         }
     }
 }
 
 /* ─────────────────────────────────────────────
-   REUSABLE SETTINGS UI PIECES
+   REUSABLE UI COMPONENTS
    ───────────────────────────────────────────── */
 
 @Composable
@@ -399,10 +410,7 @@ fun SettingsNavRow(
 }
 
 @Composable
-fun SettingsLinkRow(
-    title: String,
-    onClick: () -> Unit
-) {
+fun SettingsLinkRow(title: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -410,22 +418,13 @@ fun SettingsLinkRow(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = title,
-            color = Color(0xFF0A84FF),
-            fontSize = 17.sp,
-            modifier = Modifier.weight(1f)
-        )
+        Text(text = title, color = Color(0xFF0A84FF), fontSize = 17.sp, modifier = Modifier.weight(1f))
         Text(text = "›", color = Color.White.copy(alpha = 0.3f), fontSize = 22.sp)
     }
 }
 
 @Composable
-fun SettingsValueRow(
-    title: String,
-    value: String,
-    onClick: () -> Unit
-) {
+fun SettingsValueRow(title: String, value: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -493,12 +492,7 @@ fun GraphicsLevelRow(
             Text(text = description, color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
         }
         if (selected == level) {
-            Text(
-                text = "✓",
-                color = Color(0xFF0A84FF),
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text(text = "✓", color = Color(0xFF0A84FF), fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
