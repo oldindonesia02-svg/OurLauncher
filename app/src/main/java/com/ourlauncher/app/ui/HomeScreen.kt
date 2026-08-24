@@ -170,6 +170,24 @@ fun HomeScreen(
         )
     }
 
+    // Auto Dissolve Engine: Dissolves folders with 1 or 0 apps into single apps
+    fun sanitizeAndSaveFolders(items: List<GridItem>) {
+        val sanitized = items.mapNotNull { item ->
+            when (item) {
+                is GridItem.SingleApp -> item
+                is GridItem.Folder -> {
+                    when (item.folder.apps.size) {
+                        0 -> null
+                        1 -> GridItem.SingleApp(item.folder.apps.first())
+                        else -> item
+                    }
+                }
+            }
+        }
+        gridItems = sanitized
+        saveGridStructure(sanitized, settingsManager)
+    }
+
     LaunchedEffect(resumeTrigger) {
         if (resumeTrigger > 0L && activeApp != null && activeBounds != null) {
             animJob?.cancel()
@@ -311,19 +329,16 @@ fun HomeScreen(
                                                         val adjustedTo = if (from < to) to - 1 else to
                                                         if (idx == adjustedTo) GridItem.Folder(newFolder) else item
                                                     }
-                                                    gridItems = updated
-                                                    saveGridStructure(updated, settingsManager)
+                                                    sanitizeAndSaveFolders(updated)
                                                 } else if (targetItem is GridItem.Folder) {
                                                     targetItem.folder.apps.add(sourceItem.app)
                                                     val updated = gridItems.filterIndexed { idx, _ -> idx != from }
-                                                    gridItems = updated
-                                                    saveGridStructure(updated, settingsManager)
+                                                    sanitizeAndSaveFolders(updated)
                                                 }
                                             } else {
                                                 val updated = gridItems.toMutableList()
                                                 Collections.swap(updated, from, to)
-                                                gridItems = updated
-                                                saveGridStructure(updated, settingsManager)
+                                                sanitizeAndSaveFolders(updated)
                                             }
                                         }
                                         draggedIndex = null
@@ -394,99 +409,4 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         LiquidSearchDotsCapsule(
-                            totalPages = totalPages,
-                            currentPage = pagerState.currentPage,
-                            onSearchClick = onOpenDrawer
-                        )
-                    }
-                }
-
-                Dock(
-                    pinnedApps = dockApps,
-                    settingsManager = settingsManager,
-                    getCustomDrawable = getCustomDrawable,
-                    onAppClick = { contextMenuApp = null; handleAppOpen(it, null) },
-                    onAppClickWithBounds = { app, bounds -> contextMenuApp = null; handleAppOpen(app, bounds) }
-                )
-            }
-        }
-
-        // Active Folder Liquid Popup
-        if (activeFolder != null) {
-            FolderPopup(
-                folder = activeFolder!!,
-                settingsManager = settingsManager,
-                getCustomDrawable = getCustomDrawable,
-                onAppClick = { app -> handleAppOpen(app, null) },
-                onAppClickWithBounds = { app, bounds -> handleAppOpen(app, bounds) },
-                onRenameFolder = { newName ->
-                    activeFolder?.name = newName
-                    saveGridStructure(gridItems, settingsManager)
-                },
-                onDismiss = { activeFolder = null }
-            )
-        }
-
-        if (contextMenuApp != null && draggedIndex == null) {
-            val app = contextMenuApp!!
-            HomeContextMenu(
-                app = app,
-                position = contextMenuPosition,
-                screenWidthPx = screenWidthPx,
-                repository = repository,
-                onDismiss = { contextMenuApp = null },
-                onRemove = {
-                    val updated = gridItems.filterNot { it is GridItem.SingleApp && it.app.packageName == app.packageName }
-                    gridItems = updated
-                    saveGridStructure(updated, settingsManager)
-                }
-            )
-        }
-
-        if (draggedIndex != null && draggedIndex!! < gridItems.size) {
-            val item = gridItems[draggedIndex!!]
-            if (item is GridItem.SingleApp) {
-                val app = item.app
-                val targetDrawable = getCustomDrawable(app.packageName) ?: app.icon
-                val cacheKey = "${app.packageName}_${targetDrawable?.hashCode() ?: 0}"
-                val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
-
-                with(density) {
-                    Box(
-                        modifier = Modifier
-                            .offset {
-                                IntOffset(
-                                    (dragOffset.x - (settingsManager.iconSize.dp.toPx() / 2)).roundToInt(),
-                                    (dragOffset.y - (settingsManager.iconSize.dp.toPx() / 2) - 30.dp.toPx()).roundToInt()
-                                )
-                            }
-                            .scale(1.15f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (bitmap != null) {
-                            Image(
-                                bitmap = bitmap,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(settingsManager.iconSize.dp)
-                                    .clip(RoundedCornerShape(settingsManager.iconCornerRadius.toInt()))
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        if (activeApp != null && activeBounds != null && p > 0.005f) {
-            AppLaunchOverlay(
-                activeApp = activeApp!!,
-                activeBounds = activeBounds!!,
-                progress = p,
-                screenWidthPx = screenWidthPx,
-                screenHeightPx = screenHeightPx,
-                settingsManager = settingsManager,
-                getCustomDrawable = getCustomDrawable
-            )
-        }
-    }
-}           
+                            totalP
