@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Collections
@@ -53,17 +54,16 @@ fun HomeScreen(
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // Drag State
+    // Drag-to-Move State
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     val itemBoundsMap = remember { mutableStateMapOf<Int, android.graphics.Rect>() }
 
-    // Animation States
+    // Dual Open/Close Animation State
     var activeApp by remember { mutableStateOf<AppInfo?>(null) }
     var activeBounds by remember { mutableStateOf<android.graphics.Rect?>(null) }
-    var isAppOpen by remember { mutableStateOf(false) }
-    var isAnimating by remember { mutableStateOf(false) }
     val animProgress = remember { Animatable(0f) }
+    var animationJob by remember { mutableStateOf<Job?>(null) }
 
     val posEasing = remember(settingsManager.posCurveX1, settingsManager.posCurveY1, settingsManager.posCurveX2, settingsManager.posCurveY2) {
         CubicBezierEasing(
@@ -74,34 +74,33 @@ fun HomeScreen(
         )
     }
 
+    // Trigger Returning App Closing Animation on Home Resume
     LaunchedEffect(resumeTrigger) {
-        if (resumeTrigger > 0L && isAppOpen && activeBounds != null) {
-            isAnimating = true
-            animProgress.snapTo(1f)
-            animProgress.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(durationMillis = 280, easing = posEasing)
-            )
-            isAppOpen = false
-            isAnimating = false
-            activeApp = null
+        if (resumeTrigger > 0L && activeApp != null && activeBounds != null) {
+            animationJob?.cancel()
+            animationJob = coroutineScope.launch {
+                animProgress.snapTo(1f)
+                animProgress.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(durationMillis = 260, easing = posEasing)
+                )
+                activeApp = null
+                activeBounds = null
+            }
         }
     }
 
     fun handleAppOpen(app: AppInfo, bounds: android.graphics.Rect?) {
-        if (isAnimating) return
-
         if (!settingsManager.animEnabled || bounds == null) {
             onAppClick(app)
             return
         }
 
+        animationJob?.cancel()
         activeApp = app
         activeBounds = bounds
-        isAppOpen = true
-        isAnimating = true
 
-        coroutineScope.launch {
+        animationJob = coroutineScope.launch {
             animProgress.snapTo(0f)
             launch {
                 animProgress.animateTo(
@@ -111,7 +110,6 @@ fun HomeScreen(
             }
             delay((settingsManager.animDuration * 0.72f).toLong())
             onAppClickWithBounds(app, bounds)
-            isAnimating = false
         }
     }
 
@@ -218,7 +216,7 @@ fun HomeScreen(
             }
         }
 
-        // --- FLOATING DRAGGED ICON ---
+        // --- FLOATING ICON UNDER FINGER WHEN DRAGGING ---
         if (draggedIndex != null && draggedIndex!! < gridApps.size) {
             val app = gridApps[draggedIndex!!]
             val targetDrawable = getCustomDrawable(app.packageName) ?: app.icon
@@ -250,7 +248,7 @@ fun HomeScreen(
             }
         }
 
-        // --- EXPANDING CARD (NO CORNER GLITCH) ---
+        // --- GPU-ACCELERATED DUAL APP OPENING & CLOSING OVERLAY ---
         if (activeApp != null && activeBounds != null && p > 0.005f) {
             val b = activeBounds!!
             val currentX = b.left * (1f - p)
