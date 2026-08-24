@@ -3,18 +3,16 @@ package com.ourlauncher.app.ui
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,90 +25,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun PhoneMockupPreview(durationMs: Int) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        // Phone Outer Mockup Body
-        Box(
-            modifier = Modifier
-                .width(170.dp)
-                .height(290.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(Color(0xFF141416))
-                .border(2.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(32.dp))
-                .padding(8.dp)
-        ) {
-            val infiniteTransition = rememberInfiniteTransition(label = "mockupAnim")
-            val progress by infiniteTransition.animateFloat(
-                initialValue = 0f,
-                targetValue = 1f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(durationMillis = durationMs.coerceAtLeast(250), easing = FastOutSlowInEasing),
-                    repeatMode = RepeatMode.Reverse
-                ),
-                label = "progress"
-            )
-
-            // Phone Screen Background
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(26.dp))
-                    .background(Color(0xFF000000))
-            ) {
-                // Mockup Mini Dock Icons at bottom
-                Row(
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 12.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(Color.White.copy(alpha = 0.10f))
-                        .padding(vertical = 6.dp)
-                ) {
-                    val colors = listOf(Color(0xFF0A84FF), Color(0xFF34C759), Color(0xFFFF9500), Color(0xFFFF2D55))
-                    colors.forEach { c ->
-                        Box(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .clip(RoundedCornerShape(5.dp))
-                                .background(c.copy(alpha = 0.7f))
-                        )
-                    }
-                }
-
-                // Expanding App Card (Animates up from 2nd dock item to full screen)
-                val cardWidth = (18 + (136 * progress)).dp
-                val cardHeight = (18 + (250 * progress)).dp
-                val cardRadius = ((1f - progress) * 6 + (progress * 22)).dp
-
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = (14 * (1f - progress)).dp)
-                        .size(width = cardWidth, height = cardHeight)
-                        .clip(RoundedCornerShape(cardRadius))
-                        .background(Color(0xFF0A84FF))
-                )
-            }
-        }
-    }
-}
-
-@Composable
 fun SettingsSectionHeader(title: String) {
     Text(
         text = title,
-        color = Color.White.copy(alpha = 0.45f),
+        color = Color(0xFF8E8E93),
         fontSize = 12.sp,
         fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 6.dp)
+        modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 8.dp)
     )
 }
 
@@ -119,87 +40,90 @@ fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(Color(0xFF1C1C1E))
-            .padding(4.dp),
-        content = content
-    )
+    ) {
+        content()
+    }
 }
 
 @Composable
 fun SettingsDivider() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp)
-            .height(0.5.dp)
-            .background(Color.White.copy(alpha = 0.1f))
-    )
-}
-
-@Composable
-fun SettingsNavRow(title: String, subtitle: String? = null, onClick: () -> Unit = {}) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = Color.White, fontSize = 16.sp)
-            if (subtitle != null) {
-                Text(text = subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-            }
-        }
-        Text(text = "›", color = Color.White.copy(alpha = 0.3f), fontSize = 20.sp)
-    }
+    Divider(color = Color(0xFF2C2C2E), thickness = 0.8.dp, modifier = Modifier.padding(start = 16.dp))
 }
 
 @Composable
 fun SettingsToggleRow(
     title: String,
     subtitle: String? = null,
-    checked: Boolean = false,
-    onCheckedChange: (Boolean) -> Unit = {}
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(14.dp),
+            .clickable { onCheckedChange(!checked) }
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = Color.White, fontSize = 16.sp)
+        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+            Text(title, color = Color.White, fontSize = 15.sp)
             if (subtitle != null) {
-                Text(text = subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
+                Text(subtitle, color = Color(0xFF8E8E93), fontSize = 12.sp)
             }
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = Color(0xFF0A84FF)
+            )
+        )
     }
 }
 
 @Composable
-fun SwipeActionPicker(label: String, selected: String, onSelect: (String) -> Unit) {
-    val options = listOf("none" to "None", "drawer" to "Open App Drawer", "settings" to "Open Settings")
-    SettingsSectionHeader(label.uppercase())
-    SettingsGroup {
-        options.forEach { (value, displayName) ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelect(value) }
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = selected == value,
-                    onClick = { onSelect(value) },
-                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF))
-                )
-                Text(text = displayName, color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
+fun SettingsNavRow(
+    title: String,
+    subtitle: String? = null,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+            Text(title, color = Color.White, fontSize = 15.sp)
+            if (subtitle != null) {
+                Text(subtitle, color = Color(0xFF8E8E93), fontSize = 12.sp)
             }
         }
+        Text("›", color = Color(0xFF8E8E93), fontSize = 20.sp)
+    }
+}
+
+@Composable
+fun CurveSlider(
+    label: String,
+    subtitle: String,
+    value: Float,
+    onValueChange: (Float) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Column {
+                Text(label, color = Color.White, fontSize = 14.sp)
+                Text(subtitle, color = Color(0xFF8E8E93), fontSize = 11.sp)
+            }
+            Text(String.format("%.2f", value), color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+        Slider(value = value, onValueChange = onValueChange, valueRange = 0f..1.5f)
     }
 }
 
@@ -209,45 +133,65 @@ fun BezierCanvas(x1: Float, y1: Float, x2: Float, y2: Float) {
         modifier = Modifier
             .fillMaxWidth()
             .height(130.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF141418))
-            .padding(10.dp)
+            .padding(vertical = 8.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF141416))
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier.fillMaxSize().padding(16.dp)) {
             val w = size.width
             val h = size.height
-
-            val gridColor = Color.White.copy(alpha = 0.08f)
-            drawLine(gridColor, Offset(w * 0.25f, 0f), Offset(w * 0.25f, h), 1f)
-            drawLine(gridColor, Offset(w * 0.5f, 0f), Offset(w * 0.5f, h), 1f)
-            drawLine(gridColor, Offset(w * 0.75f, 0f), Offset(w * 0.75f, h), 1f)
-            drawLine(gridColor, Offset(0f, h * 0.5f), Offset(w, h * 0.5f), 1f)
-
-            val cp1 = Offset(w * x1.coerceIn(0f, 1f), h * (1f - y1.coerceIn(0f, 1.5f)))
-            val cp2 = Offset(w * x2.coerceIn(0f, 1f), h * (1f - y2.coerceIn(0f, 1.5f)))
-
-            drawLine(Color.Red.copy(alpha = 0.4f), Offset(0f, h), cp1, 2f)
-            drawLine(Color.Green.copy(alpha = 0.4f), Offset(w, 0f), cp2, 2f)
-
             val path = Path().apply {
                 moveTo(0f, h)
-                cubicTo(cp1.x, cp1.y, cp2.x, cp2.y, w, 0f)
+                cubicTo(
+                    x1.coerceIn(0f, 1f) * w, h - (y1 * h),
+                    x2.coerceIn(0f, 1f) * w, h - (y2 * h),
+                    w, 0f
+                )
             }
-            drawPath(path = path, color = Color(0xFF0A84FF), style = Stroke(width = 4f))
-            drawCircle(color = Color(0xFFFF3B30), radius = 6f, center = cp1)
-            drawCircle(color = Color(0xFF34C759), radius = 6f, center = cp2)
+            drawPath(path, color = Color(0xFF0A84FF), style = Stroke(width = 4f))
+            drawCircle(Color(0xFF34C759), radius = 6f, center = Offset(x1.coerceIn(0f, 1f) * w, h - (y1 * h)))
+            drawCircle(Color(0xFFFF9500), radius = 6f, center = Offset(x2.coerceIn(0f, 1f) * w, h - (y2 * h)))
         }
     }
 }
 
 @Composable
-fun CurveSlider(label: String, subtitle: String, valIn: Float, onChange: (Float) -> Unit) {
-    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(text = label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            Text(text = String.format("%.2f", valIn), color = Color(0xFF0A84FF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+fun PhoneMockupPreview(durationMs: Int) {
+    val infiniteTransition = rememberInfiniteTransition(label = "preview")
+    val p by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = durationMs.coerceAtLeast(200), easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "progress"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .width(110.dp)
+                .height(180.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color.Black)
+                .padding(6.dp),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            val currentH = 30.dp + (140.dp * p)
+            val currentW = 30.dp + (75.dp * p)
+            Box(
+                modifier = Modifier
+                    .size(currentW, currentH)
+                    .clip(RoundedCornerShape((14 * (1f - p)).dp))
+                    .background(Color(0xFF0A84FF))
+            )
         }
-        Text(text = subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp)
-        Slider(value = valIn, onValueChange = onChange, valueRange = 0f..1.5f)
     }
 }
