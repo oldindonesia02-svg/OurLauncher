@@ -3,18 +3,7 @@ package com.ourlauncher.app.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,11 +13,7 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,65 +24,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-@Composable
-fun HomeScreenSettingsSheet(
-    onDismiss: () -> Unit = {},
-    onOpenMoreSettings: () -> Unit = {},
-    selectedEffect: String = "Crossfade",
-    onEffectSelect: (String) -> Unit = {}
-) {
-    var showLabel by remember { mutableStateOf(true) }
-    var liquidFolder by remember { mutableStateOf(true) }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
-            .clickable { onDismiss() }
-    ) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                .background(Color(0xFF1C1C1E))
-                .padding(16.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .size(width = 36.dp, height = 4.dp)
-                    .background(Color.White.copy(alpha = 0.3f), CircleShape)
-            )
-            Text(
-                text = "Home screen settings",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(vertical = 12.dp)
-            )
-            SettingsGroup {
-                SettingsValueRow(
-                    title = "Show label",
-                    value = if (showLabel) "On" else "Off",
-                    onClick = { showLabel = !showLabel }
-                )
-                SettingsDivider()
-                SettingsToggleRow(
-                    title = "Liquid folder",
-                    subtitle = null,
-                    checked = liquidFolder,
-                    onCheckedChange = { liquidFolder = it }
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            SettingsGroup {
-                SettingsLinkRow("More settings") { onOpenMoreSettings() }
-            }
-        }
-    }
-}
+import com.ourlauncher.app.IconPackInfo
 
 @Composable
 fun SettingsScreen(
@@ -108,6 +35,13 @@ fun SettingsScreen(
     onShowDockBgChange: (Boolean) -> Unit = {},
     searchOffset: Float = 0f,
     onSearchOffsetChange: (Float) -> Unit = {},
+    iconCornerRadius: Float = 25f,
+    onIconCornerRadiusChange: (Float) -> Unit = {},
+    iconOpacity: Float = 1.0f,
+    onIconOpacityChange: (Float) -> Unit = {},
+    installedIconPacks: List<IconPackInfo> = emptyList(),
+    selectedIconPack: String = "default",
+    onIconPackSelect: (String) -> Unit = {},
     swipeUp: String = "drawer",
     onSwipeUpChange: (String) -> Unit = {},
     swipeDown: String = "none",
@@ -164,6 +98,59 @@ fun SettingsScreen(
                 .padding(16.dp)
         ) {
             when (currentSubPage) {
+                "icons" -> {
+                    SettingsSectionHeader("SHAPE & CORNER RADIUS")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(text = "Corner Radius: ${iconCornerRadius.toInt()}%", color = Color.White)
+                            Slider(value = iconCornerRadius, onValueChange = onIconCornerRadiusChange, valueRange = 0f..50f)
+                        }
+                    }
+
+                    SettingsSectionHeader("ICON OPACITY")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(text = "Opacity: ${(iconOpacity * 100).toInt()}%", color = Color.White)
+                            Slider(value = iconOpacity, onValueChange = onIconOpacityChange, valueRange = 0.2f..1.0f)
+                        }
+                    }
+
+                    SettingsSectionHeader("ICON PACK")
+                    SettingsGroup {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onIconPackSelect("default") }
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedIconPack == "default",
+                                onClick = { onIconPackSelect("default") },
+                                colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF))
+                            )
+                            Text(text = "Default System Icons", color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
+                        }
+
+                        installedIconPacks.forEach { pack ->
+                            SettingsDivider()
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onIconPackSelect(pack.packageName) }
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selectedIconPack == pack.packageName,
+                                    onClick = { onIconPackSelect(pack.packageName) },
+                                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF))
+                                )
+                                Text(text = pack.label, color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                }
                 "appearance" -> {
                     SettingsSectionHeader("FONT FAMILY")
                     SettingsGroup {
@@ -175,17 +162,8 @@ fun SettingsScreen(
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                RadioButton(
-                                    selected = font == f,
-                                    onClick = { font = f },
-                                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF))
-                                )
-                                Text(
-                                    text = f,
-                                    color = Color.White,
-                                    fontSize = 16.sp,
-                                    modifier = Modifier.padding(start = 8.dp)
-                                )
+                                RadioButton(selected = font == f, onClick = { font = f }, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF)))
+                                Text(text = f, color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     }
@@ -206,15 +184,6 @@ fun SettingsScreen(
                             CurveSlider("Velocity Y1", py1) { py1 = it }
                             CurveSlider("Tension X2", px2) { px2 = it }
                             CurveSlider("Velocity Y2", py2) { py2 = it }
-                        }
-                    }
-                }
-                "icons" -> {
-                    SettingsSectionHeader("ICON PACK")
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(text = "Corner Radius: ${dockRadius.toInt()}%", color = Color.White)
-                            Slider(value = dockRadius, onValueChange = onDockRadiusChange, valueRange = 0f..50f)
                         }
                     }
                 }
@@ -239,7 +208,7 @@ fun SettingsScreen(
                     SettingsGroup {
                         SettingsNavRow("Appearance", "Theme & Fonts") { currentSubPage = "appearance" }
                         SettingsDivider()
-                        SettingsNavRow("App icons", "Shape & Icon Pack") { currentSubPage = "icons" }
+                        SettingsNavRow("App icons", "Shape, Opacity & Icon Pack") { currentSubPage = "icons" }
                         SettingsDivider()
                         SettingsNavRow("App Open Animation", "Duration & Bezier Curves") { currentSubPage = "animation" }
                         SettingsDivider()
@@ -373,31 +342,6 @@ fun SettingsNavRow(title: String, subtitle: String? = null, onClick: () -> Unit 
             }
         }
         Text(text = "›", color = Color.White.copy(alpha = 0.3f), fontSize = 20.sp)
-    }
-}
-
-@Composable
-fun SettingsLinkRow(title: String, onClick: () -> Unit = {}) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(14.dp)
-    ) {
-        Text(text = title, color = Color(0xFF0A84FF), fontSize = 16.sp)
-    }
-}
-
-@Composable
-fun SettingsValueRow(title: String, value: String, onClick: () -> Unit = {}) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(14.dp)
-    ) {
-        Text(text = title, color = Color.White, modifier = Modifier.weight(1f))
-        Text(text = value, color = Color.White.copy(alpha = 0.4f))
     }
 }
 
