@@ -5,14 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.ourlauncher.app.ui.AppDrawer
 import com.ourlauncher.app.ui.HomeScreen
 import com.ourlauncher.app.ui.SettingsScreen
+import com.ourlauncher.app.ui.clearIconCache
 
 private enum class Screen { HOME, DRAWER, SETTINGS }
 
@@ -22,25 +20,40 @@ class MainActivity : ComponentActivity() {
 
         val repository = AppRepository(this)
         val settingsManager = SettingsManager(this)
+        val iconPackManager = IconPackManager(this)
 
         setContent {
             var screen by remember { mutableStateOf(Screen.HOME) }
             val apps = remember { repository.getInstalledApps() }
+            val installedPacks = remember { iconPackManager.getInstalledIconPacks() }
 
             var showLabels by remember { mutableStateOf(settingsManager.showLabels) }
             var dockRadius by remember { mutableStateOf(settingsManager.dockRadius) }
             var showDockBg by remember { mutableStateOf(settingsManager.showDockBg) }
             var searchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
+
+            var iconCornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
+            var iconOpacity by remember { mutableStateOf(settingsManager.iconOpacity) }
+            var selectedIconPack by remember { mutableStateOf(settingsManager.iconPack) }
+
             var swipeUp by remember { mutableStateOf(settingsManager.swipeUpAction) }
             var swipeDown by remember { mutableStateOf(settingsManager.swipeDownAction) }
             var swipeLeft by remember { mutableStateOf(settingsManager.swipeLeftAction) }
             var swipeRight by remember { mutableStateOf(settingsManager.swipeRightAction) }
+
+            LaunchedEffect(selectedIconPack) {
+                iconPackManager.loadIconPack(selectedIconPack)
+                clearIconCache()
+            }
 
             Box(modifier = Modifier.fillMaxSize()) {
                 when (screen) {
                     Screen.HOME -> HomeScreen(
                         apps = apps,
                         showLabels = showLabels,
+                        cornerRadiusPercent = iconCornerRadius,
+                        iconOpacity = iconOpacity,
+                        getCustomDrawable = { pkg -> iconPackManager.getCustomIcon(pkg) },
                         onAppClick = { app -> repository.launchApp(app) },
                         onAppClickWithBounds = { app, bounds -> repository.launchApp(app, bounds) },
                         onOpenDrawer = { screen = Screen.DRAWER },
@@ -53,6 +66,9 @@ class MainActivity : ComponentActivity() {
 
                     Screen.DRAWER -> AppDrawer(
                         apps = apps,
+                        cornerRadiusPercent = iconCornerRadius,
+                        iconOpacity = iconOpacity,
+                        getCustomDrawable = { pkg -> iconPackManager.getCustomIcon(pkg) },
                         onAppClick = { app ->
                             repository.launchApp(app)
                             screen = Screen.HOME
@@ -80,6 +96,22 @@ class MainActivity : ComponentActivity() {
                         onSearchOffsetChange = {
                             searchOffset = it
                             settingsManager.searchOffset = it
+                        },
+                        iconCornerRadius = iconCornerRadius,
+                        onIconCornerRadiusChange = {
+                            iconCornerRadius = it
+                            settingsManager.iconCornerRadius = it
+                        },
+                        iconOpacity = iconOpacity,
+                        onIconOpacityChange = {
+                            iconOpacity = it
+                            settingsManager.iconOpacity = it
+                        },
+                        installedIconPacks = installedPacks,
+                        selectedIconPack = selectedIconPack,
+                        onIconPackSelect = {
+                            selectedIconPack = it
+                            settingsManager.iconPack = it
                         },
                         swipeUp = swipeUp,
                         onSwipeUpChange = {
