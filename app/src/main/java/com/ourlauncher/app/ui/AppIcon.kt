@@ -7,12 +7,7 @@ import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -58,17 +53,17 @@ fun AppIcon(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     showLabel: Boolean = true,
-    fontFamilyName: String = "sans-serif",
     iconSizeDp: Float = 54f,
     cornerRadiusPercent: Float = 25f,
     iconOpacity: Float = 1.0f,
     customDrawable: Drawable? = null,
-    onClickWithBounds: ((Rect) -> Unit)? = null
+    onClickWithBounds: ((Rect) -> Unit)? = null,
+    fontFamilyName: String = "sans-serif"
 ) {
     var iconBounds by remember { mutableStateOf<Rect?>(null) }
     val interactionSource = remember { MutableInteractionSource() }
 
-    val resolvedFontFamily = when (fontFamilyName.lowercase()) {
+    val resolvedFont = when (fontFamilyName.lowercase()) {
         "serif" -> FontFamily.Serif
         "monospace" -> FontFamily.Monospace
         "cursive" -> FontFamily.Cursive
@@ -113,7 +108,7 @@ fun AppIcon(
                 Image(
                     bitmap = imageBitmap,
                     contentDescription = app.label,
-                    modifier = Modifier.size(iconSizeDp.dp)
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
@@ -124,7 +119,7 @@ fun AppIcon(
                 text = app.label,
                 color = Color.White.copy(alpha = iconOpacity),
                 fontSize = 11.5.sp,
-                fontFamily = resolvedFontFamily,
+                fontFamily = resolvedFont,
                 maxLines = 1,
                 textAlign = TextAlign.Center,
                 overflow = TextOverflow.Ellipsis,
