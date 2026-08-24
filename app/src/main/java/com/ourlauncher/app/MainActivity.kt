@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
             var showDockBg by remember { mutableStateOf(settingsManager.showDockBg) }
             var searchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
 
+            var iconSize by remember { mutableStateOf(settingsManager.iconSize) }
             var iconCornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
             var iconOpacity by remember { mutableStateOf(settingsManager.iconOpacity) }
             var selectedIconPack by remember { mutableStateOf(settingsManager.iconPack) }
@@ -51,6 +52,7 @@ class MainActivity : ComponentActivity() {
                     Screen.HOME -> HomeScreen(
                         apps = apps,
                         showLabels = showLabels,
+                        iconSize = iconSize,
                         cornerRadiusPercent = iconCornerRadius,
                         iconOpacity = iconOpacity,
                         getCustomDrawable = { pkg -> iconPackManager.getCustomIcon(pkg) },
@@ -66,6 +68,7 @@ class MainActivity : ComponentActivity() {
 
                     Screen.DRAWER -> AppDrawer(
                         apps = apps,
+                        iconSize = iconSize,
                         cornerRadiusPercent = iconCornerRadius,
                         iconOpacity = iconOpacity,
                         getCustomDrawable = { pkg -> iconPackManager.getCustomIcon(pkg) },
@@ -96,6 +99,11 @@ class MainActivity : ComponentActivity() {
                         onSearchOffsetChange = {
                             searchOffset = it
                             settingsManager.searchOffset = it
+                        },
+                        iconSize = iconSize,
+                        onIconSizeChange = {
+                            iconSize = it
+                            settingsManager.iconSize = it
                         },
                         iconCornerRadius = iconCornerRadius,
                         onIconCornerRadiusChange = {
