@@ -33,6 +33,9 @@ fun SettingsScreen(
 ) {
     var currentSubPage by remember { mutableStateOf("main") }
 
+    var gridColumns by remember { mutableStateOf(settingsManager.gridColumns) }
+    var gridRows by remember { mutableStateOf(settingsManager.gridRows) }
+
     var iconSize by remember { mutableStateOf(settingsManager.iconSize) }
     var iconCornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
     var iconOpacity by remember { mutableStateOf(settingsManager.iconOpacity) }
@@ -139,6 +142,48 @@ fun SettingsScreen(
                 .padding(16.dp)
         ) {
             when (currentSubPage) {
+                "grid" -> {
+                    SettingsSectionHeader("HOME SCREEN GRID")
+                    SettingsGroup {
+                        val gridPresets = listOf(
+                            (4 to 4) to "4 x 4 (Spacious)",
+                            (4 to 5) to "4 x 5 (Default)",
+                            (4 to 6) to "4 x 6 (Tall)",
+                            (5 to 5) to "5 x 5 (Compact)",
+                            (5 to 6) to "5 x 6 (Dense)"
+                        )
+                        gridPresets.forEachIndexed { i, (pair, label) ->
+                            val (c, r) = pair
+                            val isSelected = gridColumns == c && gridRows == r
+                            if (i > 0) SettingsDivider()
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        gridColumns = c
+                                        gridRows = r
+                                        settingsManager.gridColumns = c
+                                        settingsManager.gridRows = r
+                                    }
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = {
+                                        gridColumns = c
+                                        gridRows = r
+                                        settingsManager.gridColumns = c
+                                        settingsManager.gridRows = r
+                                    },
+                                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF))
+                                )
+                                Text(label, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                }
+
                 "animation" -> {
                     SettingsSectionHeader("APP OPEN ANIMATION CONFIGURATION")
                     SettingsGroup {
@@ -172,39 +217,6 @@ fun SettingsScreen(
                             CurveSlider("Initial Velocity (Y1)", "Controls speed burst", posY1) { posY1 = it; settingsManager.posCurveY1 = it }
                             CurveSlider("Final Tension (X2)", "Delays end", posX2) { posX2 = it; settingsManager.posCurveX2 = it }
                             CurveSlider("Final Velocity (Y2)", "Values > 1.0 overshoot", posY2) { posY2 = it; settingsManager.posCurveY2 = it }
-                        }
-                    }
-
-                    SettingsSectionHeader("WIDTH SCALING CURVE")
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            BezierCanvas(widthX1, widthY1, widthX2, widthY2)
-                            CurveSlider("Initial Tension (X1)", "Delays width growth", widthX1) { widthX1 = it; settingsManager.widthCurveX1 = it }
-                            CurveSlider("Initial Velocity (Y1)", "Width speed burst", widthY1) { widthY1 = it; settingsManager.widthCurveY1 = it }
-                            CurveSlider("Final Tension (X2)", "Delays end width", widthX2) { widthX2 = it; settingsManager.widthCurveX2 = it }
-                            CurveSlider("Final Velocity (Y2)", "Width overshoot", widthY2) { widthY2 = it; settingsManager.widthCurveY2 = it }
-                        }
-                    }
-
-                    SettingsSectionHeader("HEIGHT SCALING CURVE")
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            BezierCanvas(heightX1, heightY1, heightX2, heightY2)
-                            CurveSlider("Initial Tension (X1)", "Delays height growth", heightX1) { heightX1 = it; settingsManager.heightCurveX1 = it }
-                            CurveSlider("Initial Velocity (Y1)", "Height speed burst", heightY1) { heightY1 = it; settingsManager.heightCurveY1 = it }
-                            CurveSlider("Final Tension (X2)", "Delays end height", heightX2) { heightX2 = it; settingsManager.heightCurveY2 = it }
-                            CurveSlider("Final Velocity (Y2)", "Height overshoot", heightY2) { heightY2 = it; settingsManager.heightCurveY2 = it }
-                        }
-                    }
-
-                    SettingsSectionHeader("CORNER RADIUS TRANSITION CURVE")
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            BezierCanvas(cornerX1, cornerY1, cornerX2, cornerY2)
-                            CurveSlider("Initial Tension (X1)", "Delays corner transition", cornerX1) { cornerX1 = it; settingsManager.cornerCurveX1 = it }
-                            CurveSlider("Initial Velocity (Y1)", "Corner change speed", cornerY1) { cornerY1 = it; settingsManager.cornerCurveY1 = it }
-                            CurveSlider("Final Tension (X2)", "Delays corner end", cornerX2) { cornerX2 = it; settingsManager.cornerCurveX2 = it }
-                            CurveSlider("Final Velocity (Y2)", "Corner overshoot", cornerY2) { cornerY2 = it; settingsManager.cornerCurveY2 = it }
                         }
                     }
 
@@ -317,6 +329,8 @@ fun SettingsScreen(
                 else -> {
                     SettingsSectionHeader("CUSTOMIZATION")
                     SettingsGroup {
+                        SettingsNavRow("Desktop Grid", "Configure Columns & Rows (4x5, 5x5, 5x6)") { currentSubPage = "grid" }
+                        SettingsDivider()
                         SettingsNavRow("App icons", "Themes, Lens Light, Shape & Size") { currentSubPage = "icons" }
                         SettingsDivider()
                         SettingsNavRow("App Open Animation", "Duration & Bezier Curves") { currentSubPage = "animation" }
