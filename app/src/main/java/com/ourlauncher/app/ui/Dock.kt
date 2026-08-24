@@ -20,6 +20,7 @@ import com.ourlauncher.app.AppInfo
 fun Dock(
     pinnedApps: List<AppInfo>,
     onAppClick: (AppInfo) -> Unit,
+    iconSize: Float = 48f,
     cornerRadiusPercent: Float = 25f,
     iconOpacity: Float = 1.0f,
     getCustomDrawable: (String) -> Drawable? = { null },
@@ -57,7 +58,7 @@ fun Dock(
                 app = app,
                 onClick = { onAppClick(app) },
                 showLabel = false,
-                iconSizeDp = 48,
+                iconSizeDp = iconSize,
                 cornerRadiusPercent = cornerRadiusPercent,
                 iconOpacity = iconOpacity,
                 customDrawable = getCustomDrawable(app.packageName),
