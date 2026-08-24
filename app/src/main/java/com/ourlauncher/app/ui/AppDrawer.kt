@@ -43,6 +43,11 @@ fun AppDrawer(
     apps: List<AppInfo>,
     settingsManager: SettingsManager = SettingsManager(LocalContext.current),
     getCustomDrawable: (String) -> Drawable? = { null },
+    cornerRadiusPercent: Float = settingsManager.iconCornerRadius,
+    iconOpacity: Float = settingsManager.iconOpacity,
+    iconSizeDp: Float = settingsManager.iconSize,
+    showLabel: Boolean = settingsManager.showLabels,
+    fontFamilyName: String = settingsManager.fontFamily,
     onAppClick: (AppInfo) -> Unit = {},
     onAppClickWithBounds: (AppInfo, Rect) -> Unit = { app, _ -> onAppClick(app) },
     onCloseDrawer: () -> Unit = {}
@@ -192,11 +197,11 @@ fun AppDrawer(
                             AppIcon(
                                 app = app,
                                 onClick = { onAppClick(app) },
-                                showLabel = settingsManager.showLabels,
-                                fontFamilyName = settingsManager.fontFamily,
-                                iconSizeDp = settingsManager.iconSize,
-                                cornerRadiusPercent = settingsManager.iconCornerRadius,
-                                iconOpacity = settingsManager.iconOpacity,
+                                showLabel = showLabel,
+                                fontFamilyName = fontFamilyName,
+                                iconSizeDp = iconSizeDp,
+                                cornerRadiusPercent = cornerRadiusPercent,
+                                iconOpacity = iconOpacity,
                                 customDrawable = getCustomDrawable(app.packageName),
                                 onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
                                 modifier = Modifier.width(80.dp)
