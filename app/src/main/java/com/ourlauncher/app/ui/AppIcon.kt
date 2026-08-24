@@ -25,7 +25,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -68,7 +68,7 @@ fun AppIcon(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .onGloballyPositioned { coords ->
-                val b = coords.boundsInWindow()
+                val b = coords.boundsInRoot()
                 screenBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
             }
             .clickable {
