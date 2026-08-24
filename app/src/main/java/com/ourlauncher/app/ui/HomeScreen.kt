@@ -22,6 +22,7 @@ import kotlin.math.abs
 fun HomeScreen(
     apps: List<AppInfo>,
     showLabels: Boolean,
+    iconSize: Float = 54f,
     cornerRadiusPercent: Float = 25f,
     iconOpacity: Float = 1.0f,
     getCustomDrawable: (String) -> Drawable? = { null },
@@ -89,6 +90,7 @@ fun HomeScreen(
                         app = app,
                         onClick = { onAppClick(app) },
                         showLabel = showLabels,
+                        iconSizeDp = iconSize,
                         cornerRadiusPercent = cornerRadiusPercent,
                         iconOpacity = iconOpacity,
                         customDrawable = getCustomDrawable(app.packageName),
@@ -100,6 +102,7 @@ fun HomeScreen(
             SearchPill(onClick = onOpenDrawer, modifier = Modifier.padding(bottom = 8.dp))
             Dock(
                 pinnedApps = dockApps,
+                iconSize = iconSize,
                 cornerRadiusPercent = cornerRadiusPercent,
                 iconOpacity = iconOpacity,
                 getCustomDrawable = getCustomDrawable,
