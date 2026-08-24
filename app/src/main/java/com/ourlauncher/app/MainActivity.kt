@@ -1,6 +1,5 @@
 package com.ourlauncher.app
 
-import android.graphics.Rect
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,6 +31,10 @@ class MainActivity : ComponentActivity() {
             var dockRadius by remember { mutableStateOf(settingsManager.dockRadius) }
             var showDockBg by remember { mutableStateOf(settingsManager.showDockBg) }
             var searchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
+            var swipeUp by remember { mutableStateOf(settingsManager.swipeUpAction) }
+            var swipeDown by remember { mutableStateOf(settingsManager.swipeDownAction) }
+            var swipeLeft by remember { mutableStateOf(settingsManager.swipeLeftAction) }
+            var swipeRight by remember { mutableStateOf(settingsManager.swipeRightAction) }
 
             Box(modifier = Modifier.fillMaxSize()) {
                 when (screen) {
@@ -41,7 +44,11 @@ class MainActivity : ComponentActivity() {
                         onAppClick = { app -> repository.launchApp(app) },
                         onAppClickWithBounds = { app, bounds -> repository.launchApp(app, bounds) },
                         onOpenDrawer = { screen = Screen.DRAWER },
-                        onOpenSettings = { screen = Screen.SETTINGS }
+                        onOpenSettings = { screen = Screen.SETTINGS },
+                        swipeUp = swipeUp,
+                        swipeDown = swipeDown,
+                        swipeLeft = swipeLeft,
+                        swipeRight = swipeRight
                     )
 
                     Screen.DRAWER -> AppDrawer(
@@ -73,6 +80,26 @@ class MainActivity : ComponentActivity() {
                         onSearchOffsetChange = {
                             searchOffset = it
                             settingsManager.searchOffset = it
+                        },
+                        swipeUp = swipeUp,
+                        onSwipeUpChange = {
+                            swipeUp = it
+                            settingsManager.swipeUpAction = it
+                        },
+                        swipeDown = swipeDown,
+                        onSwipeDownChange = {
+                            swipeDown = it
+                            settingsManager.swipeDownAction = it
+                        },
+                        swipeLeft = swipeLeft,
+                        onSwipeLeftChange = {
+                            swipeLeft = it
+                            settingsManager.swipeLeftAction = it
+                        },
+                        swipeRight = swipeRight,
+                        onSwipeRightChange = {
+                            swipeRight = it
+                            settingsManager.swipeRightAction = it
                         }
                     )
                 }
