@@ -107,7 +107,15 @@ fun SettingsScreen(
     showDockBg: Boolean = true,
     onShowDockBgChange: (Boolean) -> Unit = {},
     searchOffset: Float = 0f,
-    onSearchOffsetChange: (Float) -> Unit = {}
+    onSearchOffsetChange: (Float) -> Unit = {},
+    swipeUp: String = "drawer",
+    onSwipeUpChange: (String) -> Unit = {},
+    swipeDown: String = "none",
+    onSwipeDownChange: (String) -> Unit = {},
+    swipeLeft: String = "none",
+    onSwipeLeftChange: (String) -> Unit = {},
+    swipeRight: String = "none",
+    onSwipeRightChange: (String) -> Unit = {}
 ) {
     var currentSubPage by remember { mutableStateOf("main") }
     var font by remember { mutableStateOf("sans-serif") }
@@ -220,6 +228,12 @@ fun SettingsScreen(
                         }
                     }
                 }
+                "swipe" -> {
+                    SwipeActionPicker("Swipe Up", swipeUp, onSwipeUpChange)
+                    SwipeActionPicker("Swipe Down", swipeDown, onSwipeDownChange)
+                    SwipeActionPicker("Swipe Left", swipeLeft, onSwipeLeftChange)
+                    SwipeActionPicker("Swipe Right", swipeRight, onSwipeRightChange)
+                }
                 else -> {
                     SettingsSectionHeader("CUSTOMIZATION")
                     SettingsGroup {
@@ -231,7 +245,40 @@ fun SettingsScreen(
                         SettingsDivider()
                         SettingsNavRow("Dock", "Padding & Corner Radius") { currentSubPage = "dock" }
                     }
+                    SettingsSectionHeader("ACTIONS")
+                    SettingsGroup {
+                        SettingsNavRow("Swipe actions", "Customize gesture swipe behaviors") { currentSubPage = "swipe" }
+                    }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SwipeActionPicker(label: String, selected: String, onSelect: (String) -> Unit) {
+    val options = listOf("none" to "None", "drawer" to "Open App Drawer", "settings" to "Open Settings")
+    SettingsSectionHeader(label.uppercase())
+    SettingsGroup {
+        options.forEach { (value, displayName) ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelect(value) }
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = selected == value,
+                    onClick = { onSelect(value) },
+                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF))
+                )
+                Text(
+                    text = displayName,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
             }
         }
     }
