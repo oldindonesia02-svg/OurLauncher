@@ -33,7 +33,7 @@ class SettingsManager(context: Context) {
         get() = prefs.getBoolean("show_dock_bg", true)
         set(value) = prefs.edit().putBoolean("show_dock_bg", value).apply()
 
-    // General Customization
+    // Icon Customization & Themes
     var showLabels: Boolean
         get() = prefs.getBoolean("show_labels", true)
         set(value) = prefs.edit().putBoolean("show_labels", value).apply()
@@ -57,6 +57,37 @@ class SettingsManager(context: Context) {
     var iconPack: String
         get() = prefs.getString("icon_pack", "default") ?: "default"
         set(value) = prefs.edit().putString("icon_pack", value).apply()
+
+    // Icon Themes: "standard", "dark", "transparent", "tinted"
+    var iconTheme: String
+        get() = prefs.getString("icon_theme", "standard") ?: "standard"
+        set(value) = prefs.edit().putString("icon_theme", value).apply()
+
+    var iconTintColor: Long
+        get() = prefs.getLong("icon_tint_color", 0xFF0A84FF)
+        set(value) = prefs.edit().putLong("icon_tint_color", value).apply()
+
+    // Lens Highlights Engine
+    var lensLightEnabled: Boolean
+        get() = prefs.getBoolean("lens_light_enabled", true)
+        set(value) = prefs.edit().putBoolean("lens_light_enabled", value).apply()
+
+    var lensAngle: Float
+        get() = prefs.getFloat("lens_angle", 45f)
+        set(value) = prefs.edit().putFloat("lens_angle", value).apply()
+
+    var lensIntensity: Float
+        get() = prefs.getFloat("lens_intensity", 0.75f)
+        set(value) = prefs.edit().putFloat("lens_intensity", value).apply()
+
+    var lensStrokeWidth: Float
+        get() = prefs.getFloat("lens_stroke_width", 1.2f)
+        set(value) = prefs.edit().putFloat("lens_stroke_width", value).apply()
+
+    // Graphic Presets: "ultra", "high", "medium", "low"
+    var graphicPreset: String
+        get() = prefs.getString("graphic_preset", "ultra") ?: "ultra"
+        set(value) = prefs.edit().putString("graphic_preset", value).apply()
 
     // Gesture Actions
     var leftPullDownAction: String
