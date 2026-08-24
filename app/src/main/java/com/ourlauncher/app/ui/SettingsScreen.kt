@@ -1,5 +1,6 @@
 package com.ourlauncher.app.ui
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -65,6 +66,14 @@ fun SettingsScreen(
     var swipeDown by remember { mutableStateOf(settingsManager.swipeDownAction) }
     var swipeLeft by remember { mutableStateOf(settingsManager.swipeLeftAction) }
     var swipeRight by remember { mutableStateOf(settingsManager.swipeRightAction) }
+
+    if (currentSubPage == "liquid_glass") {
+        LiquidGlassScreen(
+            onBack = { currentSubPage = "main" },
+            settingsManager = settingsManager
+        )
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -272,6 +281,8 @@ fun SettingsScreen(
                         SettingsNavRow("App Open Animation", "Duration & Bezier Curves") { currentSubPage = "animation" }
                         SettingsDivider()
                         SettingsNavRow("Dock", "Padding & Corner Radius") { currentSubPage = "dock" }
+                        SettingsDivider()
+                        SettingsNavRow("Liquid Glass", "Adjust transparency, blur and lens refraction") { currentSubPage = "liquid_glass" }
                     }
                     SettingsSectionHeader("ACTIONS")
                     SettingsGroup {
