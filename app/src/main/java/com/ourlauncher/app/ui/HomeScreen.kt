@@ -56,14 +56,18 @@ fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -
                 val service = context.getSystemService("statusbar")
                 val clz = Class.forName("android.app.StatusBarManager")
                 clz.getMethod("expandNotificationsPanel").invoke(service)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
         "system_control_center" -> {
             try {
                 val service = context.getSystemService("statusbar")
                 val clz = Class.forName("android.app.StatusBarManager")
                 clz.getMethod("expandSettingsPanel").invoke(service)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
         "builtin_control_center" -> {
             onOpenSettings()
@@ -390,7 +394,7 @@ fun HomeScreen(
             }
         }
 
-        // --- FLOATING ICON WHEN DRAGGED ---
+        // --- FLOATING DRAGGED ICON ---
         if (draggedIndex != null && draggedIndex!! < gridApps.size) {
             val app = gridApps[draggedIndex!!]
             val targetDrawable = getCustomDrawable(app.packageName) ?: app.icon
@@ -422,7 +426,7 @@ fun HomeScreen(
             }
         }
 
-        // --- GPU-ACCELERATED DUAL OPEN & CLOSE OVERLAY ---
+        // --- DUAL OPEN & CLOSE OVERLAY ---
         if (activeApp != null && activeBounds != null && p > 0.005f) {
             val b = activeBounds!!
             val currentX = b.left * (1f - p)
@@ -433,6 +437,4 @@ fun HomeScreen(
             val currentRadius = initialCornerPx * (1f - p)
 
             with(density) {
-                Box(
-                    modifier = Modifier
-                        
+        
