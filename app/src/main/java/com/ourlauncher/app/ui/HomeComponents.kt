@@ -3,7 +3,6 @@ package com.ourlauncher.app.ui
 import android.content.Context
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,7 +12,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,13 +67,13 @@ fun LiquidSearchDotsCapsule(
     Box(
         modifier = modifier
             .wrapContentWidth()
-            .height(32.dp)
+            .height(30.dp)
             .clip(pillShape)
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.22f),
-                        Color.Black.copy(alpha = 0.35f)
+                        Color.White.copy(alpha = 0.20f),
+                        Color.Black.copy(alpha = 0.40f)
                     )
                 )
             )
@@ -83,8 +81,8 @@ fun LiquidSearchDotsCapsule(
                 1.dp,
                 Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.45f),
-                        Color.White.copy(alpha = 0.10f)
+                        Color.White.copy(alpha = 0.35f),
+                        Color.White.copy(alpha = 0.08f)
                     )
                 ),
                 pillShape
@@ -100,14 +98,14 @@ fun LiquidSearchDotsCapsule(
             Text(
                 text = "search",
                 color = Color.White.copy(alpha = 0.85f),
-                fontSize = 12.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = "🔍",
                 color = Color.White.copy(alpha = 0.85f),
-                fontSize = 11.sp
+                fontSize = 10.5.sp
             )
 
             if (totalPages > 1) {
@@ -115,7 +113,7 @@ fun LiquidSearchDotsCapsule(
                 Box(
                     modifier = Modifier
                         .width(1.dp)
-                        .height(12.dp)
+                        .height(10.dp)
                         .background(Color.White.copy(alpha = 0.25f))
                 )
                 Spacer(modifier = Modifier.width(10.dp))
@@ -126,15 +124,10 @@ fun LiquidSearchDotsCapsule(
                 ) {
                     repeat(totalPages) { index ->
                         val isSelected = currentPage == index
-                        val dotWidth by animateDpAsState(
-                            targetValue = if (isSelected) 14.dp else 4.5.dp,
-                            label = "dotWidth"
-                        )
-
                         Box(
                             modifier = Modifier
-                                .height(4.5.dp)
-                                .width(dotWidth)
+                                .height(4.dp)
+                                .width(if (isSelected) 10.dp else 4.dp)
                                 .clip(CircleShape)
                                 .background(
                                     if (isSelected) Color.White.copy(alpha = 0.95f)
