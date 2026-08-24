@@ -5,45 +5,53 @@ import android.graphics.Canvas
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
+import com.ourlauncher.app.SettingsManager
+import kotlin.math.cos
+import kotlin.math.sin
 
-private val iconCache = HashMap<String, Bitmap>()
+private val bitmapCache = mutableMapOf<String, Bitmap>()
 
-fun clearIconCache() {
-    iconCache.clear()
-}
-
-fun getCachedBitmap(cacheKey: String, drawable: Drawable?): Bitmap? {
-    if (drawable == null) return null
-    return iconCache.getOrPut(cacheKey) {
-        val size = 192
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+fun getCachedBitmap(key: String, drawable: Drawable): Bitmap? {
+    bitmapCache[key]?.let { return it }
+    return try {
+        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 144
+        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 144
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, size, size)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
+        bitmapCache[key] = bitmap
         bitmap
+    } catch (e: Exception) {
+        null
     }
 }
 
@@ -51,63 +59,92 @@ fun getCachedBitmap(cacheKey: String, drawable: Drawable?): Bitmap? {
 fun AppIcon(
     app: AppInfo,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
     showLabel: Boolean = true,
+    fontFamilyName: String = "sans-serif",
     iconSizeDp: Float = 54f,
     cornerRadiusPercent: Float = 25f,
     iconOpacity: Float = 1.0f,
     customDrawable: Drawable? = null,
     onClickWithBounds: ((Rect) -> Unit)? = null,
-    fontFamilyName: String = "sans-serif"
+    modifier: Modifier = Modifier
 ) {
-    var iconBounds by remember { mutableStateOf<Rect?>(null) }
-    val interactionSource = remember { MutableInteractionSource() }
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val targetDrawable = customDrawable ?: app.icon
+    val cacheKey = "${app.packageName}_${targetDrawable.hashCode()}"
+    val bitmap = remember(cacheKey) { getCachedBitmap(cacheKey, targetDrawable) }
 
-    val resolvedFont = when (fontFamilyName.lowercase()) {
-        "serif" -> FontFamily.Serif
-        "monospace" -> FontFamily.Monospace
-        "cursive" -> FontFamily.Cursive
-        else -> FontFamily.Default
+    val shape = RoundedCornerShape(cornerRadiusPercent.toInt())
+
+    // Theme Color Filter
+    val colorFilter = remember(settingsManager.iconTheme, settingsManager.iconTintColor) {
+        when (settingsManager.iconTheme) {
+            "dark" -> {
+                val matrix = ColorMatrix().apply { setToSaturation(0f) }
+                ColorFilter.colorMatrix(matrix)
+            }
+            "tinted" -> ColorFilter.tint(Color(settingsManager.iconTintColor.toULong()))
+            else -> null
+        }
+    }
+
+    // Lens Lighting Brush
+    val lensBrush = remember(settingsManager.lensLightEnabled, settingsManager.lensAngle, settingsManager.lensIntensity) {
+        if (settingsManager.lensLightEnabled && settingsManager.graphicPreset != "low") {
+            val rad = Math.toRadians(settingsManager.lensAngle.toDouble())
+            val intensity = settingsManager.lensIntensity
+            Brush.linearGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = (intensity * 0.85f).coerceIn(0f, 1f)),
+                    Color.White.copy(alpha = (intensity * 0.15f).coerceIn(0f, 1f)),
+                    Color.Transparent
+                ),
+                start = Offset.Zero,
+                end = Offset(cos(rad).toFloat() * 200f, sin(rad).toFloat() * 200f)
+            )
+        } else null
     }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) {
-                val bounds = iconBounds
-                if (onClickWithBounds != null && bounds != null) {
-                    onClickWithBounds(bounds)
+            .onGloballyPositioned { coords ->
+                if (onClickWithBounds != null) {
+                    val b = coords.boundsInRoot()
+                    val r = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
+                    app.cachedBounds = r
+                }
+            }
+            .clickable {
+                if (onClickWithBounds != null && app.cachedBounds != null) {
+                    onClickWithBounds(app.cachedBounds!!)
                 } else {
                     onClick()
                 }
             }
-            .padding(horizontal = 2.dp, vertical = 2.dp)
     ) {
-        val targetDrawable = customDrawable ?: app.icon
-        val cacheKey = "${app.packageName}_${targetDrawable.hashCode()}"
-        val imageBitmap = remember(cacheKey) {
-            getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
-        }
-
-        val shape = RoundedCornerShape(cornerRadiusPercent.toInt())
-
         Box(
             modifier = Modifier
                 .size(iconSizeDp.dp)
-                .onGloballyPositioned { coords ->
-                    val b = coords.boundsInRoot()
-                    iconBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
-                }
-                .clip(shape)
                 .alpha(iconOpacity)
+                .clip(shape)
+                .then(
+                    if (settingsManager.iconTheme == "transparent") {
+                        Modifier.background(Color.White.copy(alpha = 0.12f))
+                    } else Modifier
+                )
+                .then(
+                    if (lensBrush != null) {
+                        Modifier.border(settingsManager.lensStrokeWidth.dp, lensBrush, shape)
+                    } else Modifier
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            if (imageBitmap != null) {
+            if (bitmap != null) {
                 Image(
-                    bitmap = imageBitmap,
+                    bitmap = bitmap.asImageBitmap(),
                     contentDescription = app.label,
+                    colorFilter = colorFilter,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -117,19 +154,18 @@ fun AppIcon(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = app.label,
-                color = Color.White.copy(alpha = iconOpacity),
                 fontSize = 11.5.sp,
-                fontFamily = resolvedFont,
+                color = Color.White,
+                fontFamily = when (fontFamilyName) {
+                    "serif" -> FontFamily.Serif
+                    "monospace" -> FontFamily.Monospace
+                    else -> FontFamily.SansSerif
+                },
+                fontWeight = FontWeight.Medium,
                 maxLines = 1,
-                textAlign = TextAlign.Center,
                 overflow = TextOverflow.Ellipsis,
-                style = TextStyle(
-                    shadow = Shadow(
-                        color = Color.Black.copy(alpha = 0.85f),
-                        offset = Offset(0f, 2f),
-                        blurRadius = 4f
-                    )
-                )
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
