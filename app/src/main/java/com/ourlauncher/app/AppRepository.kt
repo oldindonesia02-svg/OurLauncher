@@ -1,6 +1,5 @@
 package com.ourlauncher.app
 
-import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
@@ -35,25 +34,16 @@ class AppRepository(private val context: Context) {
         val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
             ?: return
 
-        if (sourceBounds != null && context is Activity) {
-            val rootView = context.window.decorView
-            val options = ActivityOptions.makeClipRevealAnimation(
-                rootView,
-                sourceBounds.left,
-                sourceBounds.top,
-                sourceBounds.width(),
-                sourceBounds.height()
-            )
-            context.startActivity(launchIntent, options.toBundle())
-        } else {
-            context.startActivity(launchIntent)
-        }
+        // Zero-duration transition to let our custom Compose animation handle 100% of the visuals seamlessly
+        val options = ActivityOptions.makeCustomAnimation(context, 0, 0)
+        context.startActivity(launchIntent, options.toBundle())
     }
 
     fun launchApp(packageName: String) {
         val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
         if (launchIntent != null) {
-            context.startActivity(launchIntent)
+            val options = ActivityOptions.makeCustomAnimation(context, 0, 0)
+            context.startActivity(launchIntent, options.toBundle())
         }
     }
 }
