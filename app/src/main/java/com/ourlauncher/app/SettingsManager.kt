@@ -6,11 +6,34 @@ import android.content.SharedPreferences
 class SettingsManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("void_settings", Context.MODE_PRIVATE)
 
-    // Saved Home Grid & Dock Layout
+    // Layout Persistence
     var homeGridApps: List<String>
         get() = prefs.getString("home_grid_apps", "")?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
         set(value) = prefs.edit().putString("home_grid_apps", value.joinToString(",")).apply()
 
+    // Live Search Bar Position Settings
+    var searchOffset: Float
+        get() = prefs.getFloat("search_offset", 0f)
+        set(value) = prefs.edit().putFloat("search_offset", value).apply()
+
+    var hideSearchCapsule: Boolean
+        get() = prefs.getBoolean("hide_search_capsule", false)
+        set(value) = prefs.edit().putBoolean("hide_search_capsule", value).apply()
+
+    // Live Dock Customization Settings
+    var dockRadius: Float
+        get() = prefs.getFloat("dock_radius", 33f)
+        set(value) = prefs.edit().putFloat("dock_radius", value).apply()
+
+    var dockOffset: Float
+        get() = prefs.getFloat("dock_offset", 0f)
+        set(value) = prefs.edit().putFloat("dock_offset", value).apply()
+
+    var showDockBg: Boolean
+        get() = prefs.getBoolean("show_dock_bg", true)
+        set(value) = prefs.edit().putBoolean("show_dock_bg", value).apply()
+
+    // General Customization
     var showLabels: Boolean
         get() = prefs.getBoolean("show_labels", true)
         set(value) = prefs.edit().putBoolean("show_labels", value).apply()
@@ -18,18 +41,6 @@ class SettingsManager(context: Context) {
     var fontFamily: String
         get() = prefs.getString("font_family", "sans-serif") ?: "sans-serif"
         set(value) = prefs.edit().putString("font_family", value).apply()
-
-    var dockRadius: Float
-        get() = prefs.getFloat("dock_radius", 36f)
-        set(value) = prefs.edit().putFloat("dock_radius", value).apply()
-
-    var showDockBg: Boolean
-        get() = prefs.getBoolean("show_dock_bg", true)
-        set(value) = prefs.edit().putBoolean("show_dock_bg", value).apply()
-
-    var searchOffset: Float
-        get() = prefs.getFloat("search_offset", 0f)
-        set(value) = prefs.edit().putFloat("search_offset", value).apply()
 
     var iconSize: Float
         get() = prefs.getFloat("icon_size", 54f)
@@ -47,7 +58,7 @@ class SettingsManager(context: Context) {
         get() = prefs.getString("icon_pack", "default") ?: "default"
         set(value) = prefs.edit().putString("icon_pack", value).apply()
 
-    // Swipe Actions
+    // Gesture Actions
     var leftPullDownAction: String
         get() = prefs.getString("left_pull_down", "notifications") ?: "notifications"
         set(value) = prefs.edit().putString("left_pull_down", value).apply()
