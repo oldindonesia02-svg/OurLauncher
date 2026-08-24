@@ -8,6 +8,7 @@ import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -20,10 +21,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,34 +59,38 @@ fun AppIcon(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     showLabel: Boolean = true,
+    fontFamilyName: String = "sans-serif",
     iconSizeDp: Float = 54f,
     cornerRadiusPercent: Float = 25f,
     iconOpacity: Float = 1.0f,
     customDrawable: Drawable? = null,
     onClickWithBounds: ((Rect) -> Unit)? = null
 ) {
-    var screenBounds by remember { mutableStateOf<Rect?>(null) }
+    var iconBounds by remember { mutableStateOf<Rect?>(null) }
     val interactionSource = remember { MutableInteractionSource() }
+
+    val resolvedFontFamily = when (fontFamilyName.lowercase()) {
+        "serif" -> FontFamily.Serif
+        "monospace" -> FontFamily.Monospace
+        "cursive" -> FontFamily.Cursive
+        else -> FontFamily.Default
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
-            .onGloballyPositioned { coords ->
-                val b = coords.boundsInRoot()
-                screenBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
-            }
             .clickable(
                 interactionSource = interactionSource,
                 indication = null
             ) {
-                val bounds = screenBounds
+                val bounds = iconBounds
                 if (onClickWithBounds != null && bounds != null) {
                     onClickWithBounds(bounds)
                 } else {
                     onClick()
                 }
             }
-            .padding(4.dp)
+            .padding(horizontal = 2.dp, vertical = 4.dp)
     ) {
         val targetDrawable = customDrawable ?: app.icon
         val cacheKey = "${app.packageName}_${targetDrawable.hashCode()}"
@@ -90,17 +100,25 @@ fun AppIcon(
 
         val shape = RoundedCornerShape(cornerRadiusPercent.toInt())
 
-        if (imageBitmap != null) {
-            Image(
-                bitmap = imageBitmap,
-                contentDescription = app.label,
-                modifier = Modifier
-                    .size(iconSizeDp.dp)
-                    .clip(shape)
-                    .alpha(iconOpacity)
-            )
-        } else {
-            Spacer(modifier = Modifier.size(iconSizeDp.dp))
+        Box(
+            modifier = Modifier
+                .onGloballyPositioned { coords ->
+                    val b = coords.boundsInRoot()
+                    iconBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
+                }
+        ) {
+            if (imageBitmap != null) {
+                Image(
+                    bitmap = imageBitmap,
+                    contentDescription = app.label,
+                    modifier = Modifier
+                        .size(iconSizeDp.dp)
+                        .clip(shape)
+                        .alpha(iconOpacity)
+                )
+            } else {
+                Spacer(modifier = Modifier.size(iconSizeDp.dp))
+            }
         }
 
         if (showLabel) {
@@ -108,9 +126,18 @@ fun AppIcon(
             Text(
                 text = app.label,
                 color = Color.White.copy(alpha = iconOpacity),
-                fontSize = 12.sp,
+                fontSize = 11.5.sp,
+                fontFamily = resolvedFontFamily,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                textAlign = TextAlign.Center,
+                overflow = TextOverflow.Ellipsis,
+                style = TextStyle(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.85f),
+                        offset = Offset(0f, 2f),
+                        blurRadius = 4f
+                    )
+                )
             )
         }
     }
