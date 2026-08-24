@@ -1,7 +1,7 @@
 package com.ourlauncher.app.ui
 
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.ourlauncher.app.AppInfo
+import kotlin.math.abs
 
 @Composable
 fun HomeScreen(
@@ -23,18 +24,46 @@ fun HomeScreen(
     onAppClick: (AppInfo) -> Unit,
     onAppClickWithBounds: (AppInfo, android.graphics.Rect) -> Unit,
     onOpenDrawer: () -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    swipeUp: String = "drawer",
+    swipeDown: String = "none",
+    swipeLeft: String = "none",
+    swipeRight: String = "none"
 ) {
     val dockApps = apps.take(4)
     val gridApps = apps.drop(4).take(20)
 
+    fun performSwipe(action: String) {
+        when (action) {
+            "drawer" -> onOpenDrawer()
+            "settings" -> onOpenSettings()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onVerticalDrag = { change: androidx.compose.ui.input.pointer.PointerInputChange, dragAmount: Float ->
-                        if (dragAmount < -20) onOpenDrawer()
+            .pointerInput(swipeUp, swipeDown, swipeLeft, swipeRight) {
+                var totalDragX = 0f
+                var totalDragY = 0f
+                detectDragGestures(
+                    onDragStart = {
+                        totalDragX = 0f
+                        totalDragY = 0f
+                    },
+                    onDrag = { _, dragAmount ->
+                        totalDragX += dragAmount.x
+                        totalDragY += dragAmount.y
+                    },
+                    onDragEnd = {
+                        val threshold = 60f
+                        if (abs(totalDragY) > abs(totalDragX)) {
+                            if (totalDragY < -threshold) performSwipe(swipeUp)
+                            else if (totalDragY > threshold) performSwipe(swipeDown)
+                        } else {
+                            if (totalDragX < -threshold) performSwipe(swipeLeft)
+                            else if (totalDragX > threshold) performSwipe(swipeRight)
+                        }
                     }
                 )
             }
