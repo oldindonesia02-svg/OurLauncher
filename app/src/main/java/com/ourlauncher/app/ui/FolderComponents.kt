@@ -3,11 +3,9 @@ package com.ourlauncher.app.ui
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,7 +15,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -33,8 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
@@ -47,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
+import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -103,7 +100,6 @@ fun FolderIcon(
                 .padding(6.dp),
             contentAlignment = Alignment.Center
         ) {
-            // 2x2 Mini Preview Icons
             val previewApps = folder.apps.take(4)
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -180,28 +176,60 @@ fun FolderPopup(
     onRenameFolder: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    BackHandler { onDismiss() }
-
+    val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     var folderTitle by remember { mutableStateOf(folder.name) }
 
+    // --- FLUID SPRING EXPAND ANIMATION ENGINE ---
+    val animProgress = remember { Animatable(0f) }
+
+    LaunchedEffect(Unit) {
+        animProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(
+                dampingRatio = 0.76f,
+                stiffness = 360f
+            )
+        )
+    }
+
+    fun dismissAnimated() {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+        coroutineScope.launch {
+            animProgress.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 180)
+            )
+            onDismiss()
+        }
+    }
+
+    BackHandler { dismissAnimated() }
+
+    val p = animProgress.value
+    val scale = 0.65f + (0.35f * p)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.65f))
+            .background(Color.Black.copy(alpha = (0.65f * p).coerceIn(0f, 0.65f)))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) {
-                focusManager.clearFocus()
-                keyboardController?.hide()
-                onDismiss()
+                dismissAnimated()
             },
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    alpha = p.coerceIn(0f, 1f)
+                }
                 .width(320.dp)
                 .wrapContentHeight()
                 .clip(RoundedCornerShape(32.dp))
@@ -269,7 +297,7 @@ fun FolderPopup(
                         AppIcon(
                             app = app,
                             onClick = {
-                                onDismiss()
+                                dismissAnimated()
                                 onAppClick(app)
                             },
                             showLabel = settingsManager.showLabels,
@@ -279,7 +307,7 @@ fun FolderPopup(
                             iconOpacity = settingsManager.iconOpacity,
                             customDrawable = getCustomDrawable(app.packageName),
                             onClickWithBounds = { bounds ->
-                                onDismiss()
+                                dismissAnimated()
                                 onAppClickWithBounds(app, bounds)
                             }
                         )
