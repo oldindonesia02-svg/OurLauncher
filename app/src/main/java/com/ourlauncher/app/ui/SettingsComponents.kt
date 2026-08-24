@@ -1,9 +1,12 @@
 package com.ourlauncher.app.ui
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -11,6 +14,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +25,83 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+@Composable
+fun PhoneMockupPreview(durationMs: Int) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // Phone Outer Mockup Body
+        Box(
+            modifier = Modifier
+                .width(170.dp)
+                .height(290.dp)
+                .clip(RoundedCornerShape(32.dp))
+                .background(Color(0xFF141416))
+                .border(2.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(32.dp))
+                .padding(8.dp)
+        ) {
+            val infiniteTransition = rememberInfiniteTransition(label = "mockupAnim")
+            val progress by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = durationMs.coerceAtLeast(250), easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "progress"
+            )
+
+            // Phone Screen Background
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(26.dp))
+                    .background(Color(0xFF000000))
+            ) {
+                // Mockup Mini Dock Icons at bottom
+                Row(
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 12.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color.White.copy(alpha = 0.10f))
+                        .padding(vertical = 6.dp)
+                ) {
+                    val colors = listOf(Color(0xFF0A84FF), Color(0xFF34C759), Color(0xFFFF9500), Color(0xFFFF2D55))
+                    colors.forEach { c ->
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(c.copy(alpha = 0.7f))
+                        )
+                    }
+                }
+
+                // Expanding App Card (Animates up from 2nd dock item to full screen)
+                val cardWidth = (18 + (136 * progress)).dp
+                val cardHeight = (18 + (250 * progress)).dp
+                val cardRadius = ((1f - progress) * 6 + (progress * 22)).dp
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = (14 * (1f - progress)).dp)
+                        .size(width = cardWidth, height = cardHeight)
+                        .clip(RoundedCornerShape(cardRadius))
+                        .background(Color(0xFF0A84FF))
+                )
+            }
+        }
+    }
+}
 
 @Composable
 fun SettingsSectionHeader(title: String) {
