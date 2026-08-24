@@ -178,7 +178,7 @@ fun FolderPopup(
     onAppClick: (AppInfo) -> Unit,
     onAppClickWithBounds: (AppInfo, Rect) -> Unit,
     onRenameFolder: (String) -> Unit,
-    onDragOutApp: (AppInfo, Offset) -> Unit,
+    onStartDragOut: (AppInfo, Offset) -> Unit,
     onDismiss: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -263,7 +263,7 @@ fun FolderPopup(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
-                ) { /* Consume background click */ }
+                ) { /* consume background */ }
                 .padding(22.dp)
         ) {
             Column(
@@ -300,24 +300,24 @@ fun FolderPopup(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    itemsIndexed(folder.apps, key = { _, app -> app.packageName }) { index, app ->
+                    itemsIndexed(folder.apps, key = { _, app -> app.packageName }) { _, app ->
+                        var itemGlobalOffset by remember { mutableStateOf(Offset.Zero) }
+
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .onGloballyPositioned { coords ->
+                                    itemGlobalOffset = coords.boundsInRoot().let { Offset(it.left, it.top) }
+                                }
                                 .pointerInput(app.packageName) {
                                     detectDragGesturesAfterLongPress(
-                                        onDragStart = { /* Drag started */ },
-                                        onDrag = { change, _ ->
-                                            change.consume()
-                                            val currentPos = change.position
-                                            // Trigger Drag-out when dragged outside the folder popup
-                                            val isOutside = popupBounds?.contains(currentPos.x.toInt(), currentPos.y.toInt()) == false
-                                            if (isOutside) {
-                                                focusManager.clearFocus()
-                                                keyboardController?.hide()
-                                                onDragOutApp(app, currentPos)
-                                            }
+                                        onDragStart = { localOffset ->
+                                            focusManager.clearFocus()
+                                            keyboardController?.hide()
+                                            val globalTouch = itemGlobalOffset + localOffset
+                                            onStartDragOut(app, globalTouch)
                                         },
+                                        onDrag = { _, _ -> },
                                         onDragEnd = { },
                                         onDragCancel = { }
                                     )
