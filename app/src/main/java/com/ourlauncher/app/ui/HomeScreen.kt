@@ -271,7 +271,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Dynamic Offset Floating Search & Dots Capsule
                 if (!settingsManager.hideSearchCapsule) {
                     Box(
                         modifier = Modifier
@@ -317,7 +316,7 @@ fun HomeScreen(
         if (draggedIndex != null && draggedIndex!! < gridApps.size) {
             val app = gridApps[draggedIndex!!]
             val targetDrawable = getCustomDrawable(app.packageName) ?: app.icon
-            val cacheKey = "${app.packageName}_${targetDrawable.hashCode()}"
+            val cacheKey = "${app.packageName}_${targetDrawable?.hashCode() ?: 0}"
             val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
 
             with(density) {
