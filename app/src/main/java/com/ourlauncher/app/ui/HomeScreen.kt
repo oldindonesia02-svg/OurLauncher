@@ -54,35 +54,43 @@ fun HomeScreen(
     val density = LocalDensity.current
 
     // Drag State
-    var draggedAppIndex by remember { mutableStateOf<Int?>(null) }
-    var dragPosition by remember { mutableStateOf(Offset.Zero) }
+    var draggedIndex by remember { mutableStateOf<Int?>(null) }
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
     val itemBoundsMap = remember { mutableStateMapOf<Int, android.graphics.Rect>() }
 
     // Animation States
     var activeApp by remember { mutableStateOf<AppInfo?>(null) }
     var activeBounds by remember { mutableStateOf<android.graphics.Rect?>(null) }
     var isAppOpen by remember { mutableStateOf(false) }
+    var isAnimating by remember { mutableStateOf(false) }
     val animProgress = remember { Animatable(0f) }
 
-    // Bézier Easing
     val posEasing = remember(settingsManager.posCurveX1, settingsManager.posCurveY1, settingsManager.posCurveX2, settingsManager.posCurveY2) {
-        CubicBezierEasing(settingsManager.posCurveX1.coerceIn(0f, 1f), settingsManager.posCurveY1, settingsManager.posCurveX2.coerceIn(0f, 1f), settingsManager.posCurveY2)
+        CubicBezierEasing(
+            settingsManager.posCurveX1.coerceIn(0f, 1f),
+            settingsManager.posCurveY1.coerceIn(0f, 1.5f),
+            settingsManager.posCurveX2.coerceIn(0f, 1f),
+            settingsManager.posCurveY2.coerceIn(0f, 1.5f)
+        )
     }
 
-    // Trigger Closing Animation on returning to Home Screen
     LaunchedEffect(resumeTrigger) {
         if (resumeTrigger > 0L && isAppOpen && activeBounds != null) {
+            isAnimating = true
             animProgress.snapTo(1f)
             animProgress.animateTo(
                 targetValue = 0f,
                 animationSpec = tween(durationMillis = 280, easing = posEasing)
             )
             isAppOpen = false
+            isAnimating = false
             activeApp = null
         }
     }
 
-    fun launchAppWithAnim(app: AppInfo, bounds: android.graphics.Rect?) {
+    fun handleAppOpen(app: AppInfo, bounds: android.graphics.Rect?) {
+        if (isAnimating) return
+
         if (!settingsManager.animEnabled || bounds == null) {
             onAppClick(app)
             return
@@ -91,6 +99,7 @@ fun HomeScreen(
         activeApp = app
         activeBounds = bounds
         isAppOpen = true
+        isAnimating = true
 
         coroutineScope.launch {
             animProgress.snapTo(0f)
@@ -100,8 +109,9 @@ fun HomeScreen(
                     animationSpec = tween(durationMillis = settingsManager.animDuration.toInt(), easing = posEasing)
                 )
             }
-            delay((settingsManager.animDuration * 0.70f).toLong())
+            delay((settingsManager.animDuration * 0.72f).toLong())
             onAppClickWithBounds(app, bounds)
+            isAnimating = false
         }
     }
 
@@ -111,7 +121,7 @@ fun HomeScreen(
         val p = animProgress.value
 
         val bgScale = if (activeApp != null && settingsManager.animAdvancedTexture) 1f - (0.05f * p) else 1f
-        val bgAlpha = if (activeApp != null && settingsManager.animAdvancedTexture) 1f - (0.30f * p) else 1f
+        val bgAlpha = if (activeApp != null && settingsManager.animAdvancedTexture) 1f - (0.35f * p) else 1f
 
         Box(
             modifier = Modifier
@@ -120,33 +130,33 @@ fun HomeScreen(
                 .alpha(bgAlpha)
                 .pointerInput(Unit) {
                     detectDragGesturesAfterLongPress(
-                        onDragStart = { startOffset ->
+                        onDragStart = { startPos ->
                             val found = itemBoundsMap.entries.firstOrNull { (_, rect) ->
-                                rect.contains(startOffset.x.toInt(), startOffset.y.toInt())
+                                rect.contains(startPos.x.toInt(), startPos.y.toInt())
                             }
                             if (found != null) {
-                                draggedAppIndex = found.key
-                                dragPosition = startOffset
+                                draggedIndex = found.key
+                                dragOffset = startPos
                             }
                         },
-                        onDrag = { change, dragAmount ->
+                        onDrag = { change, amount ->
                             change.consume()
-                            dragPosition += dragAmount
+                            dragOffset += amount
 
                             val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
-                                rect.contains(dragPosition.x.toInt(), dragPosition.y.toInt())
+                                rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
                             }
-                            if (hovered != null && draggedAppIndex != null && hovered.key != draggedAppIndex) {
-                                val from = draggedAppIndex!!
+                            if (hovered != null && draggedIndex != null && hovered.key != draggedIndex) {
+                                val from = draggedIndex!!
                                 val to = hovered.key
                                 val list = gridApps.toMutableList()
                                 Collections.swap(list, from, to)
                                 gridApps = list
-                                draggedAppIndex = to
+                                draggedIndex = to
                             }
                         },
-                        onDragEnd = { draggedAppIndex = null },
-                        onDragCancel = { draggedAppIndex = null }
+                        onDragEnd = { draggedIndex = null },
+                        onDragCancel = { draggedIndex = null }
                     )
                 }
                 .pointerInput(Unit) {
@@ -156,15 +166,18 @@ fun HomeScreen(
             Column(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
-                    contentPadding = PaddingValues(top = 56.dp, start = 16.dp, end = 16.dp),
+                    contentPadding = PaddingValues(top = 56.dp, start = 12.dp, end = 12.dp),
                     userScrollEnabled = false,
-                    modifier = Modifier.fillMaxSize().weight(1f)
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f)
                 ) {
                     itemsIndexed(gridApps, key = { _, app -> app.packageName }) { index, app ->
-                        val isBeingDragged = draggedAppIndex == index
+                        val isBeingDragged = draggedIndex == index
                         Box(
                             modifier = Modifier
-                                .height(88.dp)
+                                .wrapContentHeight()
+                                .padding(vertical = 4.dp)
                                 .onGloballyPositioned { coords ->
                                     val b = coords.boundsInRoot()
                                     itemBoundsMap[index] = android.graphics.Rect(
@@ -176,13 +189,14 @@ fun HomeScreen(
                         ) {
                             AppIcon(
                                 app = app,
-                                onClick = { launchAppWithAnim(app, null) },
+                                onClick = { handleAppOpen(app, null) },
                                 showLabel = settingsManager.showLabels,
+                                fontFamilyName = settingsManager.fontFamily,
                                 iconSizeDp = settingsManager.iconSize,
                                 cornerRadiusPercent = settingsManager.iconCornerRadius,
                                 iconOpacity = settingsManager.iconOpacity,
                                 customDrawable = getCustomDrawable(app.packageName),
-                                onClickWithBounds = { bounds -> launchAppWithAnim(app, bounds) }
+                                onClickWithBounds = { bounds -> handleAppOpen(app, bounds) }
                             )
                         }
                     }
@@ -198,15 +212,15 @@ fun HomeScreen(
                     dockRadius = settingsManager.dockRadius,
                     showDockBg = settingsManager.showDockBg,
                     getCustomDrawable = getCustomDrawable,
-                    onAppClick = { launchAppWithAnim(it, null) },
-                    onAppClickWithBounds = { app, bounds -> launchAppWithAnim(app, bounds) }
+                    onAppClick = { handleAppOpen(it, null) },
+                    onAppClickWithBounds = { app, bounds -> handleAppOpen(app, bounds) }
                 )
             }
         }
 
-        // --- FLOATING ICON WHEN DRAGGED ---
-        if (draggedAppIndex != null && draggedAppIndex!! < gridApps.size) {
-            val app = gridApps[draggedAppIndex!!]
+        // --- FLOATING DRAGGED ICON ---
+        if (draggedIndex != null && draggedIndex!! < gridApps.size) {
+            val app = gridApps[draggedIndex!!]
             val targetDrawable = getCustomDrawable(app.packageName) ?: app.icon
             val cacheKey = "${app.packageName}_${targetDrawable.hashCode()}"
             val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
@@ -216,8 +230,8 @@ fun HomeScreen(
                     modifier = Modifier
                         .offset {
                             IntOffset(
-                                (dragPosition.x - (settingsManager.iconSize.dp.toPx() / 2)).roundToInt(),
-                                (dragPosition.y - (settingsManager.iconSize.dp.toPx() / 2) - 30.dp.toPx()).roundToInt()
+                                (dragOffset.x - (settingsManager.iconSize.dp.toPx() / 2)).roundToInt(),
+                                (dragOffset.y - (settingsManager.iconSize.dp.toPx() / 2) - 30.dp.toPx()).roundToInt()
                             )
                         }
                         .scale(1.15f),
@@ -236,22 +250,23 @@ fun HomeScreen(
             }
         }
 
-        // --- GPU-ACCELERATED DUAL OPEN & CLOSE EXPANDING CARD ---
-        if (activeApp != null && activeBounds != null && p > 0.01f) {
+        // --- EXPANDING CARD (NO CORNER GLITCH) ---
+        if (activeApp != null && activeBounds != null && p > 0.005f) {
             val b = activeBounds!!
             val currentX = b.left * (1f - p)
             val currentY = b.top * (1f - p)
             val currentW = b.width() + (screenWidthPx - b.width()) * p
             val currentH = b.height() + (screenHeightPx - b.height()) * p
-            val currentRadius = (28f * (1f - p) + 36f * p)
+            val initialCornerPx = (b.width() * (settingsManager.iconCornerRadius / 100f))
+            val currentRadius = initialCornerPx * (1f - p)
 
             with(density) {
                 Box(
                     modifier = Modifier
                         .offset { IntOffset(currentX.roundToInt(), currentY.roundToInt()) }
                         .size(currentW.toDp(), currentH.toDp())
-                        .clip(RoundedCornerShape(currentRadius.dp))
-                        .background(Color(0xFF18181B))
+                        .clip(RoundedCornerShape(currentRadius.toDp()))
+                        .background(Color(0xFF141416))
                         .graphicsLayer { alpha = p.coerceIn(0.1f, 1f) },
                     contentAlignment = Alignment.Center
                 ) {
@@ -264,8 +279,8 @@ fun HomeScreen(
                             bitmap = bitmap,
                             contentDescription = null,
                             modifier = Modifier
-                                .size((settingsManager.iconSize * 1.25f).dp)
-                                .scale(1f + (0.3f * p))
+                                .size((settingsManager.iconSize * 1.35f).dp)
+                                .scale(1f + (0.35f * p))
                         )
                     }
                 }
