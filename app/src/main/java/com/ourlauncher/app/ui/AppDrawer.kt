@@ -46,14 +46,13 @@ import com.ourlauncher.app.AppInfo
 fun AppDrawer(
     apps: List<AppInfo>,
     onAppClick: (AppInfo) -> Unit,
+    onAppClickWithBounds: (AppInfo, android.graphics.Rect) -> Unit,
     onCloseDrawer: () -> Unit
 ) {
     val gridState = rememberLazyGridState()
-    
-    // 🔍 LIVE SEARCH STATE
+
     var searchQuery by remember { mutableStateOf("") }
-    
-    // 🔍 FILTER APPS BASED ON SEARCH
+
     val filteredApps = remember(searchQuery, apps) {
         if (searchQuery.isEmpty()) {
             apps
@@ -62,11 +61,9 @@ fun AppDrawer(
         }
     }
 
-    // Ultra-sensitive Instant Swipe Down Connection
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                // If user drags DOWN (> 8f) and grid is at top, close immediately!
                 if (available.y > 8f && gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0) {
                     onCloseDrawer()
                     return Offset(0f, available.y)
@@ -80,8 +77,8 @@ fun AppDrawer(
 
     val glassBgGradient = Brush.verticalGradient(
         colors = listOf(
-            Color(0xFF141418).copy(alpha = 0.72f), 
-            Color(0xFF0A0A0D).copy(alpha = 0.88f)  
+            Color(0xFF141418).copy(alpha = 0.72f),
+            Color(0xFF0A0A0D).copy(alpha = 0.88f)
         )
     )
 
@@ -112,7 +109,6 @@ fun AppDrawer(
         ) {
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Pull Handle Line
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
@@ -124,7 +120,6 @@ fun AppDrawer(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 🔍 REAL GLASS SEARCH BAR (Live Typing)
             Box(
                 modifier = Modifier
                     .padding(horizontal = 18.dp)
@@ -156,7 +151,6 @@ fun AppDrawer(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 🔍 SHOW FILTERED APPS
             LazyVerticalGrid(
                 state = gridState,
                 columns = GridCells.Fixed(4),
@@ -164,10 +158,14 @@ fun AppDrawer(
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(
-                    items = filteredApps, // Use filtered list!
+                    items = filteredApps,
                     key = { app -> app.packageName }
                 ) { app ->
-                    AppIcon(app = app, onClick = { onAppClick(app) })
+                    AppIcon(
+                        app = app,
+                        onClick = { onAppClick(app) },
+                        onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) }
+                    )
                 }
             }
         }
