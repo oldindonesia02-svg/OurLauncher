@@ -2,9 +2,6 @@ package com.ourlauncher.app.ui
 
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +25,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
@@ -42,7 +40,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AppDrawer(
     apps: List<AppInfo>,
-    settingsManager: SettingsManager,
+    settingsManager: SettingsManager = SettingsManager(LocalContext.current),
     getCustomDrawable: (String) -> Drawable? = { null },
     onAppClick: (AppInfo) -> Unit,
     onCloseDrawer: () -> Unit
@@ -262,14 +260,10 @@ fun AppDrawer(
                 }
 
                 // --- LETTER POPUP INDICATOR ---
-                AnimatedVisibility(
-                    visible = activeScrollLetter != null,
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.Center)
-                ) {
+                if (activeScrollLetter != null) {
                     Box(
                         modifier = Modifier
+                            .align(Alignment.Center)
                             .size(72.dp)
                             .clip(CircleShape)
                             .background(
@@ -284,7 +278,7 @@ fun AppDrawer(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = activeScrollLetter?.toString() ?: "",
+                            text = activeScrollLetter.toString(),
                             color = Color.White,
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold
