@@ -62,7 +62,7 @@ fun HomeScreen(
             }
 
             SearchPill(onClick = onOpenDrawer, modifier = Modifier.padding(bottom = 8.dp))
-            Dock(pinnedApps = dockApps, onAppClick = onAppClick)
+            Dock(pinnedApps = dockApps, onAppClick = onAppClick, onAppClickWithBounds = onAppClickWithBounds)
         }
     }
 }
