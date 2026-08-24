@@ -1,6 +1,5 @@
 package com.ourlauncher.app
 
-import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
@@ -37,15 +36,9 @@ class AppRepository(private val context: Context) {
 
         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-        if (sourceBounds != null && context is Activity) {
+        if (sourceBounds != null) {
             launchIntent.sourceBounds = sourceBounds
-            val options = ActivityOptions.makeScaleUpAnimation(
-                context.window.decorView,
-                sourceBounds.left,
-                sourceBounds.top,
-                sourceBounds.width(),
-                sourceBounds.height()
-            )
+            val options = ActivityOptions.makeCustomAnimation(context, 0, 0)
             context.startActivity(launchIntent, options.toBundle())
         } else {
             context.startActivity(launchIntent)
