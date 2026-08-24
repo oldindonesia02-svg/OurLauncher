@@ -15,6 +15,13 @@ import com.ourlauncher.app.ui.clearIconCache
 private enum class Screen { HOME, DRAWER, SETTINGS }
 
 class MainActivity : ComponentActivity() {
+    private val isResumedTrigger = mutableStateOf(0L)
+
+    override fun onResume() {
+        super.onResume()
+        isResumedTrigger.value = System.currentTimeMillis()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -38,6 +45,7 @@ class MainActivity : ComponentActivity() {
                     Screen.HOME -> HomeScreen(
                         apps = apps,
                         settingsManager = settingsManager,
+                        resumeTrigger = isResumedTrigger.value,
                         getCustomDrawable = { pkg -> iconPackManager.getCustomIcon(pkg) },
                         onAppClick = { app -> repository.launchApp(app) },
                         onAppClickWithBounds = { app, bounds -> repository.launchApp(app, bounds) },
