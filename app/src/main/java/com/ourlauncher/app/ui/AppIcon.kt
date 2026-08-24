@@ -1,172 +1,399 @@
 package com.ourlauncher.app.ui
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
-import androidx.compose.foundation.Image
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
-import kotlin.math.cos
-import kotlin.math.sin
-
-private val bitmapCache = mutableMapOf<String, Bitmap>()
-
-fun clearIconCache() {
-    bitmapCache.clear()
-}
-
-fun getCachedBitmap(key: String, drawable: Drawable?): Bitmap? {
-    if (drawable == null) return null
-    bitmapCache[key]?.let { return it }
-    return try {
-        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 144
-        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 144
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
-        bitmapCache[key] = bitmap
-        bitmap
-    } catch (e: Exception) {
-        null
-    }
-}
+import kotlinx.coroutines.launch
 
 @Composable
-fun AppIcon(
-    app: AppInfo,
-    onClick: () -> Unit,
-    showLabel: Boolean = true,
-    fontFamilyName: String = "sans-serif",
-    iconSizeDp: Float = 54f,
-    cornerRadiusPercent: Float = 25f,
-    iconOpacity: Float = 1.0f,
-    customDrawable: Drawable? = null,
-    onClickWithBounds: ((Rect) -> Unit)? = null,
-    modifier: Modifier = Modifier
+fun AppDrawer(
+    apps: List<AppInfo>,
+    settingsManager: SettingsManager = SettingsManager(LocalContext.current),
+    getCustomDrawable: (String) -> Drawable? = { null },
+    iconSize: Float = settingsManager.iconSize,
+    iconSizeDp: Float = iconSize,
+    cornerRadiusPercent: Float = settingsManager.iconCornerRadius,
+    iconCornerRadius: Float = cornerRadiusPercent,
+    iconOpacity: Float = settingsManager.iconOpacity,
+    showLabel: Boolean = settingsManager.showLabels,
+    showLabels: Boolean = showLabel,
+    fontFamily: String = settingsManager.fontFamily,
+    fontFamilyName: String = fontFamily,
+    onAppClick: (AppInfo) -> Unit = {},
+    onAppClickWithBounds: (AppInfo, Rect) -> Unit = { app, _ -> onAppClick(app) },
+    onCloseDrawer: () -> Unit = {}
 ) {
-    val context = LocalContext.current
-    val settingsManager = remember { SettingsManager(context) }
-    val targetDrawable = customDrawable ?: app.icon
-    val cacheKey = "${app.packageName}_${targetDrawable?.hashCode() ?: 0}"
-    val bitmap = remember(cacheKey) { getCachedBitmap(cacheKey, targetDrawable) }
+    BackHandler { onCloseDrawer() }
 
-    val shape = RoundedCornerShape(cornerRadiusPercent.toInt())
-    var currentBounds by remember { mutableStateOf<Rect?>(null) }
+    val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val gridState = rememberLazyGridState()
 
-    val colorFilter = remember(settingsManager.iconTheme, settingsManager.iconTintColor) {
-        when (settingsManager.iconTheme) {
-            "dark" -> {
-                val matrix = ColorMatrix().apply { setToSaturation(0f) }
-                ColorFilter.colorMatrix(matrix)
-            }
-            "tinted" -> ColorFilter.tint(Color(settingsManager.iconTintColor.toULong()))
-            else -> null
+    var searchQuery by remember { mutableStateOf("") }
+    val drawerOffsetY = remember { Animatable(0f) }
+    val dismissThresholdPx = with(density) { 150.dp.toPx() }
+
+    val filteredApps = remember(searchQuery, apps) {
+        if (searchQuery.isBlank()) {
+            apps.sortedBy { it.label.lowercase() }
+        } else {
+            apps.filter {
+                it.label.contains(searchQuery, ignoreCase = true) ||
+                it.packageName.contains(searchQuery, ignoreCase = true)
+            }.sortedBy { it.label.lowercase() }
         }
     }
 
-    val lensBrush = remember(settingsManager.lensLightEnabled, settingsManager.lensAngle, settingsManager.lensIntensity) {
-        if (settingsManager.lensLightEnabled && settingsManager.graphicPreset != "low") {
-            val rad = Math.toRadians(settingsManager.lensAngle.toDouble())
-            val intensity = settingsManager.lensIntensity
-            Brush.linearGradient(
-                colors = listOf(
-                    Color.White.copy(alpha = (intensity * 0.85f).coerceIn(0f, 1f)),
-                    Color.White.copy(alpha = (intensity * 0.15f).coerceIn(0f, 1f)),
-                    Color.Transparent
-                ),
-                start = Offset.Zero,
-                end = Offset(cos(rad).toFloat() * 200f, sin(rad).toFloat() * 200f)
-            )
-        } else null
+    val alphabet = remember { ('A'..'Z').toList() }
+    val alphabetIndexMap = remember(filteredApps) {
+        val map = mutableMapOf<Char, Int>()
+        filteredApps.forEachIndexed { index, app ->
+            val firstChar = app.label.firstOrNull()?.uppercaseChar() ?: '#'
+            if (!map.containsKey(firstChar) && firstChar in 'A'..'Z') {
+                map[firstChar] = index
+            }
+        }
+        map
     }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-            .onGloballyPositioned { coords ->
-                val b = coords.boundsInRoot()
-                currentBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
+    var activeScrollLetter by remember { mutableStateOf<Char?>(null) }
+
+    // --- NESTED SCROLL: ONLY PULLS DOWN ONCE AT THE VERY TOP ---
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (drawerOffsetY.value > 0f) {
+                    val newOffset = (drawerOffsetY.value + available.y).coerceAtLeast(0f)
+                    val consumedY = newOffset - drawerOffsetY.value
+                    coroutineScope.launch {
+                        drawerOffsetY.snapTo(newOffset)
+                    }
+                    return Offset(0f, consumedY)
+                }
+                return Offset.Zero
             }
-            .clickable {
-                if (onClickWithBounds != null && currentBounds != null) {
-                    onClickWithBounds(currentBounds!!)
-                } else {
-                    onClick()
+
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                // When grid reaches top (first visible item is 0 and offset 0) and cannot scroll up anymore:
+                if (available.y > 0f && gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0) {
+                    val newOffset = drawerOffsetY.value + (available.y * 0.85f)
+                    coroutineScope.launch {
+                        drawerOffsetY.snapTo(newOffset)
+                    }
+                    return Offset(0f, available.y)
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (drawerOffsetY.value > 0f) {
+                    if (drawerOffsetY.value > dismissThresholdPx || available.y > 800f) {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                        onCloseDrawer()
+                    } else {
+                        drawerOffsetY.animateTo(0f, tween(240))
+                    }
+                    return available
+                }
+                return Velocity.Zero
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (drawerOffsetY.value > 0f) {
+                    if (drawerOffsetY.value > dismissThresholdPx || available.y > 800f) {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                        onCloseDrawer()
+                    } else {
+                        drawerOffsetY.animateTo(0f, tween(240))
+                    }
+                    return available
+                }
+                return Velocity.Zero
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF0C0C0E))
+            .graphicsLayer {
+                translationY = drawerOffsetY.value
+                alpha = (1f - (drawerOffsetY.value / 1200f)).coerceIn(0.2f, 1f)
+            }
+            .nestedScroll(nestedScrollConnection)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 44.dp)
+        ) {
+            // --- TOP HEADER / SEARCH BAR AREA (DRAGGABLE TO DISMISS) ---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                coroutineScope.launch {
+                                    val newOffset = (drawerOffsetY.value + dragAmount.y).coerceAtLeast(0f)
+                                    drawerOffsetY.snapTo(newOffset)
+                                }
+                            },
+                            onDragEnd = {
+                                coroutineScope.launch {
+                                    if (drawerOffsetY.value > dismissThresholdPx) {
+                                        focusManager.clearFocus()
+                                        keyboardController?.hide()
+                                        onCloseDrawer()
+                                    } else {
+                                        drawerOffsetY.animateTo(0f, tween(240))
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.14f),
+                                Color.White.copy(alpha = 0.05f)
+                            )
+                        )
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(24.dp))
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "🔍",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                text = "Search apps...",
+                                color = Color.White.copy(alpha = 0.4f),
+                                fontSize = 15.sp
+                            )
+                        }
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            singleLine = true,
+                            textStyle = TextStyle(
+                                color = Color.White,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Normal
+                            ),
+                            cursorBrush = SolidColor(Color(0xFF0A84FF)),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(
+                                onSearch = {
+                                    focusManager.clearFocus()
+                                    keyboardController?.hide()
+                                    if (filteredApps.isNotEmpty()) {
+                                        onAppClick(filteredApps.first())
+                                    }
+                                }
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    if (searchQuery.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f))
+                                .clickable { searchQuery = "" },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("✕", color = Color.White, fontSize = 11.sp)
+                        }
+                    }
                 }
             }
-    ) {
-        Box(
-            modifier = Modifier
-                .size(iconSizeDp.dp)
-                .alpha(iconOpacity)
-                .clip(shape)
-                .then(
-                    if (settingsManager.iconTheme == "transparent") {
-                        Modifier.background(Color.White.copy(alpha = 0.12f))
-                    } else Modifier
-                )
-                .then(
-                    if (lensBrush != null) {
-                        Modifier.border(settingsManager.lensStrokeWidth.dp, lensBrush, shape)
-                    } else Modifier
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (bitmap != null) {
-                Image(
-                    bitmap = bitmap.asImageBitmap(),
-                    contentDescription = app.label,
-                    colorFilter = colorFilter,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
 
-        if (showLabel) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = app.label,
-                fontSize = 11.5.sp,
-                color = Color.White,
-                fontFamily = when (fontFamilyName) {
-                    "serif" -> FontFamily.Serif
-                    "monospace" -> FontFamily.Monospace
-                    else -> FontFamily.SansSerif
-                },
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
+            // --- APPS GRID & A-Z FAST SCROLL ---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = GridCells.Fixed(4),
+                    contentPadding = PaddingValues(top = 12.dp, start = 12.dp, end = 36.dp, bottom = 48.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    itemsIndexed(
+                        items = filteredApps,
+                        key = { _, app -> app.packageName }
+                    ) { _, app ->
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AppIcon(
+                                app = app,
+                                onClick = { onAppClick(app) },
+                                showLabel = showLabel,
+                                fontFamilyName = fontFamilyName,
+                                iconSizeDp = iconSize,
+                                cornerRadiusPercent = cornerRadiusPercent,
+                                iconOpacity = iconOpacity,
+                                customDrawable = getCustomDrawable(app.packageName),
+                                onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
+                                modifier = Modifier.width(80.dp)
+                            )
+                        }
+                    }
+                }
+
+                // --- A-Z ALPHABET SCROLLER ---
+                if (searchQuery.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 4.dp)
+                            .fillMaxHeight(0.85f)
+                            .width(28.dp)
+                            .pointerInput(Unit) {
+                                detectVerticalDragGestures(
+                                    onDragStart = { offset ->
+                                        val itemHeight = size.height / alphabet.size
+                                        val index = (offset.y / itemHeight).toInt().coerceIn(0, alphabet.size - 1)
+                                        val char = alphabet[index]
+                                        activeScrollLetter = char
+                                        alphabetIndexMap[char]?.let { targetIndex ->
+                                            coroutineScope.launch { gridState.scrollToItem(targetIndex) }
+                                        }
+                                    },
+                                    onVerticalDrag = { change, _ ->
+                                        val itemHeight = size.height / alphabet.size
+                                        val index = (change.position.y / itemHeight).toInt().coerceIn(0, alphabet.size - 1)
+                                        val char = alphabet[index]
+                                        activeScrollLetter = char
+                                        alphabetIndexMap[char]?.let { targetIndex ->
+                                            coroutineScope.launch { gridState.scrollToItem(targetIndex) }
+                                        }
+                                    },
+                                    onDragEnd = { activeScrollLetter = null },
+                                    onDragCancel = { activeScrollLetter = null }
+                                )
+                            }
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.SpaceBetween,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            alphabet.forEach { char ->
+                                val hasApps = alphabetIndexMap.containsKey(char)
+                                Text(
+                                    text = char.toString(),
+                                    fontSize = 9.5.sp,
+                                    fontWeight = if (hasApps) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (hasApps) Color.White.copy(alpha = 0.85f) else Color.White.copy(alpha = 0.2f),
+                                    modifier = Modifier.clickable(enabled = hasApps) {
+                                        alphabetIndexMap[char]?.let { targetIndex ->
+                                            coroutineScope.launch { gridState.animateScrollToItem(targetIndex) }
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // --- LETTER POPUP INDICATOR ---
+                if (activeScrollLetter != null) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .size(72.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color(0xFF2C2C2E).copy(alpha = 0.95f),
+                                        Color(0xFF1C1C1E).copy(alpha = 0.98f)
+                                    )
+                                )
+                            )
+                            .border(1.5.dp, Color(0xFF0A84FF), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = activeScrollLetter.toString(),
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         }
     }
 }
