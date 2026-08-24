@@ -42,6 +42,15 @@ class SettingsManager(context: Context) {
         get() = prefs.getString("icon_pack", "default") ?: "default"
         set(value) = prefs.edit().putString("icon_pack", value).apply()
 
+    // Swipe Actions (Pull Down Left & Right)
+    var leftPullDownAction: String
+        get() = prefs.getString("left_pull_down", "notifications") ?: "notifications"
+        set(value) = prefs.edit().putString("left_pull_down", value).apply()
+
+    var rightPullDownAction: String
+        get() = prefs.getString("right_pull_down", "system_control_center") ?: "system_control_center"
+        set(value) = prefs.edit().putString("right_pull_down", value).apply()
+
     // Liquid Glass Properties
     var glassMode: String
         get() = prefs.getString("glass_mode", "easy") ?: "easy"
@@ -99,20 +108,4 @@ class SettingsManager(context: Context) {
     var cornerCurveY1: Float get() = prefs.getFloat("c_y1", 0.00f); set(v) = prefs.edit().putFloat("c_y1", v).apply()
     var cornerCurveX2: Float get() = prefs.getFloat("c_x2", 1.00f); set(v) = prefs.edit().putFloat("c_x2", v).apply()
     var cornerCurveY2: Float get() = prefs.getFloat("c_y2", 0.20f); set(v) = prefs.edit().putFloat("c_y2", v).apply()
-
-    var swipeUpAction: String
-        get() = prefs.getString("swipe_up", "drawer") ?: "drawer"
-        set(value) = prefs.edit().putString("swipe_up", value).apply()
-
-    var swipeDownAction: String
-        get() = prefs.getString("swipe_down", "none") ?: "none"
-        set(value) = prefs.edit().putString("swipe_down", value).apply()
-
-    var swipeLeftAction: String
-        get() = prefs.getString("swipe_left", "none") ?: "none"
-        set(value) = prefs.edit().putString("swipe_left", value).apply()
-
-    var swipeRightAction: String
-        get() = prefs.getString("swipe_right", "none") ?: "none"
-        set(value) = prefs.edit().putString("swipe_right", value).apply()
 }
