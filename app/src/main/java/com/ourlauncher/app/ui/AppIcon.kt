@@ -41,16 +41,12 @@ fun clearIconCache() {
 fun getCachedBitmap(cacheKey: String, drawable: Drawable?): Bitmap? {
     if (drawable == null) return null
     return iconCache.getOrPut(cacheKey) {
-        if (drawable is BitmapDrawable && drawable.bitmap != null) {
-            drawable.bitmap
-        } else {
-            val size = 108
-            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            drawable.setBounds(0, 0, size, size)
-            drawable.draw(canvas)
-            bitmap
-        }
+        val size = 192
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, size, size)
+        drawable.draw(canvas)
+        bitmap
     }
 }
 
@@ -60,7 +56,7 @@ fun AppIcon(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     showLabel: Boolean = true,
-    iconSizeDp: Int = 48,
+    iconSizeDp: Float = 54f,
     cornerRadiusPercent: Float = 25f,
     iconOpacity: Float = 1.0f,
     customDrawable: Drawable? = null,
