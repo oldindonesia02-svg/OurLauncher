@@ -9,7 +9,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -67,7 +66,6 @@ fun LiquidGlassScreen(
                 )
             }
 
-            // Reset Button
             Box(
                 modifier = Modifier
                     .size(38.dp)
@@ -99,7 +97,7 @@ fun LiquidGlassScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // --- INTERACTIVE LIVE GLASS PREVIEW CARD ---
+            // Live Preview
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -116,7 +114,6 @@ fun LiquidGlassScreen(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                // Liquid Glass Floating Capsule
                 val glassShape = RoundedCornerShape(32.dp)
                 val glassAlpha = transparency.coerceIn(0.05f, 0.85f)
                 val borderAlpha = (refractionAmount / 50f).coerceIn(0.15f, 0.9f)
@@ -146,7 +143,6 @@ fun LiquidGlassScreen(
                         .border(1.5.dp, glassBorder, glassShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Geometric Shapes: Square, Circle, Triangle
                     Row(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically,
@@ -161,7 +157,7 @@ fun LiquidGlassScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // --- EASY / ADVANCED SEGMENTED TAB ---
+            // Easy / Advanced Toggle
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -218,7 +214,6 @@ fun LiquidGlassScreen(
 
             SettingsGroup {
                 if (mode == "easy") {
-                    // Transparency
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Transparency", color = Color.White, fontSize = 14.sp)
@@ -236,7 +231,6 @@ fun LiquidGlassScreen(
 
                     SettingsDivider()
 
-                    // Blur
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Blur", color = Color.White, fontSize = 14.sp)
@@ -252,7 +246,6 @@ fun LiquidGlassScreen(
                         )
                     }
                 } else {
-                    // ADVANCED MODE SLIDERS
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Transparency", color = Color.White, fontSize = 14.sp)
