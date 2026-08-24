@@ -59,7 +59,6 @@ fun HomeScreen(
                         onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) }
                     )
                 }
-                }
             }
 
             SearchPill(onClick = onOpenDrawer, modifier = Modifier.padding(bottom = 8.dp))
