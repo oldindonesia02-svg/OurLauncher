@@ -1,5 +1,6 @@
 package com.ourlauncher.app.ui
 
+import android.graphics.drawable.Drawable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,9 @@ import kotlin.math.abs
 fun HomeScreen(
     apps: List<AppInfo>,
     showLabels: Boolean,
+    cornerRadiusPercent: Float = 25f,
+    iconOpacity: Float = 1.0f,
+    getCustomDrawable: (String) -> Drawable? = { null },
     onAppClick: (AppInfo) -> Unit,
     onAppClickWithBounds: (AppInfo, android.graphics.Rect) -> Unit,
     onOpenDrawer: () -> Unit,
@@ -85,13 +89,23 @@ fun HomeScreen(
                         app = app,
                         onClick = { onAppClick(app) },
                         showLabel = showLabels,
+                        cornerRadiusPercent = cornerRadiusPercent,
+                        iconOpacity = iconOpacity,
+                        customDrawable = getCustomDrawable(app.packageName),
                         onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) }
                     )
                 }
             }
 
             SearchPill(onClick = onOpenDrawer, modifier = Modifier.padding(bottom = 8.dp))
-            Dock(pinnedApps = dockApps, onAppClick = onAppClick, onAppClickWithBounds = onAppClickWithBounds)
+            Dock(
+                pinnedApps = dockApps,
+                cornerRadiusPercent = cornerRadiusPercent,
+                iconOpacity = iconOpacity,
+                getCustomDrawable = getCustomDrawable,
+                onAppClick = onAppClick,
+                onAppClickWithBounds = onAppClickWithBounds
+            )
         }
     }
 }
