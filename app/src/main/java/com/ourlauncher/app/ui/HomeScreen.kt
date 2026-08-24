@@ -437,4 +437,30 @@ fun HomeScreen(
             val currentRadius = initialCornerPx * (1f - p)
 
             with(density) {
-        
+                Box(
+                    modifier = Modifier
+                        .offset { IntOffset(currentX.roundToInt(), currentY.roundToInt()) }
+                        .size(currentW.toDp(), currentH.toDp())
+                        .clip(RoundedCornerShape(currentRadius.toDp()))
+                        .background(Color(0xFF141416))
+                        .graphicsLayer { alpha = p.coerceIn(0.1f, 1f) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    val targetDrawable = getCustomDrawable(activeApp!!.packageName) ?: activeApp!!.icon
+                    val cacheKey = "${activeApp!!.packageName}_${targetDrawable.hashCode()}"
+                    val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
+
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size((settingsManager.iconSize * 1.35f).dp)
+                                .scale(1f + (0.35f * p))
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
