@@ -6,7 +6,6 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -36,7 +35,6 @@ import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
@@ -50,16 +48,16 @@ fun HomeScreen(
     onOpenSettings: () -> Unit
 ) {
     val dockApps = apps.take(4)
-    val gridApps = apps.drop(4).take(20)
+    val gridApps = apps.drop(4)
 
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
     var animatingApp by remember { mutableStateOf<AppInfo?>(null) }
     var startBounds by remember { mutableStateOf<android.graphics.Rect?>(null) }
+    var isLaunching by remember { mutableStateOf(false) }
     val animProgress = remember { Animatable(0f) }
 
-    // 4 Bézier Curves from Settings
     val posEasing = remember(settingsManager.posCurveX1, settingsManager.posCurveY1, settingsManager.posCurveX2, settingsManager.posCurveY2) {
         CubicBezierEasing(settingsManager.posCurveX1.coerceIn(0f, 1f), settingsManager.posCurveY1, settingsManager.posCurveX2.coerceIn(0f, 1f), settingsManager.posCurveY2)
     }
@@ -74,8 +72,12 @@ fun HomeScreen(
     }
 
     fun startAppOpenAnimation(app: AppInfo, bounds: android.graphics.Rect?) {
+        if (isLaunching) return
+        isLaunching = true
+
         if (!settingsManager.animEnabled || bounds == null) {
             onAppClick(app)
+            isLaunching = false
             return
         }
 
@@ -90,20 +92,13 @@ fun HomeScreen(
                     animationSpec = tween(durationMillis = settingsManager.animDuration.toInt())
                 )
             }
-            // Launch app right as the expanding card covers the screen
-            delay((settingsManager.animDuration * 0.75f).toLong())
+            delay((settingsManager.animDuration * 0.70f).toLong())
             onAppClickWithBounds(app, bounds)
 
-            delay(350)
+            delay(250)
             animProgress.snapTo(0f)
             animatingApp = null
-        }
-    }
-
-    fun performSwipe(action: String) {
-        when (action) {
-            "drawer" -> onOpenDrawer()
-            "settings" -> onOpenSettings()
+            isLaunching = false
         }
     }
 
@@ -121,35 +116,19 @@ fun HomeScreen(
                 .scale(bgScale)
                 .alpha(bgAlpha)
                 .pointerInput(Unit) {
-                    var totalDragX = 0f
-                    var totalDragY = 0f
-                    detectDragGestures(
-                        onDragStart = { totalDragX = 0f; totalDragY = 0f },
-                        onDrag = { _, dragAmount -> totalDragX += dragAmount.x; totalDragY += dragAmount.y },
-                        onDragEnd = {
-                            val threshold = 60f
-                            if (abs(totalDragY) > abs(totalDragX)) {
-                                if (totalDragY < -threshold) performSwipe(settingsManager.swipeUpAction)
-                                else if (totalDragY > threshold) performSwipe(settingsManager.swipeDownAction)
-                            } else {
-                                if (totalDragX < -threshold) performSwipe(settingsManager.swipeLeftAction)
-                                else if (totalDragX > threshold) performSwipe(settingsManager.swipeRightAction)
-                            }
-                        }
-                    )
-                }
-                .pointerInput(Unit) {
                     detectTapGestures(onLongPress = { onOpenSettings() })
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
-                    contentPadding = PaddingValues(top = 64.dp, start = 16.dp, end = 16.dp),
-                    userScrollEnabled = false,
-                    modifier = Modifier.fillMaxSize().weight(1f)
+                    contentPadding = PaddingValues(top = 64.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    userScrollEnabled = true, // Enabled scrolling for home apps
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f)
                 ) {
-                    items(gridApps) { app ->
+                    items(gridApps, key = { it.packageName }) { app ->
                         AppIcon(
                             app = app,
                             onClick = { startAppOpenAnimation(app, null) },
@@ -179,7 +158,7 @@ fun HomeScreen(
             }
         }
 
-        // --- EXPANDING CARD WITH CENTERED APP ICON ---
+        // --- EXPANDING CARD OVERLAY ---
         if (animatingApp != null && startBounds != null) {
             val b = startBounds!!
             val tPos = posEasing.transform(p)
