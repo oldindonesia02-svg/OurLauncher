@@ -39,7 +39,8 @@ import kotlin.math.sin
 
 private val bitmapCache = mutableMapOf<String, Bitmap>()
 
-fun getCachedBitmap(key: String, drawable: Drawable): Bitmap? {
+fun getCachedBitmap(key: String, drawable: Drawable?): Bitmap? {
+    if (drawable == null) return null
     bitmapCache[key]?.let { return it }
     return try {
         val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 144
@@ -71,12 +72,11 @@ fun AppIcon(
     val context = LocalContext.current
     val settingsManager = remember { SettingsManager(context) }
     val targetDrawable = customDrawable ?: app.icon
-    val cacheKey = "${app.packageName}_${targetDrawable.hashCode()}"
+    val cacheKey = "${app.packageName}_${targetDrawable?.hashCode() ?: 0}"
     val bitmap = remember(cacheKey) { getCachedBitmap(cacheKey, targetDrawable) }
 
     val shape = RoundedCornerShape(cornerRadiusPercent.toInt())
 
-    // Theme Color Filter
     val colorFilter = remember(settingsManager.iconTheme, settingsManager.iconTintColor) {
         when (settingsManager.iconTheme) {
             "dark" -> {
@@ -88,7 +88,6 @@ fun AppIcon(
         }
     }
 
-    // Lens Lighting Brush
     val lensBrush = remember(settingsManager.lensLightEnabled, settingsManager.lensAngle, settingsManager.lensIntensity) {
         if (settingsManager.lensLightEnabled && settingsManager.graphicPreset != "low") {
             val rad = Math.toRadians(settingsManager.lensAngle.toDouble())
