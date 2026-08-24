@@ -3,10 +3,15 @@ package com.ourlauncher.app.ui
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -17,13 +22,11 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -168,6 +171,10 @@ fun HomeScreen(
     var isOverviewMode by remember { mutableStateOf(false) }
     val overviewAnim = remember { Animatable(0f) }
 
+    var showHomeSettingsSheet by remember { mutableStateOf(false) }
+    var showIconCustomizeSheet by remember { mutableStateOf(false) }
+    var isAiListening by remember { mutableStateOf(false) }
+
     LaunchedEffect(isOverviewMode) {
         overviewAnim.animateTo(
             targetValue = if (isOverviewMode) 1f else 0f,
@@ -175,8 +182,13 @@ fun HomeScreen(
         )
     }
 
-    BackHandler(enabled = isOverviewMode) {
-        isOverviewMode = false
+    BackHandler(enabled = isOverviewMode || showHomeSettingsSheet || showIconCustomizeSheet || isAiListening) {
+        when {
+            isAiListening -> isAiListening = false
+            showIconCustomizeSheet -> showIconCustomizeSheet = false
+            showHomeSettingsSheet -> showHomeSettingsSheet = false
+            isOverviewMode -> isOverviewMode = false
+        }
     }
 
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
@@ -185,10 +197,7 @@ fun HomeScreen(
     var targetHoverIndex by remember { mutableStateOf<Int?>(null) }
     val itemBoundsMap = remember { mutableStateMapOf<Int, Rect>() }
 
-    var contextMenuApp by remember { mutableStateOf<AppInfo?>(null) }
-    var contextMenuPosition by remember { mutableStateOf(Offset.Zero) }
     var activeFolder by remember { mutableStateOf<FolderInfo?>(null) }
-
     var activeApp by remember { mutableStateOf<AppInfo?>(null) }
     var activeBounds by remember { mutableStateOf<Rect?>(null) }
     val animProgress = remember { Animatable(0f) }
@@ -233,7 +242,7 @@ fun HomeScreen(
     }
 
     fun handleAppOpen(app: AppInfo, bounds: Rect?) {
-        if (isOverviewMode) return
+        if (isOverviewMode || showHomeSettingsSheet || showIconCustomizeSheet) return
         if (!settingsManager.animEnabled || bounds == null) {
             onAppClick(app)
             return
@@ -250,8 +259,7 @@ fun HomeScreen(
             onAppClickWithBounds(app, bounds)
         }
     }
-
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenWidthPx = constraints.maxWidth.toFloat()
         val screenHeightPx = constraints.maxHeight.toFloat()
         val p = animProgress.value
@@ -265,7 +273,6 @@ fun HomeScreen(
                 .fillMaxSize()
                 .scale(bgScale)
                 .alpha(bgAlpha)
-                // Pinch to overview gesture
                 .pointerInput(Unit) {
                     detectTransformGestures { _, _, zoom, _ ->
                         if (zoom < 0.88f && !isOverviewMode) {
@@ -279,7 +286,6 @@ fun HomeScreen(
                     var totalDragX = 0f
                     detectDragGestures(
                         onDragStart = { startOffset ->
-                            contextMenuApp = null
                             startX = startOffset.x
                             totalDragY = 0f
                             totalDragX = 0f
@@ -307,7 +313,7 @@ fun HomeScreen(
                                 sanitizeAndSaveFolders(list)
                                 draggedExternalApp = null
                                 targetHoverIndex = null
-                            } else if (!isOverviewMode) {
+                            } else if (!isOverviewMode && !showHomeSettingsSheet && !showIconCustomizeSheet) {
                                 val threshold = 45f
                                 if (abs(totalDragY) > abs(totalDragX) * 1.5f) {
                                     if (totalDragY < -threshold) {
@@ -327,9 +333,16 @@ fun HomeScreen(
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = {
-                            if (isOverviewMode) isOverviewMode = false else contextMenuApp = null
+                            if (isOverviewMode) isOverviewMode = false
+                            showHomeSettingsSheet = false
+                            showIconCustomizeSheet = false
+                            isAiListening = false
                         },
-                        onLongPress = { if (!isOverviewMode) onOpenSettings() }
+                        onLongPress = {
+                            if (!isOverviewMode) {
+                                showHomeSettingsSheet = true
+                            }
+                        }
                     )
                 }
         ) {
@@ -380,17 +393,11 @@ fun HomeScreen(
                                                 if (found != null && found.key < gridItems.size) {
                                                     draggedIndex = found.key
                                                     dragOffset = startPos
-                                                    val item = gridItems[found.key]
-                                                    if (item is GridItem.SingleApp) {
-                                                        contextMenuApp = item.app
-                                                        contextMenuPosition = startPos
-                                                    }
                                                 }
                                             },
                                             onDrag = { change, amount ->
                                                 change.consume()
                                                 dragOffset += amount
-                                                contextMenuApp = null
 
                                                 val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
                                                     rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
@@ -461,14 +468,14 @@ fun HomeScreen(
                                         is GridItem.SingleApp -> {
                                             AppIcon(
                                                 app = item.app,
-                                                onClick = { contextMenuApp = null; handleAppOpen(item.app, null) },
+                                                onClick = { handleAppOpen(item.app, null) },
                                                 showLabel = settingsManager.showLabels,
                                                 fontFamilyName = settingsManager.fontFamily,
                                                 iconSizeDp = settingsManager.iconSize,
                                                 cornerRadiusPercent = settingsManager.iconCornerRadius,
                                                 iconOpacity = settingsManager.iconOpacity,
                                                 customDrawable = getCustomDrawable(item.app.packageName),
-                                                onClickWithBounds = { bounds: Rect -> contextMenuApp = null; handleAppOpen(item.app, bounds) },
+                                                onClickWithBounds = { bounds: Rect -> handleAppOpen(item.app, bounds) },
                                                 modifier = Modifier.width(82.dp)
                                             )
                                         }
@@ -488,40 +495,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Overview Bar / Page Manager controls
-                if (isOverviewMode) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 12.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color.White.copy(alpha = 0.15f))
-                                .clickable { extraPagesCount++ }
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Text("+ Add Page", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        }
-
-                        if (extraPagesCount > 0) {
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(Color(0xFFFF453A).copy(alpha = 0.25f))
-                                    .clickable { extraPagesCount = maxOf(0, extraPagesCount - 1) }
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                Text("Remove Empty Page", color = Color(0xFFFF453A), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-                }
-
                 if (!settingsManager.hideSearchCapsule && !isOverviewMode) {
                     Box(
                         modifier = Modifier
@@ -530,10 +503,11 @@ fun HomeScreen(
                             .padding(bottom = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        LiquidSearchDotsCapsule(
+                        LiquidSearchAiCapsule(
                             totalPages = totalPages,
                             currentPage = pagerState.currentPage,
-                            onSearchClick = onOpenDrawer
+                            onSearchClick = onOpenDrawer,
+                            onAiClick = { isAiListening = true }
                         )
                     }
                 }
@@ -542,13 +516,12 @@ fun HomeScreen(
                     pinnedApps = dockApps,
                     settingsManager = settingsManager,
                     getCustomDrawable = getCustomDrawable,
-                    onAppClick = { contextMenuApp = null; handleAppOpen(it, null) },
-                    onAppClickWithBounds = { app, bounds -> contextMenuApp = null; handleAppOpen(app, bounds) }
+                    onAppClick = { handleAppOpen(it, null) },
+                    onAppClickWithBounds = { app, bounds -> handleAppOpen(app, bounds) }
                 )
             }
         }
 
-        // Active Folder Popup
         if (activeFolder != null) {
             FolderPopup(
                 folder = activeFolder!!,
@@ -576,22 +549,48 @@ fun HomeScreen(
             )
         }
 
-        if (contextMenuApp != null && draggedIndex == null) {
-            val app = contextMenuApp!!
-            HomeContextMenu(
-                app = app,
-                position = contextMenuPosition,
-                screenWidthPx = screenWidthPx,
-                repository = repository,
-                onDismiss = { contextMenuApp = null },
-                onRemove = {
-                    val updated = gridItems.filterNot { it is GridItem.SingleApp && it.app.packageName == app.packageName }
-                    sanitizeAndSaveFolders(updated)
-                }
+        AnimatedVisibility(
+            visible = isAiListening,
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            AiListeningBar(onDismiss = { isAiListening = false })
+        }
+
+        AnimatedVisibility(
+            visible = showHomeSettingsSheet,
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            HomeQuickSettingsSheet(
+                settingsManager = settingsManager,
+                onOpenFullSettings = {
+                    showHomeSettingsSheet = false
+                    onOpenSettings()
+                },
+                onOpenIconCustomize = {
+                    showHomeSettingsSheet = false
+                    showIconCustomizeSheet = true
+                },
+                onDismiss = { showHomeSettingsSheet = false }
             )
         }
 
-        // Dragged Ghost Overlay
+        AnimatedVisibility(
+            visible = showIconCustomizeSheet,
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            IconCustomizeSheet(
+                settingsManager = settingsManager,
+                onApply = { showIconCustomizeSheet = false },
+                onDismiss = { showIconCustomizeSheet = false }
+            )
+        }
+
         val floatingApp = if (draggedIndex != null && draggedIndex!! < gridItems.size) {
             val item = gridItems[draggedIndex!!]
             if (item is GridItem.SingleApp) item.app else null
