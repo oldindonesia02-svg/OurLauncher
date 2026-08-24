@@ -1,12 +1,10 @@
 package com.ourlauncher.app.ui
 
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -178,28 +176,7 @@ fun SettingsScreen(
 
                     SettingsSectionHeader("LIVE ANIMATION PREVIEW")
                     SettingsGroup {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().height(200.dp).padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val infiniteTransition = rememberInfiniteTransition(label = "preview")
-                            val progress by infiniteTransition.animateFloat(
-                                initialValue = 0f,
-                                targetValue = 1f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(durationMillis = animDuration.toInt().coerceAtLeast(200), easing = FastOutSlowInEasing),
-                                    repeatMode = RepeatMode.Reverse
-                                ),
-                                label = "scale"
-                            )
-
-                            Box(
-                                modifier = Modifier
-                                    .size(width = (60 + (100 * progress)).dp, height = (60 + (140 * progress)).dp)
-                                    .clip(RoundedCornerShape(((1f - progress) * 28 + (progress * 12)).dp))
-                                    .background(Color(0xFF0A84FF))
-                            )
-                        }
+                        PhoneMockupPreview(durationMs = animDuration.toInt())
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
