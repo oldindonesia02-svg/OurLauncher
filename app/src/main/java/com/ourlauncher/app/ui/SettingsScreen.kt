@@ -31,8 +31,6 @@ fun SettingsScreen(
 ) {
     var currentSubPage by remember { mutableStateOf("main") }
 
-    var dockRadius by remember { mutableStateOf(settingsManager.dockRadius) }
-    var showDockBg by remember { mutableStateOf(settingsManager.showDockBg) }
     var iconSize by remember { mutableStateOf(settingsManager.iconSize) }
     var iconCornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
     var iconOpacity by remember { mutableStateOf(settingsManager.iconOpacity) }
@@ -71,6 +69,28 @@ fun SettingsScreen(
         return
     }
 
+    if (currentSubPage == "dock_sheet") {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f)), contentAlignment = Alignment.BottomCenter) {
+            DockAdjustmentSheet(
+                settingsManager = settingsManager,
+                onDismiss = { currentSubPage = "main" },
+                onSwitchToSearch = { currentSubPage = "search_sheet" }
+            )
+        }
+        return
+    }
+
+    if (currentSubPage == "search_sheet") {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f)), contentAlignment = Alignment.BottomCenter) {
+            SearchBarAdjustmentSheet(
+                settingsManager = settingsManager,
+                onDismiss = { currentSubPage = "main" },
+                onSwitchToDock = { currentSubPage = "dock_sheet" }
+            )
+        }
+        return
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -96,7 +116,7 @@ fun SettingsScreen(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = if (currentSubPage == "main") "Settings" else currentSubPage.replaceFirstChar { it.uppercase() },
+                text = "Settings",
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
@@ -251,17 +271,6 @@ fun SettingsScreen(
                     }
                 }
 
-                "dock" -> {
-                    SettingsGroup {
-                        SettingsToggleRow("Show dock background", null, showDockBg) { showDockBg = it; settingsManager.showDockBg = it }
-                        SettingsDivider()
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Dock Radius: ${dockRadius.toInt()}dp", color = Color.White)
-                            Slider(value = dockRadius, onValueChange = { dockRadius = it; settingsManager.dockRadius = it }, valueRange = 8f..50f)
-                        }
-                    }
-                }
-
                 else -> {
                     SettingsSectionHeader("CUSTOMIZATION")
                     SettingsGroup {
@@ -269,9 +278,11 @@ fun SettingsScreen(
                         SettingsDivider()
                         SettingsNavRow("App Open Animation", "Duration & Bezier Curves") { currentSubPage = "animation" }
                         SettingsDivider()
-                        SettingsNavRow("Dock", "Padding & Corner Radius") { currentSubPage = "dock" }
+                        SettingsNavRow("Dock", "Padding, Gap and Corner Radius") { currentSubPage = "dock_sheet" }
                         SettingsDivider()
                         SettingsNavRow("Liquid Glass", "Adjust transparency, blur and lens refraction") { currentSubPage = "liquid_glass" }
+                        SettingsDivider()
+                        SettingsNavRow("Search Bar Position", "Adjust the vertical offset of the search pill") { currentSubPage = "search_sheet" }
                     }
                     SettingsSectionHeader("ACTIONS")
                     SettingsGroup {
