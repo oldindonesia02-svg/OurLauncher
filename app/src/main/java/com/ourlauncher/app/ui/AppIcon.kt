@@ -5,9 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -48,7 +47,6 @@ fun getCachedBitmap(cacheKey: String, drawable: Drawable?): Bitmap? {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppIcon(
     app: AppInfo,
@@ -59,7 +57,6 @@ fun AppIcon(
     cornerRadiusPercent: Float = 25f,
     iconOpacity: Float = 1.0f,
     customDrawable: Drawable? = null,
-    onLongClick: (() -> Unit)? = null,
     onClickWithBounds: ((Rect) -> Unit)? = null
 ) {
     var screenBounds by remember { mutableStateOf<Rect?>(null) }
@@ -72,19 +69,17 @@ fun AppIcon(
                 val b = coords.boundsInRoot()
                 screenBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
             }
-            .combinedClickable(
+            .clickable(
                 interactionSource = interactionSource,
-                indication = null,
-                onClick = {
-                    val bounds = screenBounds
-                    if (onClickWithBounds != null && bounds != null) {
-                        onClickWithBounds(bounds)
-                    } else {
-                        onClick()
-                    }
-                },
-                onLongClick = onLongClick
-            )
+                indication = null
+            ) {
+                val bounds = screenBounds
+                if (onClickWithBounds != null && bounds != null) {
+                    onClickWithBounds(bounds)
+                } else {
+                    onClick()
+                }
+            }
             .padding(4.dp)
     ) {
         val targetDrawable = customDrawable ?: app.icon
