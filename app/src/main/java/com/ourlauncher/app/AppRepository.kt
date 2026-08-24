@@ -1,5 +1,6 @@
 package com.ourlauncher.app
 
+import android.app.Activity
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
@@ -34,16 +35,33 @@ class AppRepository(private val context: Context) {
         val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
             ?: return
 
-        // Zero-duration transition to let our custom Compose animation handle 100% of the visuals seamlessly
-        val options = ActivityOptions.makeCustomAnimation(context, 0, 0)
-        context.startActivity(launchIntent, options.toBundle())
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+        if (sourceBounds != null) {
+            launchIntent.sourceBounds = sourceBounds
+
+            val options = if (context is Activity) {
+                ActivityOptions.makeScaleUpAnimation(
+                    context.window.decorView,
+                    sourceBounds.left,
+                    sourceBounds.top,
+                    sourceBounds.width(),
+                    sourceBounds.height()
+                )
+            } else {
+                ActivityOptions.makeBasic()
+            }
+            context.startActivity(launchIntent, options.toBundle())
+        } else {
+            context.startActivity(launchIntent)
+        }
     }
 
     fun launchApp(packageName: String) {
         val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
         if (launchIntent != null) {
-            val options = ActivityOptions.makeCustomAnimation(context, 0, 0)
-            context.startActivity(launchIntent, options.toBundle())
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(launchIntent)
         }
     }
 }
