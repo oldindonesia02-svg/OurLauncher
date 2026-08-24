@@ -38,6 +38,10 @@ import kotlin.math.sin
 
 private val bitmapCache = mutableMapOf<String, Bitmap>()
 
+fun clearIconCache() {
+    bitmapCache.clear()
+}
+
 fun getCachedBitmap(key: String, drawable: Drawable?): Bitmap? {
     if (drawable == null) return null
     bitmapCache[key]?.let { return it }
