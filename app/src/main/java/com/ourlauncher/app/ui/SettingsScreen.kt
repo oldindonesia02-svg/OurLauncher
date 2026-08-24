@@ -1,5 +1,6 @@
 package com.ourlauncher.app.ui
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,46 +26,61 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.IconPackInfo
+import com.ourlauncher.app.SettingsManager
 
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit = {},
-    dockRadius: Float = 32f,
-    onDockRadiusChange: (Float) -> Unit = {},
-    showDockBg: Boolean = true,
-    onShowDockBgChange: (Boolean) -> Unit = {},
-    searchOffset: Float = 0f,
-    onSearchOffsetChange: (Float) -> Unit = {},
-    iconSize: Float = 54f,
-    onIconSizeChange: (Float) -> Unit = {},
-    iconCornerRadius: Float = 25f,
-    onIconCornerRadiusChange: (Float) -> Unit = {},
-    iconOpacity: Float = 1.0f,
-    onIconOpacityChange: (Float) -> Unit = {},
+    settingsManager: SettingsManager,
     installedIconPacks: List<IconPackInfo> = emptyList(),
     selectedIconPack: String = "default",
-    onIconPackSelect: (String) -> Unit = {},
-    swipeUp: String = "drawer",
-    onSwipeUpChange: (String) -> Unit = {},
-    swipeDown: String = "none",
-    onSwipeDownChange: (String) -> Unit = {},
-    swipeLeft: String = "none",
-    onSwipeLeftChange: (String) -> Unit = {},
-    swipeRight: String = "none",
-    onSwipeRightChange: (String) -> Unit = {}
+    onIconPackSelect: (String) -> Unit = {}
 ) {
     var currentSubPage by remember { mutableStateOf("main") }
-    var font by remember { mutableStateOf("sans-serif") }
-    var animDur by remember { mutableStateOf(300f) }
-    var px1 by remember { mutableStateOf(0.25f) }
-    var py1 by remember { mutableStateOf(0.5f) }
-    var px2 by remember { mutableStateOf(0f) }
-    var py2 by remember { mutableStateOf(1f) }
+
+    // Dock & Icon States
+    var showLabels by remember { mutableStateOf(settingsManager.showLabels) }
+    var dockRadius by remember { mutableStateOf(settingsManager.dockRadius) }
+    var showDockBg by remember { mutableStateOf(settingsManager.showDockBg) }
+    var iconSize by remember { mutableStateOf(settingsManager.iconSize) }
+    var iconCornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
+    var iconOpacity by remember { mutableStateOf(settingsManager.iconOpacity) }
+
+    // Animation States
+    var animEnabled by remember { mutableStateOf(settingsManager.animEnabled) }
+    var animAdvancedTexture by remember { mutableStateOf(settingsManager.animAdvancedTexture) }
+    var animDuration by remember { mutableStateOf(settingsManager.animDuration) }
+
+    var posX1 by remember { mutableStateOf(settingsManager.posCurveX1) }
+    var posY1 by remember { mutableStateOf(settingsManager.posCurveY1) }
+    var posX2 by remember { mutableStateOf(settingsManager.posCurveX2) }
+    var posY2 by remember { mutableStateOf(settingsManager.posCurveY2) }
+
+    var widthX1 by remember { mutableStateOf(settingsManager.widthCurveX1) }
+    var widthY1 by remember { mutableStateOf(settingsManager.widthCurveY1) }
+    var widthX2 by remember { mutableStateOf(settingsManager.widthCurveX2) }
+    var widthY2 by remember { mutableStateOf(settingsManager.widthCurveY2) }
+
+    var heightX1 by remember { mutableStateOf(settingsManager.heightCurveX1) }
+    var heightY1 by remember { mutableStateOf(settingsManager.heightCurveY1) }
+    var heightX2 by remember { mutableStateOf(settingsManager.heightCurveX2) }
+    var heightY2 by remember { mutableStateOf(settingsManager.heightCurveY2) }
+
+    var cornerX1 by remember { mutableStateOf(settingsManager.cornerCurveX1) }
+    var cornerY1 by remember { mutableStateOf(settingsManager.cornerCurveY1) }
+    var cornerX2 by remember { mutableStateOf(settingsManager.cornerCurveX2) }
+    var cornerY2 by remember { mutableStateOf(settingsManager.cornerCurveY2) }
+
+    // Swipe actions
+    var swipeUp by remember { mutableStateOf(settingsManager.swipeUpAction) }
+    var swipeDown by remember { mutableStateOf(settingsManager.swipeDownAction) }
+    var swipeLeft by remember { mutableStateOf(settingsManager.swipeLeftAction) }
+    var swipeRight by remember { mutableStateOf(settingsManager.swipeRightAction) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color(0xFF0D0D0E))
     ) {
         Row(
             modifier = Modifier
@@ -86,7 +102,7 @@ fun SettingsScreen(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = currentSubPage.replaceFirstChar { it.uppercase() },
+                text = if (currentSubPage == "main") "Settings" else currentSubPage.replaceFirstChar { it.uppercase() },
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
@@ -100,31 +116,166 @@ fun SettingsScreen(
                 .padding(16.dp)
         ) {
             when (currentSubPage) {
+                "animation" -> {
+                    SettingsSectionHeader("APP OPEN ANIMATION CONFIGURATION")
+                    SettingsGroup {
+                        SettingsToggleRow(
+                            title = "Enable Animation",
+                            subtitle = "If disabled, apps will launch instantly without the scaling effect",
+                            checked = animEnabled,
+                            onCheckedChange = {
+                                animEnabled = it
+                                settingsManager.animEnabled = it
+                            }
+                        )
+                        SettingsDivider()
+                        SettingsToggleRow(
+                            title = "Advanced Texture",
+                            subtitle = "Scales down and blurs the workspace in sync with app open sizing",
+                            checked = animAdvancedTexture,
+                            onCheckedChange = {
+                                animAdvancedTexture = it
+                                settingsManager.animAdvancedTexture = it
+                            }
+                        )
+                    }
+
+                    SettingsSectionHeader("SPEED & TIMING")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(text = "Animation Duration", color = Color.White, fontSize = 14.sp)
+                                Text(text = "${animDuration.toInt()} ms", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = animDuration,
+                                onValueChange = {
+                                    animDuration = it
+                                    settingsManager.animDuration = it
+                                },
+                                valueRange = 100f..800f
+                            )
+                        }
+                    }
+
+                    // 1. POSITION MOVEMENT CURVE
+                    SettingsSectionHeader("POSITION MOVEMENT CURVE")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            BezierCanvas(posX1, posY1, posX2, posY2)
+                            CurveSlider("Initial Tension (X1)", "Delays the start of movement", posX1) { posX1 = it; settingsManager.posCurveX1 = it }
+                            CurveSlider("Initial Velocity (Y1)", "Controls initial burst of speed", posY1) { posY1 = it; settingsManager.posCurveY1 = it }
+                            CurveSlider("Final Tension (X2)", "Delays the end of movement", posX2) { posX2 = it; settingsManager.posCurveX2 = it }
+                            CurveSlider("Final Velocity (Y2)", "Values > 1.0 create overshoot/bounce", posY2) { posY2 = it; settingsManager.posCurveY2 = it }
+                        }
+                    }
+
+                    // 2. WIDTH SCALING CURVE
+                    SettingsSectionHeader("WIDTH SCALING CURVE")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            BezierCanvas(widthX1, widthY1, widthX2, widthY2)
+                            CurveSlider("Initial Tension (X1)", "Delays the start of width growth", widthX1) { widthX1 = it; settingsManager.widthCurveX1 = it }
+                            CurveSlider("Initial Velocity (Y1)", "Controls initial burst of width growth", widthY1) { widthY1 = it; settingsManager.widthCurveY1 = it }
+                            CurveSlider("Final Tension (X2)", "Delays the end of width growth", widthX2) { widthX2 = it; settingsManager.widthCurveX2 = it }
+                            CurveSlider("Final Velocity (Y2)", "Values > 1.0 create width overshoot/bounce", widthY2) { widthY2 = it; settingsManager.widthCurveY2 = it }
+                        }
+                    }
+
+                    // 3. HEIGHT SCALING CURVE
+                    SettingsSectionHeader("HEIGHT SCALING CURVE")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            BezierCanvas(heightX1, heightY1, heightX2, heightY2)
+                            CurveSlider("Initial Tension (X1)", "Delays the start of height growth", heightX1) { heightX1 = it; settingsManager.heightCurveX1 = it }
+                            CurveSlider("Initial Velocity (Y1)", "Controls initial burst of height growth", heightY1) { heightY1 = it; settingsManager.heightCurveY1 = it }
+                            CurveSlider("Final Tension (X2)", "Delays the end of height growth", heightX2) { heightX2 = it; settingsManager.heightCurveX2 = it }
+                            CurveSlider("Final Velocity (Y2)", "Values > 1.0 create height overshoot/bounce", heightY2) { heightY2 = it; settingsManager.heightCurveY2 = it }
+                        }
+                    }
+
+                    // 4. CORNER RADIUS TRANSITION CURVE
+                    SettingsSectionHeader("CORNER RADIUS TRANSITION CURVE")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            BezierCanvas(cornerX1, cornerY1, cornerX2, cornerY2)
+                            CurveSlider("Initial Tension (X1)", "Delays the start of corner radius transition", cornerX1) { cornerX1 = it; settingsManager.cornerCurveX1 = it }
+                            CurveSlider("Initial Velocity (Y1)", "Controls initial corner shape speed change", cornerY1) { cornerY1 = it; settingsManager.cornerCurveY1 = it }
+                            CurveSlider("Final Tension (X2)", "Delays the end of corner radius transition", cornerX2) { cornerX2 = it; settingsManager.cornerCurveX2 = it }
+                            CurveSlider("Final Velocity (Y2)", "Values > 1.0 overshoot corner rounding", cornerY2) { cornerY2 = it; settingsManager.cornerCurveY2 = it }
+                        }
+                    }
+
+                    // LIVE ANIMATION PREVIEW CARD
+                    SettingsSectionHeader("LIVE ANIMATION PREVIEW")
+                    SettingsGroup {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val infiniteTransition = rememberInfiniteTransition(label = "preview")
+                            val progress by infiniteTransition.animateFloat(
+                                initialValue = 0f,
+                                targetValue = 1f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(durationMillis = animDuration.toInt().coerceAtLeast(200), easing = FastOutSlowInEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "scale"
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .size(
+                                        width = (60 + (100 * progress)).dp,
+                                        height = (60 + (140 * progress)).dp
+                                    )
+                                    .clip(RoundedCornerShape(((1f - progress) * 28 + (progress * 12)).dp))
+                                    .background(Color(0xFF0A84FF))
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SettingsGroup {
+                        SettingsNavRow(title = "Reset Curves to Default", subtitle = "Restores original curves") {
+                            posX1 = 0.25f; posY1 = 0.50f; posX2 = 0.00f; posY2 = 1.00f
+                            widthX1 = 0.15f; widthY1 = 0.10f; widthX2 = 0.15f; widthY2 = 1.00f
+                            heightX1 = 0.30f; heightY1 = 0.10f; heightX2 = 0.15f; heightY2 = 1.00f
+                            cornerX1 = 0.30f; cornerY1 = 0.00f; cornerX2 = 1.00f; cornerY2 = 0.20f
+                            settingsManager.posCurveX1 = posX1; settingsManager.posCurveY1 = posY1; settingsManager.posCurveX2 = posX2; settingsManager.posCurveY2 = posY2
+                            settingsManager.widthCurveX1 = widthX1; settingsManager.widthCurveY1 = widthY1; settingsManager.widthCurveX2 = widthX2; settingsManager.widthCurveY2 = widthY2
+                            settingsManager.heightCurveX1 = heightX1; settingsManager.heightCurveY1 = heightY1; settingsManager.heightCurveX2 = heightX2; settingsManager.heightCurveY2 = heightY2
+                            settingsManager.cornerCurveX1 = cornerX1; settingsManager.cornerCurveY1 = cornerY1; settingsManager.cornerCurveX2 = cornerX2; settingsManager.cornerCurveY2 = cornerY2
+                        }
+                    }
+                }
+
                 "icons" -> {
                     SettingsSectionHeader("ICON SIZE")
                     SettingsGroup {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(text = "Size: ${iconSize.toInt()} dp", color = Color.White)
-                            Slider(value = iconSize, onValueChange = onIconSizeChange, valueRange = 40f..72f)
+                            Slider(value = iconSize, onValueChange = { iconSize = it; settingsManager.iconSize = it }, valueRange = 40f..72f)
                         }
                     }
-
                     SettingsSectionHeader("SHAPE & CORNER RADIUS")
                     SettingsGroup {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(text = "Corner Radius: ${iconCornerRadius.toInt()}%", color = Color.White)
-                            Slider(value = iconCornerRadius, onValueChange = onIconCornerRadiusChange, valueRange = 0f..50f)
+                            Slider(value = iconCornerRadius, onValueChange = { iconCornerRadius = it; settingsManager.iconCornerRadius = it }, valueRange = 0f..50f)
                         }
                     }
-
                     SettingsSectionHeader("ICON OPACITY")
                     SettingsGroup {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(text = "Opacity: ${(iconOpacity * 100).toInt()}%", color = Color.White)
-                            Slider(value = iconOpacity, onValueChange = onIconOpacityChange, valueRange = 0.2f..1.0f)
+                            Slider(value = iconOpacity, onValueChange = { iconOpacity = it; settingsManager.iconOpacity = it }, valueRange = 0.2f..1.0f)
                         }
                     }
-
                     SettingsSectionHeader("ICON PACK")
                     SettingsGroup {
                         Row(
@@ -141,7 +292,6 @@ fun SettingsScreen(
                             )
                             Text(text = "Default System Icons", color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
                         }
-
                         installedIconPacks.forEach { pack ->
                             SettingsDivider()
                             Row(
@@ -161,63 +311,28 @@ fun SettingsScreen(
                         }
                     }
                 }
-                "appearance" -> {
-                    SettingsSectionHeader("FONT FAMILY")
-                    SettingsGroup {
-                        listOf("sans-serif", "sans-serif-medium", "ABeeZee", "ADLaM Display").forEach { f ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { font = f }
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(selected = font == f, onClick = { font = f }, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF)))
-                                Text(text = f, color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
-                            }
-                        }
-                    }
-                }
-                "animation" -> {
-                    SettingsSectionHeader("SPEED & TIMING")
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(text = "Duration: ${animDur.toInt()} ms", color = Color.White)
-                            Slider(value = animDur, onValueChange = { animDur = it }, valueRange = 100f..800f)
-                        }
-                    }
-                    SettingsSectionHeader("POSITION BEZIER CURVE")
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            BezierCanvas(px1, py1, px2, py2)
-                            CurveSlider("Tension X1", px1) { px1 = it }
-                            CurveSlider("Velocity Y1", py1) { py1 = it }
-                            CurveSlider("Tension X2", px2) { px2 = it }
-                            CurveSlider("Velocity Y2", py2) { py2 = it }
-                        }
-                    }
-                }
+
                 "dock" -> {
                     SettingsGroup {
-                        SettingsToggleRow("Show dock background", null, showDockBg, onShowDockBgChange)
+                        SettingsToggleRow("Show dock background", null, showDockBg) { showDockBg = it; settingsManager.showDockBg = it }
                         SettingsDivider()
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(text = "Dock Radius: ${dockRadius.toInt()}dp", color = Color.White)
-                            Slider(value = dockRadius, onValueChange = onDockRadiusChange, valueRange = 8f..50f)
+                            Slider(value = dockRadius, onValueChange = { dockRadius = it; settingsManager.dockRadius = it }, valueRange = 8f..50f)
                         }
                     }
                 }
+
                 "swipe" -> {
-                    SwipeActionPicker("Swipe Up", swipeUp, onSwipeUpChange)
-                    SwipeActionPicker("Swipe Down", swipeDown, onSwipeDownChange)
-                    SwipeActionPicker("Swipe Left", swipeLeft, onSwipeLeftChange)
-                    SwipeActionPicker("Swipe Right", swipeRight, onSwipeRightChange)
+                    SwipeActionPicker("Swipe Up", swipeUp) { swipeUp = it; settingsManager.swipeUpAction = it }
+                    SwipeActionPicker("Swipe Down", swipeDown) { swipeDown = it; settingsManager.swipeDownAction = it }
+                    SwipeActionPicker("Swipe Left", swipeLeft) { swipeLeft = it; settingsManager.swipeLeftAction = it }
+                    SwipeActionPicker("Swipe Right", swipeRight) { swipeRight = it; settingsManager.swipeRightAction = it }
                 }
+
                 else -> {
                     SettingsSectionHeader("CUSTOMIZATION")
                     SettingsGroup {
-                        SettingsNavRow("Appearance", "Theme & Fonts") { currentSubPage = "appearance" }
-                        SettingsDivider()
                         SettingsNavRow("App icons", "Shape, Size & Icon Pack") { currentSubPage = "icons" }
                         SettingsDivider()
                         SettingsNavRow("App Open Animation", "Duration & Bezier Curves") { currentSubPage = "animation" }
@@ -226,154 +341,4 @@ fun SettingsScreen(
                     }
                     SettingsSectionHeader("ACTIONS")
                     SettingsGroup {
-                        SettingsNavRow("Swipe actions", "Customize gesture swipe behaviors") { currentSubPage = "swipe" }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun SwipeActionPicker(label: String, selected: String, onSelect: (String) -> Unit) {
-    val options = listOf("none" to "None", "drawer" to "Open App Drawer", "settings" to "Open Settings")
-    SettingsSectionHeader(label.uppercase())
-    SettingsGroup {
-        options.forEach { (value, displayName) ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelect(value) }
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = selected == value,
-                    onClick = { onSelect(value) },
-                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF))
-                )
-                Text(
-                    text = displayName,
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun BezierCanvas(x1: Float, y1: Float, x2: Float, y2: Float) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(140.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF141418))
-            .padding(12.dp)
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            val cp1 = Offset(w * x1, h * (1f - y1))
-            val cp2 = Offset(w * x2, h * (1f - y2))
-            val path = Path().apply {
-                moveTo(0f, h)
-                cubicTo(cp1.x, cp1.y, cp2.x, cp2.y, w, 0f)
-            }
-            drawPath(path = path, color = Color(0xFF0A84FF), style = Stroke(width = 4f))
-            drawCircle(color = Color.Green, radius = 6f, center = cp1)
-            drawCircle(color = Color.Red, radius = 6f, center = cp2)
-        }
-    }
-}
-
-@Composable
-fun CurveSlider(label: String, valIn: Float, onChange: (Float) -> Unit) {
-    Column(modifier = Modifier.padding(vertical = 4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = label, color = Color.White, fontSize = 13.sp)
-            Text(text = String.format("%.2f", valIn), color = Color(0xFF0A84FF), fontSize = 13.sp)
-        }
-        Slider(value = valIn, onValueChange = onChange, valueRange = 0f..1.5f)
-    }
-}
-
-@Composable
-fun SettingsSectionHeader(title: String) {
-    Text(
-        text = title,
-        color = Color.White.copy(alpha = 0.4f),
-        fontSize = 12.sp,
-        modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 6.dp)
-    )
-}
-
-@Composable
-fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFF1C1C1E))
-            .padding(4.dp),
-        content = content
-    )
-}
-
-@Composable
-fun SettingsDivider() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp)
-            .height(0.5.dp)
-            .background(Color.White.copy(alpha = 0.1f))
-    )
-}
-
-@Composable
-fun SettingsNavRow(title: String, subtitle: String? = null, onClick: () -> Unit = {}) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = Color.White, fontSize = 16.sp)
-            if (subtitle != null) {
-                Text(text = subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-            }
-        }
-        Text(text = "›", color = Color.White.copy(alpha = 0.3f), fontSize = 20.sp)
-    }
-}
-
-@Composable
-fun SettingsToggleRow(
-    title: String,
-    subtitle: String? = null,
-    checked: Boolean = false,
-    onCheckedChange: (Boolean) -> Unit = {}
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, color = Color.White, fontSize = 16.sp)
-            if (subtitle != null) {
-                Text(text = subtitle, color = Color.White.copy(alpha = 0.4f), fontSize = 12.sp)
-            }
-        }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
+                        SettingsNavRow("Swipe actions", "Customize gesture swipe behaviors") { currentSubPage = "s
