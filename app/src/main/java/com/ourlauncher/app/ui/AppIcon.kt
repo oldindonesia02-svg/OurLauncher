@@ -11,8 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -76,6 +75,7 @@ fun AppIcon(
     val bitmap = remember(cacheKey) { getCachedBitmap(cacheKey, targetDrawable) }
 
     val shape = RoundedCornerShape(cornerRadiusPercent.toInt())
+    var currentBounds by remember { mutableStateOf<Rect?>(null) }
 
     val colorFilter = remember(settingsManager.iconTheme, settingsManager.iconTintColor) {
         when (settingsManager.iconTheme) {
@@ -108,15 +108,12 @@ fun AppIcon(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .onGloballyPositioned { coords ->
-                if (onClickWithBounds != null) {
-                    val b = coords.boundsInRoot()
-                    val r = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
-                    app.cachedBounds = r
-                }
+                val b = coords.boundsInRoot()
+                currentBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
             }
             .clickable {
-                if (onClickWithBounds != null && app.cachedBounds != null) {
-                    onClickWithBounds(app.cachedBounds!!)
+                if (onClickWithBounds != null && currentBounds != null) {
+                    onClickWithBounds(currentBounds!!)
                 } else {
                     onClick()
                 }
