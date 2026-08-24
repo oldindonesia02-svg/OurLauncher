@@ -1,5 +1,6 @@
 package com.ourlauncher.app.ui
 
+import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -42,8 +43,9 @@ fun AppDrawer(
     apps: List<AppInfo>,
     settingsManager: SettingsManager = SettingsManager(LocalContext.current),
     getCustomDrawable: (String) -> Drawable? = { null },
-    onAppClick: (AppInfo) -> Unit,
-    onCloseDrawer: () -> Unit
+    onAppClick: (AppInfo) -> Unit = {},
+    onAppClickWithBounds: (AppInfo, Rect) -> Unit = { app, _ -> onAppClick(app) },
+    onCloseDrawer: () -> Unit = {}
 ) {
     BackHandler { onCloseDrawer() }
 
@@ -196,7 +198,7 @@ fun AppDrawer(
                                 cornerRadiusPercent = settingsManager.iconCornerRadius,
                                 iconOpacity = settingsManager.iconOpacity,
                                 customDrawable = getCustomDrawable(app.packageName),
-                                onClickWithBounds = { onAppClick(app) },
+                                onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
                                 modifier = Modifier.width(80.dp)
                             )
                         }
