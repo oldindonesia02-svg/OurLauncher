@@ -1,5 +1,6 @@
 package com.ourlauncher.app.ui
 
+import android.graphics.drawable.Drawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +20,9 @@ import com.ourlauncher.app.AppInfo
 fun Dock(
     pinnedApps: List<AppInfo>,
     onAppClick: (AppInfo) -> Unit,
+    cornerRadiusPercent: Float = 25f,
+    iconOpacity: Float = 1.0f,
+    getCustomDrawable: (String) -> Drawable? = { null },
     onAppClickWithBounds: ((AppInfo, android.graphics.Rect) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -54,6 +58,9 @@ fun Dock(
                 onClick = { onAppClick(app) },
                 showLabel = false,
                 iconSizeDp = 48,
+                cornerRadiusPercent = cornerRadiusPercent,
+                iconOpacity = iconOpacity,
+                customDrawable = getCustomDrawable(app.packageName),
                 onClickWithBounds = onAppClickWithBounds?.let { callback ->
                     { bounds: android.graphics.Rect -> callback(app, bounds) }
                 }
