@@ -34,6 +34,7 @@ import com.ourlauncher.app.AppInfo
 @Composable
 fun AppDrawer(
     apps: List<AppInfo>,
+    iconSize: Float = 54f,
     cornerRadiusPercent: Float = 25f,
     iconOpacity: Float = 1.0f,
     getCustomDrawable: (String) -> Drawable? = { null },
@@ -136,6 +137,7 @@ fun AppDrawer(
                 items(items = filteredApps, key = { it.packageName }) { app ->
                     AppIcon(
                         app = app,
+                        iconSizeDp = iconSize,
                         cornerRadiusPercent = cornerRadiusPercent,
                         iconOpacity = iconOpacity,
                         customDrawable = getCustomDrawable(app.packageName),
