@@ -15,6 +15,15 @@ class SettingsManager(context: Context) {
         get() = prefs.getString("home_grid_apps", "")?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
         set(value) = prefs.edit().putString("home_grid_apps", value.joinToString(",")).apply()
 
+    // Home Screen Grid Customization
+    var gridColumns: Int
+        get() = prefs.getInt("grid_columns", 4)
+        set(value) = prefs.edit().putInt("grid_columns", value).apply()
+
+    var gridRows: Int
+        get() = prefs.getInt("grid_rows", 5)
+        set(value) = prefs.edit().putInt("grid_rows", value).apply()
+
     // Live Search Bar Position Settings
     var searchOffset: Float
         get() = prefs.getFloat("search_offset", 0f)
