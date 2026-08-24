@@ -3,6 +3,8 @@ package com.ourlauncher.app.ui
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,9 +25,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -33,12 +40,12 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 @Composable
 fun AppDrawer(
@@ -66,6 +73,7 @@ fun AppDrawer(
     val gridState = rememberLazyGridState()
 
     var searchQuery by remember { mutableStateOf("") }
+    val drawerOffsetY = remember { Animatable(0f) }
 
     val filteredApps = remember(searchQuery, apps) {
         if (searchQuery.isBlank()) {
@@ -92,29 +100,76 @@ fun AppDrawer(
 
     var activeScrollLetter by remember { mutableStateOf<Char?>(null) }
 
+    // --- NATURAL NESTED SCROLL PULL-DOWN DISMISS ---
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                // If drawer is already pulled down, pull it further or back
+                if (drawerOffsetY.value > 0f && available.y < 0) {
+                    val consumed = available.y
+                    coroutineScope.launch {
+                        drawerOffsetY.snapTo((drawerOffsetY.value + consumed).coerceAtLeast(0f))
+                    }
+                    return Offset(0f, consumed)
+                }
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                // When at the top of grid, pull down the whole drawer
+                if (available.y > 0 && gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0) {
+                    coroutineScope.launch {
+                        drawerOffsetY.snapTo(drawerOffsetY.value + (available.y * 0.75f))
+                    }
+                    return Offset(0f, available.y)
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                if (drawerOffsetY.value > 220f || available.y > 1000f) {
+                    focusManager.clearFocus()
+                    keyboardController?.hide()
+                    onCloseDrawer()
+                    return available
+                } else if (drawerOffsetY.value > 0f) {
+                    drawerOffsetY.animateTo(0f, tween(200))
+                    return available
+                }
+                return Velocity.Zero
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0C0C0E))
+            .graphicsLayer {
+                translationY = drawerOffsetY.value
+                alpha = (1f - (drawerOffsetY.value / 1200f)).coerceIn(0.2f, 1f)
+            }
+            .nestedScroll(nestedScrollConnection)
             .pointerInput(Unit) {
                 var totalDragY = 0f
-                var totalDragX = 0f
                 detectDragGestures(
-                    onDragStart = {
-                        totalDragY = 0f
-                        totalDragX = 0f
-                    },
+                    onDragStart = { totalDragY = 0f },
                     onDrag = { _, dragAmount ->
                         totalDragY += dragAmount.y
-                        totalDragX += dragAmount.x
+                        if (totalDragY > 0) {
+                            coroutineScope.launch {
+                                drawerOffsetY.snapTo(totalDragY * 0.75f)
+                            }
+                        }
                     },
                     onDragEnd = {
-                        // Swipe Down to Close when at top of list
-                        if (totalDragY > 70f && abs(totalDragY) > abs(totalDragX) * 1.5f) {
-                            if (gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0) {
-                                focusManager.clearFocus()
-                                keyboardController?.hide()
-                                onCloseDrawer()
+                        if (drawerOffsetY.value > 220f) {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                            onCloseDrawer()
+                        } else {
+                            coroutineScope.launch {
+                                drawerOffsetY.animateTo(0f, tween(200))
                             }
                         }
                     }
