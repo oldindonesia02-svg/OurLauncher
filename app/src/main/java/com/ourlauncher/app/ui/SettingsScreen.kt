@@ -35,6 +35,8 @@ fun SettingsScreen(
     onShowDockBgChange: (Boolean) -> Unit = {},
     searchOffset: Float = 0f,
     onSearchOffsetChange: (Float) -> Unit = {},
+    iconSize: Float = 54f,
+    onIconSizeChange: (Float) -> Unit = {},
     iconCornerRadius: Float = 25f,
     onIconCornerRadiusChange: (Float) -> Unit = {},
     iconOpacity: Float = 1.0f,
@@ -99,6 +101,14 @@ fun SettingsScreen(
         ) {
             when (currentSubPage) {
                 "icons" -> {
+                    SettingsSectionHeader("ICON SIZE")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(text = "Size: ${iconSize.toInt()} dp", color = Color.White)
+                            Slider(value = iconSize, onValueChange = onIconSizeChange, valueRange = 40f..72f)
+                        }
+                    }
+
                     SettingsSectionHeader("SHAPE & CORNER RADIUS")
                     SettingsGroup {
                         Column(modifier = Modifier.padding(16.dp)) {
@@ -208,7 +218,7 @@ fun SettingsScreen(
                     SettingsGroup {
                         SettingsNavRow("Appearance", "Theme & Fonts") { currentSubPage = "appearance" }
                         SettingsDivider()
-                        SettingsNavRow("App icons", "Shape, Opacity & Icon Pack") { currentSubPage = "icons" }
+                        SettingsNavRow("App icons", "Shape, Size & Icon Pack") { currentSubPage = "icons" }
                         SettingsDivider()
                         SettingsNavRow("App Open Animation", "Duration & Bezier Curves") { currentSubPage = "animation" }
                         SettingsDivider()
