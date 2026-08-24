@@ -10,11 +10,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -31,6 +32,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
@@ -174,14 +178,15 @@ fun FolderPopup(
     onAppClick: (AppInfo) -> Unit,
     onAppClickWithBounds: (AppInfo, Rect) -> Unit,
     onRenameFolder: (String) -> Unit,
+    onDragOutApp: (AppInfo, Offset) -> Unit,
     onDismiss: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     var folderTitle by remember { mutableStateOf(folder.name) }
+    var popupBounds by remember { mutableStateOf<Rect?>(null) }
 
-    // --- FLUID SPRING EXPAND ANIMATION ENGINE ---
     val animProgress = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) {
@@ -232,6 +237,10 @@ fun FolderPopup(
                 }
                 .width(320.dp)
                 .wrapContentHeight()
+                .onGloballyPositioned { coords ->
+                    val b = coords.boundsInRoot()
+                    popupBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
+                }
                 .clip(RoundedCornerShape(32.dp))
                 .background(
                     Brush.verticalGradient(
@@ -254,14 +263,13 @@ fun FolderPopup(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
-                ) { /* Consume taps on card */ }
+                ) { /* Consume background click */ }
                 .padding(22.dp)
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Editable Folder Title
                 BasicTextField(
                     value = folderTitle,
                     onValueChange = {
@@ -286,31 +294,53 @@ fun FolderPopup(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
                 )
 
-                // Grid of Apps inside Folder
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(folder.apps, key = { it.packageName }) { app ->
-                        AppIcon(
-                            app = app,
-                            onClick = {
-                                dismissAnimated()
-                                onAppClick(app)
-                            },
-                            showLabel = settingsManager.showLabels,
-                            fontFamilyName = settingsManager.fontFamily,
-                            iconSizeDp = settingsManager.iconSize,
-                            cornerRadiusPercent = settingsManager.iconCornerRadius,
-                            iconOpacity = settingsManager.iconOpacity,
-                            customDrawable = getCustomDrawable(app.packageName),
-                            onClickWithBounds = { bounds ->
-                                dismissAnimated()
-                                onAppClickWithBounds(app, bounds)
-                            }
-                        )
+                    itemsIndexed(folder.apps, key = { _, app -> app.packageName }) { index, app ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerInput(app.packageName) {
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = { /* Drag started */ },
+                                        onDrag = { change, _ ->
+                                            change.consume()
+                                            val currentPos = change.position
+                                            // Trigger Drag-out when dragged outside the folder popup
+                                            val isOutside = popupBounds?.contains(currentPos.x.toInt(), currentPos.y.toInt()) == false
+                                            if (isOutside) {
+                                                focusManager.clearFocus()
+                                                keyboardController?.hide()
+                                                onDragOutApp(app, currentPos)
+                                            }
+                                        },
+                                        onDragEnd = { },
+                                        onDragCancel = { }
+                                    )
+                                }
+                        ) {
+                            AppIcon(
+                                app = app,
+                                onClick = {
+                                    dismissAnimated()
+                                    onAppClick(app)
+                                },
+                                showLabel = settingsManager.showLabels,
+                                fontFamilyName = settingsManager.fontFamily,
+                                iconSizeDp = settingsManager.iconSize,
+                                cornerRadiusPercent = settingsManager.iconCornerRadius,
+                                iconOpacity = settingsManager.iconOpacity,
+                                customDrawable = getCustomDrawable(app.packageName),
+                                onClickWithBounds = { bounds ->
+                                    dismissAnimated()
+                                    onAppClickWithBounds(app, bounds)
+                                }
+                            )
+                        }
                     }
                 }
             }
