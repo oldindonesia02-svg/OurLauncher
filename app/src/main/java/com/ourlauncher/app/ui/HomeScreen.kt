@@ -1,11 +1,13 @@
 package com.ourlauncher.app.ui
 
+import android.content.Context
 import android.graphics.drawable.Drawable
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -26,6 +28,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -35,7 +38,30 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Collections
+import kotlin.math.abs
 import kotlin.math.roundToInt
+
+fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -> Unit) {
+    when (action) {
+        "notifications" -> {
+            try {
+                val service = context.getSystemService("statusbar")
+                val clz = Class.forName("android.app.StatusBarManager")
+                clz.getMethod("expandNotificationsPanel").invoke(service)
+            } catch (_: Exception) {}
+        }
+        "system_control_center" -> {
+            try {
+                val service = context.getSystemService("statusbar")
+                val clz = Class.forName("android.app.StatusBarManager")
+                clz.getMethod("expandSettingsPanel").invoke(service)
+            } catch (_: Exception) {}
+        }
+        "builtin_control_center" -> {
+            onOpenSettings()
+        }
+    }
+}
 
 @Composable
 fun HomeScreen(
@@ -48,22 +74,21 @@ fun HomeScreen(
     onOpenDrawer: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
+    val context = LocalContext.current
     val dockApps = remember(apps) { apps.take(4) }
     var gridApps by remember(apps) { mutableStateOf(apps.drop(4).take(20).toMutableList()) }
 
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // Drag-to-Move State
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     val itemBoundsMap = remember { mutableStateMapOf<Int, android.graphics.Rect>() }
 
-    // Dual Open/Close Animation State
     var activeApp by remember { mutableStateOf<AppInfo?>(null) }
     var activeBounds by remember { mutableStateOf<android.graphics.Rect?>(null) }
     val animProgress = remember { Animatable(0f) }
-    var animationJob by remember { mutableStateOf<Job?>(null) }
+    var animJob by remember { mutableStateOf<Job?>(null) }
 
     val posEasing = remember(settingsManager.posCurveX1, settingsManager.posCurveY1, settingsManager.posCurveX2, settingsManager.posCurveY2) {
         CubicBezierEasing(
@@ -74,11 +99,10 @@ fun HomeScreen(
         )
     }
 
-    // Trigger Returning App Closing Animation on Home Resume
     LaunchedEffect(resumeTrigger) {
         if (resumeTrigger > 0L && activeApp != null && activeBounds != null) {
-            animationJob?.cancel()
-            animationJob = coroutineScope.launch {
+            animJob?.cancel()
+            animJob = coroutineScope.launch {
                 animProgress.snapTo(1f)
                 animProgress.animateTo(
                     targetValue = 0f,
@@ -96,11 +120,11 @@ fun HomeScreen(
             return
         }
 
-        animationJob?.cancel()
+        animJob?.cancel()
         activeApp = app
         activeBounds = bounds
 
-        animationJob = coroutineScope.launch {
+        animJob = coroutineScope.launch {
             animProgress.snapTo(0f)
             launch {
                 animProgress.animateTo(
@@ -127,34 +151,34 @@ fun HomeScreen(
                 .scale(bgScale)
                 .alpha(bgAlpha)
                 .pointerInput(Unit) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = { startPos ->
-                            val found = itemBoundsMap.entries.firstOrNull { (_, rect) ->
-                                rect.contains(startPos.x.toInt(), startPos.y.toInt())
-                            }
-                            if (found != null) {
-                                draggedIndex = found.key
-                                dragOffset = startPos
-                            }
+                    var startX = 0f
+                    var totalDragY = 0f
+                    var totalDragX = 0f
+                    detectDragGestures(
+                        onDragStart = { startOffset ->
+                            startX = startOffset.x
+                            totalDragY = 0f
+                            totalDragX = 0f
                         },
-                        onDrag = { change, amount ->
-                            change.consume()
-                            dragOffset += amount
-
-                            val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
-                                rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
-                            }
-                            if (hovered != null && draggedIndex != null && hovered.key != draggedIndex) {
-                                val from = draggedIndex!!
-                                val to = hovered.key
-                                val list = gridApps.toMutableList()
-                                Collections.swap(list, from, to)
-                                gridApps = list
-                                draggedIndex = to
-                            }
+                        onDrag = { _, dragAmount ->
+                            totalDragY += dragAmount.y
+                            totalDragX += dragAmount.x
                         },
-                        onDragEnd = { draggedIndex = null },
-                        onDragCancel = { draggedIndex = null }
+                        onDragEnd = {
+                            val threshold = 45f
+                            if (abs(totalDragY) > abs(totalDragX)) {
+                                if (totalDragY < -threshold) {
+                                    onOpenDrawer() // Swipe Up -> Drawer
+                                } else if (totalDragY > threshold) {
+                                    // Pull Down Left vs Right
+                                    if (startX < screenWidthPx / 2f) {
+                                        triggerPullDownAction(settingsManager.leftPullDownAction, context, onOpenSettings)
+                                    } else {
+                                        triggerPullDownAction(settingsManager.rightPullDownAction, context, onOpenSettings)
+                                    }
+                                }
+                            }
+                        }
                     )
                 }
                 .pointerInput(Unit) {
@@ -169,6 +193,37 @@ fun HomeScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f)
+                        .pointerInput(Unit) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { startPos ->
+                                    val found = itemBoundsMap.entries.firstOrNull { (_, rect) ->
+                                        rect.contains(startPos.x.toInt(), startPos.y.toInt())
+                                    }
+                                    if (found != null) {
+                                        draggedIndex = found.key
+                                        dragOffset = startPos
+                                    }
+                                },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    dragOffset += amount
+
+                                    val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
+                                        rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
+                                    }
+                                    if (hovered != null && draggedIndex != null && hovered.key != draggedIndex) {
+                                        val from = draggedIndex!!
+                                        val to = hovered.key
+                                        val list = gridApps.toMutableList()
+                                        Collections.swap(list, from, to)
+                                        gridApps = list
+                                        draggedIndex = to
+                                    }
+                                },
+                                onDragEnd = { draggedIndex = null },
+                                onDragCancel = { draggedIndex = null }
+                            )
+                        }
                 ) {
                     itemsIndexed(gridApps, key = { _, app -> app.packageName }) { index, app ->
                         val isBeingDragged = draggedIndex == index
@@ -204,11 +259,7 @@ fun HomeScreen(
 
                 Dock(
                     pinnedApps = dockApps,
-                    iconSize = settingsManager.iconSize,
-                    cornerRadiusPercent = settingsManager.iconCornerRadius,
-                    iconOpacity = settingsManager.iconOpacity,
-                    dockRadius = settingsManager.dockRadius,
-                    showDockBg = settingsManager.showDockBg,
+                    settingsManager = settingsManager,
                     getCustomDrawable = getCustomDrawable,
                     onAppClick = { handleAppOpen(it, null) },
                     onAppClickWithBounds = { app, bounds -> handleAppOpen(app, bounds) }
@@ -248,7 +299,7 @@ fun HomeScreen(
             }
         }
 
-        // --- GPU-ACCELERATED DUAL APP OPENING & CLOSING OVERLAY ---
+        // --- GPU-ACCELERATED DUAL OPEN & CLOSE OVERLAY ---
         if (activeApp != null && activeBounds != null && p > 0.005f) {
             val b = activeBounds!!
             val currentX = b.left * (1f - p)
