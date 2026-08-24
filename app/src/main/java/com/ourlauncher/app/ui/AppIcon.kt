@@ -7,6 +7,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -63,6 +64,7 @@ fun AppIcon(
     onClickWithBounds: ((Rect) -> Unit)? = null
 ) {
     var screenBounds by remember { mutableStateOf<Rect?>(null) }
+    val interactionSource = remember { MutableInteractionSource() }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -71,7 +73,10 @@ fun AppIcon(
                 val b = coords.boundsInRoot()
                 screenBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
             }
-            .clickable {
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null // Removes dark rectangular selection border
+            ) {
                 val bounds = screenBounds
                 if (onClickWithBounds != null && bounds != null) {
                     onClickWithBounds(bounds)
