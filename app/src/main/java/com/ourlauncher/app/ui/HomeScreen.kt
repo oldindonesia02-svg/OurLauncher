@@ -39,6 +39,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Collections
+import java.util.UUID
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -59,21 +60,13 @@ fun HomeScreen(
     val repository = remember { AppRepository(context) }
     val dockApps = remember(apps) { apps.take(4) }
 
-    var gridApps by remember(apps) {
-        val savedPackages = settingsManager.homeGridApps
-        val initialList = if (savedPackages.isNotEmpty()) {
-            val appMap = apps.associateBy { it.packageName }
-            val loaded = savedPackages.mapNotNull { appMap[it] }.toMutableList()
-            val remaining = apps.drop(4).filter { app -> !savedPackages.contains(app.packageName) }
-            (loaded + remaining).toMutableList()
-        } else {
-            apps.drop(4).toMutableList()
-        }
-        mutableStateOf(initialList)
+    var gridItems by remember(apps) {
+        val initialItems = apps.drop(4).map { GridItem.SingleApp(it) }.toMutableList()
+        mutableStateOf(initialItems)
     }
 
     val pageSize = 20
-    val totalPages = remember(gridApps) { maxOf(1, ceil(gridApps.size.toFloat() / pageSize).toInt()) }
+    val totalPages = remember(gridItems) { maxOf(1, ceil(gridItems.size.toFloat() / pageSize).toInt()) }
     val pagerState = rememberPagerState(pageCount = { totalPages })
 
     val coroutineScope = rememberCoroutineScope()
@@ -81,10 +74,12 @@ fun HomeScreen(
 
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    var targetHoverIndex by remember { mutableStateOf<Int?>(null) }
     val itemBoundsMap = remember { mutableStateMapOf<Int, Rect>() }
 
     var contextMenuApp by remember { mutableStateOf<AppInfo?>(null) }
     var contextMenuPosition by remember { mutableStateOf(Offset.Zero) }
+    var activeFolder by remember { mutableStateOf<FolderInfo?>(null) }
 
     var activeApp by remember { mutableStateOf<AppInfo?>(null) }
     var activeBounds by remember { mutableStateOf<Rect?>(null) }
@@ -128,10 +123,6 @@ fun HomeScreen(
             delay((settingsManager.animDuration * 0.72f).toLong())
             onAppClickWithBounds(app, bounds)
         }
-    }
-
-    fun saveCurrentLayout(updatedList: List<AppInfo>) {
-        settingsManager.homeGridApps = updatedList.map { it.packageName }
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -191,8 +182,8 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth().weight(1f)
                 ) { pageIndex ->
                     val pageStart = pageIndex * pageSize
-                    val pageEnd = minOf(pageStart + pageSize, gridApps.size)
-                    val currentGridApps = if (pageStart < gridApps.size) gridApps.subList(pageStart, pageEnd) else emptyList()
+                    val pageEnd = minOf(pageStart + pageSize, gridItems.size)
+                    val currentGridItems = if (pageStart < gridItems.size) gridItems.subList(pageStart, pageEnd) else emptyList()
 
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(4),
@@ -207,11 +198,14 @@ fun HomeScreen(
                                         val found = itemBoundsMap.entries.firstOrNull { (_, rect) ->
                                             rect.contains(startPos.x.toInt(), startPos.y.toInt())
                                         }
-                                        if (found != null && found.key < gridApps.size) {
+                                        if (found != null && found.key < gridItems.size) {
                                             draggedIndex = found.key
                                             dragOffset = startPos
-                                            contextMenuApp = gridApps[found.key]
-                                            contextMenuPosition = startPos
+                                            val item = gridItems[found.key]
+                                            if (item is GridItem.SingleApp) {
+                                                contextMenuApp = item.app
+                                                contextMenuPosition = startPos
+                                            }
                                         }
                                     },
                                     onDrag = { change, amount ->
@@ -222,24 +216,52 @@ fun HomeScreen(
                                         val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
                                             rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
                                         }
-                                        if (hovered != null && draggedIndex != null && hovered.key != draggedIndex && hovered.key < gridApps.size) {
-                                            val from = draggedIndex!!
-                                            val to = hovered.key
-                                            val list = gridApps.toMutableList()
-                                            Collections.swap(list, from, to)
-                                            gridApps = list
-                                            draggedIndex = to
-                                            saveCurrentLayout(list)
-                                        }
+                                        targetHoverIndex = if (hovered != null && hovered.key != draggedIndex) hovered.key else null
                                     },
-                                    onDragEnd = { draggedIndex = null },
-                                    onDragCancel = { draggedIndex = null }
+                                    onDragEnd = {
+                                        if (draggedIndex != null && targetHoverIndex != null) {
+                                            val from = draggedIndex!!
+                                            val to = targetHoverIndex!!
+                                            val list = gridItems.toMutableList()
+                                            val sourceItem = list[from]
+                                            val targetItem = list[to]
+
+                                            if (sourceItem is GridItem.SingleApp) {
+                                                if (targetItem is GridItem.SingleApp) {
+                                                    // Merge 2 apps into a new Folder
+                                                    val newFolder = FolderInfo(
+                                                        id = UUID.randomUUID().toString(),
+                                                        name = "Folder",
+                                                        apps = mutableListOf(targetItem.app, sourceItem.app)
+                                                    )
+                                                    list[to] = GridItem.Folder(newFolder)
+                                                    list.removeAt(from)
+                                                    gridItems = list
+                                                } else if (targetItem is GridItem.Folder) {
+                                                    // Add app into existing Folder
+                                                    targetItem.folder.apps.add(sourceItem.app)
+                                                    list.removeAt(from)
+                                                    gridItems = list
+                                                }
+                                            } else {
+                                                Collections.swap(list, from, to)
+                                                gridItems = list
+                                            }
+                                        }
+                                        draggedIndex = null
+                                        targetHoverIndex = null
+                                    },
+                                    onDragCancel = {
+                                        draggedIndex = null
+                                        targetHoverIndex = null
+                                    }
                                 )
                             }
                     ) {
-                        itemsIndexed(currentGridApps, key = { _, app -> app.packageName }) { indexInPage, app ->
+                        itemsIndexed(currentGridItems, key = { _, item -> item.id }) { indexInPage, item ->
                             val globalIndex = pageStart + indexInPage
                             val isBeingDragged = draggedIndex == globalIndex
+                            val isHovered = targetHoverIndex == globalIndex
 
                             Box(
                                 modifier = Modifier
@@ -251,21 +273,35 @@ fun HomeScreen(
                                             b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt()
                                         )
                                     }
+                                    .scale(if (isHovered) 1.08f else 1f)
                                     .alpha(if (isBeingDragged) 0.05f else 1f),
                                 contentAlignment = Alignment.Center
                             ) {
-                                AppIcon(
-                                    app = app,
-                                    onClick = { contextMenuApp = null; handleAppOpen(app, null) },
-                                    showLabel = settingsManager.showLabels,
-                                    fontFamilyName = settingsManager.fontFamily,
-                                    iconSizeDp = settingsManager.iconSize,
-                                    cornerRadiusPercent = settingsManager.iconCornerRadius,
-                                    iconOpacity = settingsManager.iconOpacity,
-                                    customDrawable = getCustomDrawable(app.packageName),
-                                    onClickWithBounds = { bounds -> contextMenuApp = null; handleAppOpen(app, bounds) },
-                                    modifier = Modifier.width(82.dp)
-                                )
+                                when (item) {
+                                    is GridItem.SingleApp -> {
+                                        AppIcon(
+                                            app = item.app,
+                                            onClick = { contextMenuApp = null; handleAppOpen(item.app, null) },
+                                            showLabel = settingsManager.showLabels,
+                                            fontFamilyName = settingsManager.fontFamily,
+                                            iconSizeDp = settingsManager.iconSize,
+                                            cornerRadiusPercent = settingsManager.iconCornerRadius,
+                                            iconOpacity = settingsManager.iconOpacity,
+                                            customDrawable = getCustomDrawable(item.app.packageName),
+                                            onClickWithBounds = { bounds: Rect -> contextMenuApp = null; handleAppOpen(item.app, bounds) },
+                                            modifier = Modifier.width(82.dp)
+                                        )
+                                    }
+                                    is GridItem.Folder -> {
+                                        FolderIcon(
+                                            folder = item.folder,
+                                            onClick = { activeFolder = item.folder },
+                                            settingsManager = settingsManager,
+                                            getCustomDrawable = getCustomDrawable,
+                                            modifier = Modifier.width(82.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -297,6 +333,19 @@ fun HomeScreen(
             }
         }
 
+        // Active Folder Liquid Popup
+        if (activeFolder != null) {
+            FolderPopup(
+                folder = activeFolder!!,
+                settingsManager = settingsManager,
+                getCustomDrawable = getCustomDrawable,
+                onAppClick = { app -> handleAppOpen(app, null) },
+                onAppClickWithBounds = { app, bounds -> handleAppOpen(app, bounds) },
+                onRenameFolder = { newName -> activeFolder?.name = newName },
+                onDismiss = { activeFolder = null }
+            )
+        }
+
         if (contextMenuApp != null && draggedIndex == null) {
             val app = contextMenuApp!!
             HomeContextMenu(
@@ -306,39 +355,41 @@ fun HomeScreen(
                 repository = repository,
                 onDismiss = { contextMenuApp = null },
                 onRemove = {
-                    val updated = gridApps.filter { it.packageName != app.packageName }.toMutableList()
-                    gridApps = updated
-                    saveCurrentLayout(updated)
+                    val updated = gridItems.filterNot { it is GridItem.SingleApp && it.app.packageName == app.packageName }.toMutableList()
+                    gridItems = updated
                 }
             )
         }
 
-        if (draggedIndex != null && draggedIndex!! < gridApps.size) {
-            val app = gridApps[draggedIndex!!]
-            val targetDrawable = getCustomDrawable(app.packageName) ?: app.icon
-            val cacheKey = "${app.packageName}_${targetDrawable?.hashCode() ?: 0}"
-            val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
+        if (draggedIndex != null && draggedIndex!! < gridItems.size) {
+            val item = gridItems[draggedIndex!!]
+            if (item is GridItem.SingleApp) {
+                val app = item.app
+                val targetDrawable = getCustomDrawable(app.packageName) ?: app.icon
+                val cacheKey = "${app.packageName}_${targetDrawable?.hashCode() ?: 0}"
+                val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
 
-            with(density) {
-                Box(
-                    modifier = Modifier
-                        .offset {
-                            IntOffset(
-                                (dragOffset.x - (settingsManager.iconSize.dp.toPx() / 2)).roundToInt(),
-                                (dragOffset.y - (settingsManager.iconSize.dp.toPx() / 2) - 30.dp.toPx()).roundToInt()
+                with(density) {
+                    Box(
+                        modifier = Modifier
+                            .offset {
+                                IntOffset(
+                                    (dragOffset.x - (settingsManager.iconSize.dp.toPx() / 2)).roundToInt(),
+                                    (dragOffset.y - (settingsManager.iconSize.dp.toPx() / 2) - 30.dp.toPx()).roundToInt()
+                                )
+                            }
+                            .scale(1.15f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(settingsManager.iconSize.dp)
+                                    .clip(RoundedCornerShape(settingsManager.iconCornerRadius.toInt()))
                             )
                         }
-                        .scale(1.15f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(settingsManager.iconSize.dp)
-                                .clip(RoundedCornerShape(settingsManager.iconCornerRadius.toInt()))
-                        )
                     }
                 }
             }
@@ -351,9 +402,4 @@ fun HomeScreen(
                 progress = p,
                 screenWidthPx = screenWidthPx,
                 screenHeightPx = screenHeightPx,
-                settingsManager = settingsManager,
-                getCustomDrawable = getCustomDrawable
-            )
-        }
-    }
-}
+                settingsManager = settingsM
