@@ -37,20 +37,15 @@ class AppRepository(private val context: Context) {
 
         launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-        if (sourceBounds != null) {
+        if (sourceBounds != null && context is Activity) {
             launchIntent.sourceBounds = sourceBounds
-
-            val options = if (context is Activity) {
-                ActivityOptions.makeScaleUpAnimation(
-                    context.window.decorView,
-                    sourceBounds.left,
-                    sourceBounds.top,
-                    sourceBounds.width(),
-                    sourceBounds.height()
-                )
-            } else {
-                ActivityOptions.makeBasic()
-            }
+            val options = ActivityOptions.makeScaleUpAnimation(
+                context.window.decorView,
+                sourceBounds.left,
+                sourceBounds.top,
+                sourceBounds.width(),
+                sourceBounds.height()
+            )
             context.startActivity(launchIntent, options.toBundle())
         } else {
             context.startActivity(launchIntent)
