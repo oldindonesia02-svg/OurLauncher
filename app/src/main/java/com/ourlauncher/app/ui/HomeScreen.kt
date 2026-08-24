@@ -148,6 +148,7 @@ fun HomeScreen(
     val density = LocalDensity.current
 
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
+    var draggedExternalApp by remember { mutableStateOf<AppInfo?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var targetHoverIndex by remember { mutableStateOf<Int?>(null) }
     val itemBoundsMap = remember { mutableStateMapOf<Int, Rect>() }
@@ -170,7 +171,6 @@ fun HomeScreen(
         )
     }
 
-    // Auto Dissolve Engine: Dissolves folders with 1 or 0 apps into single apps
     fun sanitizeAndSaveFolders(items: List<GridItem>) {
         val sanitized = items.mapNotNull { item ->
             when (item) {
@@ -242,20 +242,40 @@ fun HomeScreen(
                             totalDragY = 0f
                             totalDragX = 0f
                         },
-                        onDrag = { _, dragAmount ->
-                            totalDragY += dragAmount.y
-                            totalDragX += dragAmount.x
+                        onDrag = { change, dragAmount ->
+                            if (draggedExternalApp != null) {
+                                change.consume()
+                                dragOffset += dragAmount
+                                val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
+                                    rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
+                                }
+                                targetHoverIndex = hovered?.key
+                            } else {
+                                totalDragY += dragAmount.y
+                                totalDragX += dragAmount.x
+                            }
                         },
                         onDragEnd = {
-                            val threshold = 45f
-                            if (abs(totalDragY) > abs(totalDragX) * 1.5f) {
-                                if (totalDragY < -threshold) {
-                                    onOpenDrawer()
-                                } else if (totalDragY > threshold) {
-                                    if (startX < screenWidthPx / 2f) {
-                                        triggerPullDownAction(settingsManager.leftPullDownAction, context, onOpenSettings)
-                                    } else {
-                                        triggerPullDownAction(settingsManager.rightPullDownAction, context, onOpenSettings)
+                            if (draggedExternalApp != null) {
+                                val targetApp = draggedExternalApp!!
+                                val insertIndex = targetHoverIndex ?: gridItems.size
+                                val list = gridItems.toMutableList()
+                                val safeIndex = insertIndex.coerceIn(0, list.size)
+                                list.add(safeIndex, GridItem.SingleApp(targetApp))
+                                sanitizeAndSaveFolders(list)
+                                draggedExternalApp = null
+                                targetHoverIndex = null
+                            } else {
+                                val threshold = 45f
+                                if (abs(totalDragY) > abs(totalDragX) * 1.5f) {
+                                    if (totalDragY < -threshold) {
+                                        onOpenDrawer()
+                                    } else if (totalDragY > threshold) {
+                                        if (startX < screenWidthPx / 2f) {
+                                            triggerPullDownAction(settingsManager.leftPullDownAction, context, onOpenSettings)
+                                        } else {
+                                            triggerPullDownAction(settingsManager.rightPullDownAction, context, onOpenSettings)
+                                        }
                                     }
                                 }
                             }
@@ -409,7 +429,7 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         LiquidSearchDotsCapsule(
-                            totalPages,
+                            totalPages = totalPages,
                             currentPage = pagerState.currentPage,
                             onSearchClick = onOpenDrawer
                         )
@@ -426,7 +446,7 @@ fun HomeScreen(
             }
         }
 
-        // Active Folder Liquid Popup with Drag-Out
+        // Active Folder Popup with Instant Seamless Handover
         if (activeFolder != null) {
             FolderPopup(
                 folder = activeFolder!!,
@@ -438,14 +458,16 @@ fun HomeScreen(
                     activeFolder?.name = newName
                     saveGridStructure(gridItems, settingsManager)
                 },
-                onDragOutApp = { draggedApp, dragPos ->
+                onStartDragOut = { appToExtract, initialPos ->
                     val folder = activeFolder
                     if (folder != null) {
-                        folder.apps.remove(draggedApp)
-                        val updated = gridItems.toMutableList()
-                        updated.add(GridItem.SingleApp(draggedApp))
-                        sanitizeAndSaveFolders(updated)
+                        folder.apps.remove(appToExtract)
+                        val folderIndex = gridItems.indexOfFirst { it is GridItem.Folder && it.folder.id == folder.id }
+                        targetHoverIndex = if (folderIndex >= 0) folderIndex + 1 else null
+                        sanitizeAndSaveFolders(gridItems)
                     }
+                    draggedExternalApp = appToExtract
+                    dragOffset = initialPos
                     activeFolder = null
                 },
                 onDismiss = { activeFolder = null }
@@ -467,35 +489,37 @@ fun HomeScreen(
             )
         }
 
-        if (draggedIndex != null && draggedIndex!! < gridItems.size) {
+        // Dragged Ghost Overlay (for regular app drag OR folder extract drag)
+        val floatingApp = if (draggedIndex != null && draggedIndex!! < gridItems.size) {
             val item = gridItems[draggedIndex!!]
-            if (item is GridItem.SingleApp) {
-                val app = item.app
-                val targetDrawable = getCustomDrawable(app.packageName) ?: app.icon
-                val cacheKey = "${app.packageName}_${targetDrawable?.hashCode() ?: 0}"
-                val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
+            if (item is GridItem.SingleApp) item.app else null
+        } else draggedExternalApp
 
-                with(density) {
-                    Box(
-                        modifier = Modifier
-                            .offset {
-                                IntOffset(
-                                    (dragOffset.x - (settingsManager.iconSize.dp.toPx() / 2)).roundToInt(),
-                                    (dragOffset.y - (settingsManager.iconSize.dp.toPx() / 2) - 30.dp.toPx()).roundToInt()
-                                )
-                            }
-                            .scale(1.15f),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (bitmap != null) {
-                            Image(
-                                bitmap = bitmap,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(settingsManager.iconSize.dp)
-                                    .clip(RoundedCornerShape(settingsManager.iconCornerRadius.toInt()))
+        if (floatingApp != null) {
+            val targetDrawable = getCustomDrawable(floatingApp.packageName) ?: floatingApp.icon
+            val cacheKey = "${floatingApp.packageName}_${targetDrawable?.hashCode() ?: 0}"
+            val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
+
+            with(density) {
+                Box(
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                (dragOffset.x - (settingsManager.iconSize.dp.toPx() / 2)).roundToInt(),
+                                (dragOffset.y - (settingsManager.iconSize.dp.toPx() / 2) - 30.dp.toPx()).roundToInt()
                             )
                         }
+                        .scale(1.15f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(settingsManager.iconSize.dp)
+                                .clip(RoundedCornerShape(settingsManager.iconCornerRadius.toInt()))
+                        )
                     }
                 }
             }
@@ -513,4 +537,4 @@ fun HomeScreen(
             )
         }
     }
-}
+}            
