@@ -12,14 +12,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.boundsInWindow
@@ -31,9 +34,13 @@ import com.ourlauncher.app.AppInfo
 
 private val iconCache = HashMap<String, Bitmap>()
 
-fun getCachedBitmap(packageName: String, drawable: Drawable?): Bitmap? {
+fun clearIconCache() {
+    iconCache.clear()
+}
+
+fun getCachedBitmap(cacheKey: String, drawable: Drawable?): Bitmap? {
     if (drawable == null) return null
-    return iconCache.getOrPut(packageName) {
+    return iconCache.getOrPut(cacheKey) {
         if (drawable is BitmapDrawable && drawable.bitmap != null) {
             drawable.bitmap
         } else {
@@ -54,6 +61,9 @@ fun AppIcon(
     modifier: Modifier = Modifier,
     showLabel: Boolean = true,
     iconSizeDp: Int = 48,
+    cornerRadiusPercent: Float = 25f,
+    iconOpacity: Float = 1.0f,
+    customDrawable: Drawable? = null,
     onClickWithBounds: ((Rect) -> Unit)? = null
 ) {
     var screenBounds by remember { mutableStateOf<Rect?>(null) }
@@ -75,15 +85,22 @@ fun AppIcon(
             }
             .padding(4.dp)
     ) {
-        val imageBitmap = remember(app.packageName) {
-            getCachedBitmap(app.packageName, app.icon)?.asImageBitmap()
+        val targetDrawable = customDrawable ?: app.icon
+        val cacheKey = "${app.packageName}_${targetDrawable.hashCode()}"
+        val imageBitmap = remember(cacheKey) {
+            getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
         }
+
+        val shape = RoundedCornerShape(cornerRadiusPercent.toInt())
 
         if (imageBitmap != null) {
             Image(
                 bitmap = imageBitmap,
                 contentDescription = app.label,
-                modifier = Modifier.size(iconSizeDp.dp)
+                modifier = Modifier
+                    .size(iconSizeDp.dp)
+                    .clip(shape)
+                    .alpha(iconOpacity)
             )
         } else {
             Spacer(modifier = Modifier.size(iconSizeDp.dp))
@@ -93,7 +110,7 @@ fun AppIcon(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = app.label,
-                color = Color.White,
+                color = Color.White.copy(alpha = iconOpacity),
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
