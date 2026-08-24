@@ -7,6 +7,8 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -15,6 +17,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +25,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -30,9 +34,12 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
+import com.ourlauncher.app.AppRepository
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -75,16 +82,34 @@ fun HomeScreen(
     onOpenSettings: () -> Unit
 ) {
     val context = LocalContext.current
+    val repository = remember { AppRepository(context) }
     val dockApps = remember(apps) { apps.take(4) }
-    var gridApps by remember(apps) { mutableStateOf(apps.drop(4).take(20).toMutableList()) }
+
+    // Load persisted grid or create initial default 20 apps
+    var gridApps by remember(apps) {
+        val savedPackages = settingsManager.homeGridApps
+        val initialList = if (savedPackages.isNotEmpty()) {
+            val appMap = apps.associateBy { it.packageName }
+            savedPackages.mapNotNull { appMap[it] }.toMutableList()
+        } else {
+            apps.drop(4).take(20).toMutableList()
+        }
+        mutableStateOf(initialList)
+    }
 
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
+    // Drag State
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     val itemBoundsMap = remember { mutableStateMapOf<Int, android.graphics.Rect>() }
 
+    // Context Menu State
+    var contextMenuApp by remember { mutableStateOf<AppInfo?>(null) }
+    var contextMenuPosition by remember { mutableStateOf(Offset.Zero) }
+
+    // Animation States
     var activeApp by remember { mutableStateOf<AppInfo?>(null) }
     var activeBounds by remember { mutableStateOf<android.graphics.Rect?>(null) }
     val animProgress = remember { Animatable(0f) }
@@ -137,6 +162,10 @@ fun HomeScreen(
         }
     }
 
+    fun saveCurrentLayout(updatedList: List<AppInfo>) {
+        settingsManager.homeGridApps = updatedList.map { it.packageName }
+    }
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenWidthPx = constraints.maxWidth.toFloat()
         val screenHeightPx = constraints.maxHeight.toFloat()
@@ -156,6 +185,7 @@ fun HomeScreen(
                     var totalDragX = 0f
                     detectDragGestures(
                         onDragStart = { startOffset ->
+                            contextMenuApp = null
                             startX = startOffset.x
                             totalDragY = 0f
                             totalDragX = 0f
@@ -168,9 +198,8 @@ fun HomeScreen(
                             val threshold = 45f
                             if (abs(totalDragY) > abs(totalDragX)) {
                                 if (totalDragY < -threshold) {
-                                    onOpenDrawer() // Swipe Up -> Drawer
+                                    onOpenDrawer()
                                 } else if (totalDragY > threshold) {
-                                    // Pull Down Left vs Right
                                     if (startX < screenWidthPx / 2f) {
                                         triggerPullDownAction(settingsManager.leftPullDownAction, context, onOpenSettings)
                                     } else {
@@ -182,7 +211,10 @@ fun HomeScreen(
                     )
                 }
                 .pointerInput(Unit) {
-                    detectTapGestures(onLongPress = { onOpenSettings() })
+                    detectTapGestures(
+                        onTap = { contextMenuApp = null },
+                        onLongPress = { onOpenSettings() }
+                    )
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -199,25 +231,29 @@ fun HomeScreen(
                                     val found = itemBoundsMap.entries.firstOrNull { (_, rect) ->
                                         rect.contains(startPos.x.toInt(), startPos.y.toInt())
                                     }
-                                    if (found != null) {
+                                    if (found != null && found.key < gridApps.size) {
                                         draggedIndex = found.key
                                         dragOffset = startPos
+                                        contextMenuApp = gridApps[found.key]
+                                        contextMenuPosition = startPos
                                     }
                                 },
                                 onDrag = { change, amount ->
                                     change.consume()
                                     dragOffset += amount
+                                    contextMenuApp = null // Dismiss popup once actual drag movement occurs
 
                                     val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
                                         rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
                                     }
-                                    if (hovered != null && draggedIndex != null && hovered.key != draggedIndex) {
+                                    if (hovered != null && draggedIndex != null && hovered.key != draggedIndex && hovered.key < gridApps.size) {
                                         val from = draggedIndex!!
                                         val to = hovered.key
                                         val list = gridApps.toMutableList()
                                         Collections.swap(list, from, to)
                                         gridApps = list
                                         draggedIndex = to
+                                        saveCurrentLayout(list)
                                     }
                                 },
                                 onDragEnd = { draggedIndex = null },
@@ -242,14 +278,20 @@ fun HomeScreen(
                         ) {
                             AppIcon(
                                 app = app,
-                                onClick = { handleAppOpen(app, null) },
+                                onClick = {
+                                    contextMenuApp = null
+                                    handleAppOpen(app, null)
+                                },
                                 showLabel = settingsManager.showLabels,
                                 fontFamilyName = settingsManager.fontFamily,
                                 iconSizeDp = settingsManager.iconSize,
                                 cornerRadiusPercent = settingsManager.iconCornerRadius,
                                 iconOpacity = settingsManager.iconOpacity,
                                 customDrawable = getCustomDrawable(app.packageName),
-                                onClickWithBounds = { bounds -> handleAppOpen(app, bounds) }
+                                onClickWithBounds = { bounds ->
+                                    contextMenuApp = null
+                                    handleAppOpen(app, bounds)
+                                }
                             )
                         }
                     }
@@ -261,9 +303,96 @@ fun HomeScreen(
                     pinnedApps = dockApps,
                     settingsManager = settingsManager,
                     getCustomDrawable = getCustomDrawable,
-                    onAppClick = { handleAppOpen(it, null) },
-                    onAppClickWithBounds = { app, bounds -> handleAppOpen(app, bounds) }
+                    onAppClick = {
+                        contextMenuApp = null
+                        handleAppOpen(it, null)
+                    },
+                    onAppClickWithBounds = { app, bounds ->
+                        contextMenuApp = null
+                        handleAppOpen(app, bounds)
+                    }
                 )
+            }
+        }
+
+        // --- APP CONTEXT MENU GLASS POPUP ---
+        if (contextMenuApp != null && draggedIndex == null) {
+            val app = contextMenuApp!!
+            with(density) {
+                val menuX = (contextMenuPosition.x - 70.dp.toPx()).coerceIn(16.dp.toPx(), screenWidthPx - 180.dp.toPx())
+                val menuY = (contextMenuPosition.y - 140.dp.toPx()).coerceAtLeast(60.dp.toPx())
+
+                Box(
+                    modifier = Modifier
+                        .offset { IntOffset(menuX.roundToInt(), menuY.roundToInt()) }
+                        .width(170.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFF2C2C2E).copy(alpha = 0.92f),
+                                    Color(0xFF1C1C1E).copy(alpha = 0.95f)
+                                )
+                            )
+                        )
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(18.dp))
+                        .padding(6.dp)
+                ) {
+                    Column {
+                        // App Info
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable {
+                                    contextMenuApp = null
+                                    repository.openAppInfo(app.packageName)
+                                }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("ⓘ", color = Color.White, fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text("App info", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        }
+
+                        // Uninstall
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable {
+                                    contextMenuApp = null
+                                    repository.uninstallApp(app.packageName)
+                                }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("🗑", color = Color(0xFFFF453A), fontSize = 15.sp)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text("Uninstall", color = Color(0xFFFF453A), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        }
+
+                        // Remove Shortcut
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable {
+                                    val updated = gridApps.filter { it.packageName != app.packageName }.toMutableList()
+                                    gridApps = updated
+                                    saveCurrentLayout(updated)
+                                    contextMenuApp = null
+                                }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("✕", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text("Remove", color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
             }
         }
 
@@ -304,36 +433,4 @@ fun HomeScreen(
             val b = activeBounds!!
             val currentX = b.left * (1f - p)
             val currentY = b.top * (1f - p)
-            val currentW = b.width() + (screenWidthPx - b.width()) * p
-            val currentH = b.height() + (screenHeightPx - b.height()) * p
-            val initialCornerPx = (b.width() * (settingsManager.iconCornerRadius / 100f))
-            val currentRadius = initialCornerPx * (1f - p)
-
-            with(density) {
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(currentX.roundToInt(), currentY.roundToInt()) }
-                        .size(currentW.toDp(), currentH.toDp())
-                        .clip(RoundedCornerShape(currentRadius.toDp()))
-                        .background(Color(0xFF141416))
-                        .graphicsLayer { alpha = p.coerceIn(0.1f, 1f) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    val targetDrawable = getCustomDrawable(activeApp!!.packageName) ?: activeApp!!.icon
-                    val cacheKey = "${activeApp!!.packageName}_${targetDrawable.hashCode()}"
-                    val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
-
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size((settingsManager.iconSize * 1.35f).dp)
-                                .scale(1f + (0.35f * p))
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+            val currentW = b.width() 
