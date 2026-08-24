@@ -6,6 +6,7 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -35,6 +36,7 @@ import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
@@ -48,7 +50,8 @@ fun HomeScreen(
     onOpenSettings: () -> Unit
 ) {
     val dockApps = apps.take(4)
-    val gridApps = apps.drop(4)
+    // Home screen holds only top 20 apps; all other apps live cleanly in the App Drawer
+    val gridApps = apps.drop(4).take(20)
 
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -92,13 +95,20 @@ fun HomeScreen(
                     animationSpec = tween(durationMillis = settingsManager.animDuration.toInt())
                 )
             }
-            delay((settingsManager.animDuration * 0.70f).toLong())
+            delay((settingsManager.animDuration * 0.65f).toLong())
             onAppClickWithBounds(app, bounds)
 
-            delay(250)
+            delay(200)
             animProgress.snapTo(0f)
             animatingApp = null
             isLaunching = false
+        }
+    }
+
+    fun performSwipe(action: String) {
+        when (action) {
+            "drawer" -> onOpenDrawer()
+            "settings" -> onOpenSettings()
         }
     }
 
@@ -108,7 +118,7 @@ fun HomeScreen(
         val p = animProgress.value
 
         val bgScale = if (animatingApp != null && settingsManager.animAdvancedTexture) 1f - (0.05f * p) else 1f
-        val bgAlpha = if (animatingApp != null && settingsManager.animAdvancedTexture) 1f - (0.30f * p) else 1f
+        val bgAlpha = if (animatingApp != null && settingsManager.animAdvancedTexture) 1f - (0.25f * p) else 1f
 
         Box(
             modifier = Modifier
@@ -116,14 +126,32 @@ fun HomeScreen(
                 .scale(bgScale)
                 .alpha(bgAlpha)
                 .pointerInput(Unit) {
+                    var totalDragX = 0f
+                    var totalDragY = 0f
+                    detectDragGestures(
+                        onDragStart = { totalDragX = 0f; totalDragY = 0f },
+                        onDrag = { _, dragAmount -> totalDragX += dragAmount.x; totalDragY += dragAmount.y },
+                        onDragEnd = {
+                            val threshold = 50f
+                            if (abs(totalDragY) > abs(totalDragX)) {
+                                if (totalDragY < -threshold) performSwipe(settingsManager.swipeUpAction)
+                                else if (totalDragY > threshold) performSwipe(settingsManager.swipeDownAction)
+                            } else {
+                                if (totalDragX < -threshold) performSwipe(settingsManager.swipeLeftAction)
+                                else if (totalDragX > threshold) performSwipe(settingsManager.swipeRightAction)
+                            }
+                        }
+                    )
+                }
+                .pointerInput(Unit) {
                     detectTapGestures(onLongPress = { onOpenSettings() })
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
-                    contentPadding = PaddingValues(top = 64.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
-                    userScrollEnabled = true, // Enabled scrolling for home apps
+                    contentPadding = PaddingValues(top = 56.dp, start = 16.dp, end = 16.dp),
+                    userScrollEnabled = false,
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f)
@@ -158,7 +186,7 @@ fun HomeScreen(
             }
         }
 
-        // --- EXPANDING CARD OVERLAY ---
+        // --- EXPANDING CARD WITH CLEAN SCALING ---
         if (animatingApp != null && startBounds != null) {
             val b = startBounds!!
             val tPos = posEasing.transform(p)
@@ -170,7 +198,7 @@ fun HomeScreen(
             val currentY = b.top * (1f - tPos)
             val currentW = b.width() + (screenWidthPx - b.width()) * tW
             val currentH = b.height() + (screenHeightPx - b.height()) * tH
-            val currentRadius = (28f * (1f - tCorner) + 40f * tCorner)
+            val currentRadius = (28f * (1f - tCorner) + 36f * tCorner)
 
             with(density) {
                 Box(
@@ -178,7 +206,7 @@ fun HomeScreen(
                         .offset { IntOffset(currentX.roundToInt(), currentY.roundToInt()) }
                         .size(currentW.toDp(), currentH.toDp())
                         .clip(RoundedCornerShape(currentRadius.dp))
-                        .background(Color(0xFF1C1C1E)),
+                        .background(Color(0xFF18181B)),
                     contentAlignment = Alignment.Center
                 ) {
                     val targetDrawable = getCustomDrawable(animatingApp!!.packageName) ?: animatingApp!!.icon
@@ -186,12 +214,12 @@ fun HomeScreen(
                     val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
 
                     if (bitmap != null) {
-                        val iconScale = 1f + (0.4f * p)
+                        val iconScale = 1f + (0.35f * p)
                         Image(
                             bitmap = bitmap,
                             contentDescription = null,
                             modifier = Modifier
-                                .size((settingsManager.iconSize * 1.3f).dp)
+                                .size((settingsManager.iconSize * 1.2f).dp)
                                 .scale(iconScale)
                         )
                     }
