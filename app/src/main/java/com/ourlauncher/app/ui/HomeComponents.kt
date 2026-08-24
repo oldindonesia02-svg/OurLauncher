@@ -58,6 +58,97 @@ fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -
 }
 
 @Composable
+fun LiquidSearchDotsCapsule(
+    totalPages: Int,
+    currentPage: Int,
+    onSearchClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val pillShape = RoundedCornerShape(20.dp)
+
+    Box(
+        modifier = modifier
+            .wrapContentWidth()
+            .height(32.dp)
+            .clip(pillShape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.22f),
+                        Color.Black.copy(alpha = 0.35f)
+                    )
+                )
+            )
+            .border(
+                1.dp,
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.45f),
+                        Color.White.copy(alpha = 0.10f)
+                    )
+                ),
+                pillShape
+            )
+            .clickable { onSearchClick() }
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "search",
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "🔍",
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 11.sp
+            )
+
+            if (totalPages > 1) {
+                Spacer(modifier = Modifier.width(10.dp))
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(12.dp)
+                        .background(Color.White.copy(alpha = 0.25f))
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    repeat(totalPages) { index ->
+                        val isSelected = currentPage == index
+                        val dotWidth by animateDpAsState(
+                            targetValue = if (isSelected) 14.dp else 4.5.dp,
+                            label = "dotWidth"
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .height(4.5.dp)
+                                .width(dotWidth)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSelected) Color.White.copy(alpha = 0.95f)
+                                    else Color.White.copy(alpha = 0.35f)
+                                )
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun HomeContextMenu(
     app: AppInfo,
     position: Offset,
@@ -169,31 +260,6 @@ fun AppLaunchOverlay(
                         .scale(1f + (0.35f * progress))
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun PageIndicatorDots(totalPages: Int, currentPage: Int) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        repeat(totalPages) { index ->
-            val isSelected = currentPage == index
-            val dotWidth by animateDpAsState(targetValue = if (isSelected) 16.dp else 6.dp, label = "dotWidth")
-
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 3.dp)
-                    .height(6.dp)
-                    .width(dotWidth)
-                    .clip(CircleShape)
-                    .background(if (isSelected) Color.White.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.3f))
-            )
         }
     }
 }
