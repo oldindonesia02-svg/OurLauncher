@@ -3,7 +3,6 @@ package com.ourlauncher.app.ui
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Rect
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -90,7 +89,7 @@ fun AppIcon(
                     onClick()
                 }
             }
-            .padding(horizontal = 2.dp, vertical = 4.dp)
+            .padding(horizontal = 2.dp, vertical = 2.dp)
     ) {
         val targetDrawable = customDrawable ?: app.icon
         val cacheKey = "${app.packageName}_${targetDrawable.hashCode()}"
@@ -102,22 +101,20 @@ fun AppIcon(
 
         Box(
             modifier = Modifier
+                .size(iconSizeDp.dp)
                 .onGloballyPositioned { coords ->
                     val b = coords.boundsInRoot()
                     iconBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
                 }
+                .clip(shape)
+                .alpha(iconOpacity)
         ) {
             if (imageBitmap != null) {
                 Image(
                     bitmap = imageBitmap,
                     contentDescription = app.label,
-                    modifier = Modifier
-                        .size(iconSizeDp.dp)
-                        .clip(shape)
-                        .alpha(iconOpacity)
+                    modifier = Modifier.size(iconSizeDp.dp)
                 )
-            } else {
-                Spacer(modifier = Modifier.size(iconSizeDp.dp))
             }
         }
 
