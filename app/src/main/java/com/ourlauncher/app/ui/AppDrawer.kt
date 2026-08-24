@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 @Composable
 fun AppDrawer(
@@ -94,6 +96,30 @@ fun AppDrawer(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0C0C0E))
+            .pointerInput(Unit) {
+                var totalDragY = 0f
+                var totalDragX = 0f
+                detectDragGestures(
+                    onDragStart = {
+                        totalDragY = 0f
+                        totalDragX = 0f
+                    },
+                    onDrag = { _, dragAmount ->
+                        totalDragY += dragAmount.y
+                        totalDragX += dragAmount.x
+                    },
+                    onDragEnd = {
+                        // Swipe Down to Close when at top of list
+                        if (totalDragY > 70f && abs(totalDragY) > abs(totalDragX) * 1.5f) {
+                            if (gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0) {
+                                focusManager.clearFocus()
+                                keyboardController?.hide()
+                                onCloseDrawer()
+                            }
+                        }
+                    }
+                )
+            }
     ) {
         Column(
             modifier = Modifier
