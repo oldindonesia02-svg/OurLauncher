@@ -42,6 +42,32 @@ class SettingsManager(context: Context) {
         get() = prefs.getString("icon_pack", "default") ?: "default"
         set(value) = prefs.edit().putString("icon_pack", value).apply()
 
+    // Liquid Glass Properties
+    var glassMode: String
+        get() = prefs.getString("glass_mode", "easy") ?: "easy"
+        set(value) = prefs.edit().putString("glass_mode", value).apply()
+
+    var glassTransparency: Float
+        get() = prefs.getFloat("glass_transparency", 0.15f)
+        set(value) = prefs.edit().putFloat("glass_transparency", value).apply()
+
+    var glassBlurRadius: Float
+        get() = prefs.getFloat("glass_blur_radius", 0.30f)
+        set(value) = prefs.edit().putFloat("glass_blur_radius", value).apply()
+
+    var glassRefractionHeight: Float
+        get() = prefs.getFloat("glass_refraction_height", 20f)
+        set(value) = prefs.edit().putFloat("glass_refraction_height", value).apply()
+
+    var glassRefractionAmount: Float
+        get() = prefs.getFloat("glass_refraction_amount", 35f)
+        set(value) = prefs.edit().putFloat("glass_refraction_amount", value).apply()
+
+    var glassDepthEnabled: Boolean
+        get() = prefs.getBoolean("glass_depth_enabled", false)
+        set(value) = prefs.edit().putBoolean("glass_depth_enabled", value).apply()
+
+    // App Open Animation
     var animEnabled: Boolean
         get() = prefs.getBoolean("anim_enabled", true)
         set(value) = prefs.edit().putBoolean("anim_enabled", value).apply()
