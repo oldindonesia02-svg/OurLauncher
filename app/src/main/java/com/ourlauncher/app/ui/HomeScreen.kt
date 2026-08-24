@@ -61,7 +61,7 @@ fun HomeScreen(
     val dockApps = remember(apps) { apps.take(4) }
 
     var gridItems by remember(apps) {
-        val initialList: MutableList<GridItem> = apps.drop(4).map { GridItem.SingleApp(it) as GridItem }.toMutableList()
+        val initialList: List<GridItem> = apps.drop(4).map { GridItem.SingleApp(it) }
         mutableStateOf(initialList)
     }
 
@@ -222,30 +222,30 @@ fun HomeScreen(
                                         if (draggedIndex != null && targetHoverIndex != null) {
                                             val from = draggedIndex!!
                                             val to = targetHoverIndex!!
-                                            val list: MutableList<GridItem> = gridItems.toMutableList()
-                                            val sourceItem = list[from]
-                                            val targetItem = list[to]
+                                            val sourceItem = gridItems[from]
+                                            val targetItem = gridItems[to]
 
                                             if (sourceItem is GridItem.SingleApp) {
                                                 if (targetItem is GridItem.SingleApp) {
-                                                    // Merge 2 apps into a new Folder
                                                     val newFolder = FolderInfo(
                                                         id = UUID.randomUUID().toString(),
                                                         name = "Folder",
                                                         apps = mutableListOf(targetItem.app, sourceItem.app)
                                                     )
-                                                    list[to] = GridItem.Folder(newFolder)
-                                                    list.removeAt(from)
-                                                    gridItems = list
+                                                    val updated = gridItems.filterIndexed { idx, _ -> idx != from }.mapIndexed { idx, item ->
+                                                        val adjustedTo = if (from < to) to - 1 else to
+                                                        if (idx == adjustedTo) GridItem.Folder(newFolder) else item
+                                                    }
+                                                    gridItems = updated
                                                 } else if (targetItem is GridItem.Folder) {
-                                                    // Add app into existing Folder
                                                     targetItem.folder.apps.add(sourceItem.app)
-                                                    list.removeAt(from)
-                                                    gridItems = list
+                                                    val updated = gridItems.filterIndexed { idx, _ -> idx != from }
+                                                    gridItems = updated
                                                 }
                                             } else {
-                                                Collections.swap(list, from, to)
-                                                gridItems = list
+                                                val updated = gridItems.toMutableList()
+                                                Collections.swap(updated, from, to)
+                                                gridItems = updated
                                             }
                                         }
                                         draggedIndex = null
@@ -355,7 +355,7 @@ fun HomeScreen(
                 repository = repository,
                 onDismiss = { contextMenuApp = null },
                 onRemove = {
-                    val updated = gridItems.filterNot { it is GridItem.SingleApp && it.app.packageName == app.packageName }.toMutableList()
+                    val updated = gridItems.filterNot { it is GridItem.SingleApp && it.app.packageName == app.packageName }
                     gridItems = updated
                 }
             )
@@ -401,4 +401,10 @@ fun HomeScreen(
                 activeBounds = activeBounds!!,
                 progress = p,
                 screenWidthPx = screenWidthPx,
-                screenHeightPx = scr
+                screenHeightPx = screenHeightPx,
+                settingsManager = settingsManager,
+                getCustomDrawable = getCustomDrawable
+            )
+        }
+    }
+} 
