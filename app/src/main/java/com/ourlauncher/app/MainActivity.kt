@@ -26,21 +26,7 @@ class MainActivity : ComponentActivity() {
             var screen by remember { mutableStateOf(Screen.HOME) }
             val apps = remember { repository.getInstalledApps() }
             val installedPacks = remember { iconPackManager.getInstalledIconPacks() }
-
-            var showLabels by remember { mutableStateOf(settingsManager.showLabels) }
-            var dockRadius by remember { mutableStateOf(settingsManager.dockRadius) }
-            var showDockBg by remember { mutableStateOf(settingsManager.showDockBg) }
-            var searchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
-
-            var iconSize by remember { mutableStateOf(settingsManager.iconSize) }
-            var iconCornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
-            var iconOpacity by remember { mutableStateOf(settingsManager.iconOpacity) }
             var selectedIconPack by remember { mutableStateOf(settingsManager.iconPack) }
-
-            var swipeUp by remember { mutableStateOf(settingsManager.swipeUpAction) }
-            var swipeDown by remember { mutableStateOf(settingsManager.swipeDownAction) }
-            var swipeLeft by remember { mutableStateOf(settingsManager.swipeLeftAction) }
-            var swipeRight by remember { mutableStateOf(settingsManager.swipeRightAction) }
 
             LaunchedEffect(selectedIconPack) {
                 iconPackManager.loadIconPack(selectedIconPack)
@@ -51,26 +37,19 @@ class MainActivity : ComponentActivity() {
                 when (screen) {
                     Screen.HOME -> HomeScreen(
                         apps = apps,
-                        showLabels = showLabels,
-                        iconSize = iconSize,
-                        cornerRadiusPercent = iconCornerRadius,
-                        iconOpacity = iconOpacity,
+                        settingsManager = settingsManager,
                         getCustomDrawable = { pkg -> iconPackManager.getCustomIcon(pkg) },
                         onAppClick = { app -> repository.launchApp(app) },
                         onAppClickWithBounds = { app, bounds -> repository.launchApp(app, bounds) },
                         onOpenDrawer = { screen = Screen.DRAWER },
-                        onOpenSettings = { screen = Screen.SETTINGS },
-                        swipeUp = swipeUp,
-                        swipeDown = swipeDown,
-                        swipeLeft = swipeLeft,
-                        swipeRight = swipeRight
+                        onOpenSettings = { screen = Screen.SETTINGS }
                     )
 
                     Screen.DRAWER -> AppDrawer(
                         apps = apps,
-                        iconSize = iconSize,
-                        cornerRadiusPercent = iconCornerRadius,
-                        iconOpacity = iconOpacity,
+                        iconSize = settingsManager.iconSize,
+                        cornerRadiusPercent = settingsManager.iconCornerRadius,
+                        iconOpacity = settingsManager.iconOpacity,
                         getCustomDrawable = { pkg -> iconPackManager.getCustomIcon(pkg) },
                         onAppClick = { app ->
                             repository.launchApp(app)
@@ -85,61 +64,12 @@ class MainActivity : ComponentActivity() {
 
                     Screen.SETTINGS -> SettingsScreen(
                         onBack = { screen = Screen.HOME },
-                        dockRadius = dockRadius,
-                        onDockRadiusChange = {
-                            dockRadius = it
-                            settingsManager.dockRadius = it
-                        },
-                        showDockBg = showDockBg,
-                        onShowDockBgChange = {
-                            showDockBg = it
-                            settingsManager.showDockBg = it
-                        },
-                        searchOffset = searchOffset,
-                        onSearchOffsetChange = {
-                            searchOffset = it
-                            settingsManager.searchOffset = it
-                        },
-                        iconSize = iconSize,
-                        onIconSizeChange = {
-                            iconSize = it
-                            settingsManager.iconSize = it
-                        },
-                        iconCornerRadius = iconCornerRadius,
-                        onIconCornerRadiusChange = {
-                            iconCornerRadius = it
-                            settingsManager.iconCornerRadius = it
-                        },
-                        iconOpacity = iconOpacity,
-                        onIconOpacityChange = {
-                            iconOpacity = it
-                            settingsManager.iconOpacity = it
-                        },
+                        settingsManager = settingsManager,
                         installedIconPacks = installedPacks,
                         selectedIconPack = selectedIconPack,
                         onIconPackSelect = {
                             selectedIconPack = it
                             settingsManager.iconPack = it
-                        },
-                        swipeUp = swipeUp,
-                        onSwipeUpChange = {
-                            swipeUp = it
-                            settingsManager.swipeUpAction = it
-                        },
-                        swipeDown = swipeDown,
-                        onSwipeDownChange = {
-                            swipeDown = it
-                            settingsManager.swipeDownAction = it
-                        },
-                        swipeLeft = swipeLeft,
-                        onSwipeLeftChange = {
-                            swipeLeft = it
-                            settingsManager.swipeLeftAction = it
-                        },
-                        swipeRight = swipeRight,
-                        onSwipeRightChange = {
-                            swipeRight = it
-                            settingsManager.swipeRightAction = it
                         }
                     )
                 }
