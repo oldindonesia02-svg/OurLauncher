@@ -2,6 +2,7 @@ package com.ourlauncher.app.ui
 
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
@@ -38,11 +39,86 @@ import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.Collections
 import java.util.UUID
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
+
+fun saveGridStructure(items: List<GridItem>, settingsManager: SettingsManager) {
+    try {
+        val jsonArray = JSONArray()
+        for (item in items) {
+            val obj = JSONObject()
+            when (item) {
+                is GridItem.SingleApp -> {
+                    obj.put("type", "app")
+                    obj.put("package", item.app.packageName)
+                }
+                is GridItem.Folder -> {
+                    obj.put("type", "folder")
+                    obj.put("id", item.folder.id)
+                    obj.put("name", item.folder.name)
+                    val appsArray = JSONArray()
+                    item.folder.apps.forEach { appsArray.put(it.packageName) }
+                    obj.put("apps", appsArray)
+                }
+            }
+            jsonArray.put(obj)
+        }
+        settingsManager.homeGridStructure = jsonArray.toString()
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}
+
+fun loadGridStructure(rawJson: String, apps: List<AppInfo>): List<GridItem> {
+    val appMap = apps.associateBy { it.packageName }
+    if (rawJson.isBlank()) {
+        return apps.drop(4).map { GridItem.SingleApp(it) }
+    }
+    return try {
+        val jsonArray = JSONArray(rawJson)
+        val loadedItems = mutableListOf<GridItem>()
+        val usedPackages = mutableSetOf<String>()
+
+        for (i in 0 until jsonArray.length()) {
+            val obj = jsonArray.getJSONObject(i)
+            val type = obj.optString("type")
+            if (type == "app") {
+                val pkg = obj.optString("package")
+                appMap[pkg]?.let {
+                    loadedItems.add(GridItem.SingleApp(it))
+                    usedPackages.add(pkg)
+                }
+            } else if (type == "folder") {
+                val id = obj.optString("id", UUID.randomUUID().toString())
+                val name = obj.optString("name", "Folder")
+                val appsArr = obj.optJSONArray("apps") ?: JSONArray()
+                val folderApps = mutableListOf<AppInfo>()
+                for (j in 0 until appsArr.length()) {
+                    val pkg = appsArr.getString(j)
+                    appMap[pkg]?.let {
+                        folderApps.add(it)
+                        usedPackages.add(pkg)
+                    }
+                }
+                if (folderApps.isNotEmpty()) {
+                    loadedItems.add(GridItem.Folder(FolderInfo(id, name, folderApps)))
+                }
+            }
+        }
+
+        val dockPackages = apps.take(4).map { it.packageName }.toSet()
+        val remaining = apps.drop(4).filter { it.packageName !in usedPackages && it.packageName !in dockPackages }
+        loadedItems.addAll(remaining.map { GridItem.SingleApp(it) })
+        loadedItems
+    } catch (e: Exception) {
+        apps.drop(4).map { GridItem.SingleApp(it) }
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -61,8 +137,7 @@ fun HomeScreen(
     val dockApps = remember(apps) { apps.take(4) }
 
     var gridItems by remember(apps) {
-        val initialList: List<GridItem> = apps.drop(4).map { GridItem.SingleApp(it) }
-        mutableStateOf(initialList)
+        mutableStateOf(loadGridStructure(settingsManager.homeGridStructure, apps))
     }
 
     val pageSize = 20
@@ -237,15 +312,18 @@ fun HomeScreen(
                                                         if (idx == adjustedTo) GridItem.Folder(newFolder) else item
                                                     }
                                                     gridItems = updated
+                                                    saveGridStructure(updated, settingsManager)
                                                 } else if (targetItem is GridItem.Folder) {
                                                     targetItem.folder.apps.add(sourceItem.app)
                                                     val updated = gridItems.filterIndexed { idx, _ -> idx != from }
                                                     gridItems = updated
+                                                    saveGridStructure(updated, settingsManager)
                                                 }
                                             } else {
                                                 val updated = gridItems.toMutableList()
                                                 Collections.swap(updated, from, to)
                                                 gridItems = updated
+                                                saveGridStructure(updated, settingsManager)
                                             }
                                         }
                                         draggedIndex = null
@@ -341,7 +419,10 @@ fun HomeScreen(
                 getCustomDrawable = getCustomDrawable,
                 onAppClick = { app -> handleAppOpen(app, null) },
                 onAppClickWithBounds = { app, bounds -> handleAppOpen(app, bounds) },
-                onRenameFolder = { newName -> activeFolder?.name = newName },
+                onRenameFolder = { newName ->
+                    activeFolder?.name = newName
+                    saveGridStructure(gridItems, settingsManager)
+                },
                 onDismiss = { activeFolder = null }
             )
         }
@@ -357,6 +438,7 @@ fun HomeScreen(
                 onRemove = {
                     val updated = gridItems.filterNot { it is GridItem.SingleApp && it.app.packageName == app.packageName }
                     gridItems = updated
+                    saveGridStructure(updated, settingsManager)
                 }
             )
         }
@@ -407,4 +489,4 @@ fun HomeScreen(
             )
         }
     }
-} 
+}           
