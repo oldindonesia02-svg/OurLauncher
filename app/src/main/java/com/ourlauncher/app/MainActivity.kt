@@ -1,5 +1,6 @@
 package com.ourlauncher.app
 
+import android.graphics.Rect
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -42,14 +43,20 @@ class MainActivity : ComponentActivity() {
                         onOpenDrawer = { screen = Screen.DRAWER },
                         onOpenSettings = { screen = Screen.SETTINGS }
                     )
+
                     Screen.DRAWER -> AppDrawer(
                         apps = apps,
                         onAppClick = { app ->
                             repository.launchApp(app)
                             screen = Screen.HOME
                         },
+                        onAppClickWithBounds = { app, bounds ->
+                            repository.launchApp(app, bounds)
+                            screen = Screen.HOME
+                        },
                         onCloseDrawer = { screen = Screen.HOME }
                     )
+
                     Screen.SETTINGS -> SettingsScreen(
                         onBack = { screen = Screen.HOME },
                         dockRadius = dockRadius,
