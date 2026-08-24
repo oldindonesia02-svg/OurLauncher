@@ -11,9 +11,6 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -75,6 +73,8 @@ fun HomeScreen(
     val pageSize = 20
     val totalPages = remember(gridApps) { maxOf(1, ceil(gridApps.size.toFloat() / pageSize).toInt()) }
     val pagerState = rememberPagerState(pageCount = { totalPages })
+
+    val chunkedPages = remember(gridApps) { gridApps.chunked(pageSize) }
 
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -186,20 +186,27 @@ fun HomeScreen(
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
+
+                // --- 120HZ ZERO-LAG HORIZONTAL PAGER ---
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.fillMaxWidth().weight(1f)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
                 ) { pageIndex ->
+                    val pageApps = if (pageIndex < chunkedPages.size) chunkedPages[pageIndex] else emptyList()
                     val pageStart = pageIndex * pageSize
-                    val pageEnd = minOf(pageStart + pageSize, gridApps.size)
-                    val currentGridApps = if (pageStart < gridApps.size) gridApps.subList(pageStart, pageEnd) else emptyList()
 
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(4),
-                        contentPadding = PaddingValues(top = 56.dp, start = 12.dp, end = 12.dp),
-                        userScrollEnabled = false,
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
+                            .padding(top = 52.dp, start = 8.dp, end = 8.dp, bottom = 4.dp)
+                            .graphicsLayer {
+                                val pageOffset = (pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction
+                                alpha = 1f - (abs(pageOffset) * 0.35f).coerceIn(0f, 1f)
+                                scaleX = 1f - (abs(pageOffset) * 0.05f).coerceIn(0f, 1f)
+                                scaleY = scaleX
+                            }
                             .pointerInput(pageIndex) {
                                 detectDragGesturesAfterLongPress(
                                     onDragStart = { startPos ->
@@ -234,46 +241,69 @@ fun HomeScreen(
                                     onDragEnd = { draggedIndex = null },
                                     onDragCancel = { draggedIndex = null }
                                 )
-                            }
+                            },
+                        verticalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        itemsIndexed(currentGridApps, key = { _, app -> app.packageName }) { indexInPage, app ->
-                            val globalIndex = pageStart + indexInPage
-                            val isBeingDragged = draggedIndex == globalIndex
+                        val rows = remember(pageApps) { pageApps.chunked(4) }
+                        rows.forEachIndexed { rowIndex, rowApps ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                rowApps.forEachIndexed { colIndex, app ->
+                                    val globalIndex = pageStart + (rowIndex * 4) + colIndex
+                                    val isBeingDragged = draggedIndex == globalIndex
 
-                            Box(
-                                modifier = Modifier
-                                    .wrapContentHeight()
-                                    .padding(vertical = 4.dp)
-                                    .onGloballyPositioned { coords ->
-                                        val b = coords.boundsInRoot()
-                                        itemBoundsMap[globalIndex] = Rect(
-                                            b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt()
+                                    Box(
+                                        modifier = Modifier
+                                            .wrapContentSize()
+                                            .onGloballyPositioned { coords ->
+                                                val b = coords.boundsInRoot()
+                                                itemBoundsMap[globalIndex] = Rect(
+                                                    b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt()
+                                                )
+                                            }
+                                            .alpha(if (isBeingDragged) 0.05f else 1f),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AppIcon(
+                                            app = app,
+                                            onClick = { contextMenuApp = null; handleAppOpen(app, null) },
+                                            showLabel = settingsManager.showLabels,
+                                            fontFamilyName = settingsManager.fontFamily,
+                                            iconSizeDp = settingsManager.iconSize,
+                                            cornerRadiusPercent = settingsManager.iconCornerRadius,
+                                            iconOpacity = settingsManager.iconOpacity,
+                                            customDrawable = getCustomDrawable(app.packageName),
+                                            onClickWithBounds = { bounds -> contextMenuApp = null; handleAppOpen(app, bounds) }
                                         )
                                     }
-                                    .alpha(if (isBeingDragged) 0.05f else 1f),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                AppIcon(
-                                    app = app,
-                                    onClick = { contextMenuApp = null; handleAppOpen(app, null) },
-                                    showLabel = settingsManager.showLabels,
-                                    fontFamilyName = settingsManager.fontFamily,
-                                    iconSizeDp = settingsManager.iconSize,
-                                    cornerRadiusPercent = settingsManager.iconCornerRadius,
-                                    iconOpacity = settingsManager.iconOpacity,
-                                    customDrawable = getCustomDrawable(app.packageName),
-                                    onClickWithBounds = { bounds -> contextMenuApp = null; handleAppOpen(app, bounds) }
-                                )
+                                }
+                                repeat(4 - rowApps.size) {
+                                    Spacer(modifier = Modifier.size(settingsManager.iconSize.dp))
+                                }
                             }
+                        }
+                        repeat(5 - rows.size) {
+                            Spacer(modifier = Modifier.weight(1f))
                         }
                     }
                 }
 
-                if (totalPages > 1) {
-                    PageIndicatorDots(totalPages = totalPages, currentPage = pagerState.currentPage)
+                // --- LIQUID FLOATING SEARCH & DOTS CAPSULE ---
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    LiquidSearchDotsCapsule(
+                        totalPages = totalPages,
+                        currentPage = pagerState.currentPage,
+                        onSearchClick = onOpenDrawer
+                    )
                 }
-
-                SearchPill(onClick = onOpenDrawer, modifier = Modifier.padding(bottom = 8.dp))
 
                 Dock(
                     pinnedApps = dockApps,
