@@ -1,6 +1,7 @@
 package com.ourlauncher.app.ui
 
 import android.content.Context
+import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
@@ -77,7 +78,7 @@ fun HomeScreen(
     resumeTrigger: Long = 0L,
     getCustomDrawable: (String) -> Drawable? = { null },
     onAppClick: (AppInfo) -> Unit,
-    onAppClickWithBounds: (AppInfo, android.graphics.Rect) -> Unit,
+    onAppClickWithBounds: (AppInfo, Rect) -> Unit,
     onOpenDrawer: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
@@ -85,7 +86,6 @@ fun HomeScreen(
     val repository = remember { AppRepository(context) }
     val dockApps = remember(apps) { apps.take(4) }
 
-    // Load persisted grid or create initial default 20 apps
     var gridApps by remember(apps) {
         val savedPackages = settingsManager.homeGridApps
         val initialList = if (savedPackages.isNotEmpty()) {
@@ -100,18 +100,15 @@ fun HomeScreen(
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // Drag State
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
-    val itemBoundsMap = remember { mutableStateMapOf<Int, android.graphics.Rect>() }
+    val itemBoundsMap = remember { mutableStateMapOf<Int, Rect>() }
 
-    // Context Menu State
     var contextMenuApp by remember { mutableStateOf<AppInfo?>(null) }
     var contextMenuPosition by remember { mutableStateOf(Offset.Zero) }
 
-    // Animation States
     var activeApp by remember { mutableStateOf<AppInfo?>(null) }
-    var activeBounds by remember { mutableStateOf<android.graphics.Rect?>(null) }
+    var activeBounds by remember { mutableStateOf<Rect?>(null) }
     val animProgress = remember { Animatable(0f) }
     var animJob by remember { mutableStateOf<Job?>(null) }
 
@@ -139,7 +136,7 @@ fun HomeScreen(
         }
     }
 
-    fun handleAppOpen(app: AppInfo, bounds: android.graphics.Rect?) {
+    fun handleAppOpen(app: AppInfo, bounds: Rect?) {
         if (!settingsManager.animEnabled || bounds == null) {
             onAppClick(app)
             return
@@ -241,7 +238,7 @@ fun HomeScreen(
                                 onDrag = { change, amount ->
                                     change.consume()
                                     dragOffset += amount
-                                    contextMenuApp = null // Dismiss popup once actual drag movement occurs
+                                    contextMenuApp = null
 
                                     val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
                                         rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
@@ -269,7 +266,7 @@ fun HomeScreen(
                                 .padding(vertical = 4.dp)
                                 .onGloballyPositioned { coords ->
                                     val b = coords.boundsInRoot()
-                                    itemBoundsMap[index] = android.graphics.Rect(
+                                    itemBoundsMap[index] = Rect(
                                         b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt()
                                     )
                                 }
@@ -315,7 +312,7 @@ fun HomeScreen(
             }
         }
 
-        // --- APP CONTEXT MENU GLASS POPUP ---
+        // --- APP CONTEXT MENU POPUP ---
         if (contextMenuApp != null && draggedIndex == null) {
             val app = contextMenuApp!!
             with(density) {
@@ -339,7 +336,6 @@ fun HomeScreen(
                         .padding(6.dp)
                 ) {
                     Column {
-                        // App Info
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -356,7 +352,6 @@ fun HomeScreen(
                             Text("App info", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         }
 
-                        // Uninstall
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -373,7 +368,6 @@ fun HomeScreen(
                             Text("Uninstall", color = Color(0xFFFF453A), fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         }
 
-                        // Remove Shortcut
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -396,7 +390,7 @@ fun HomeScreen(
             }
         }
 
-        // --- FLOATING ICON UNDER FINGER WHEN DRAGGING ---
+        // --- FLOATING ICON WHEN DRAGGED ---
         if (draggedIndex != null && draggedIndex!! < gridApps.size) {
             val app = gridApps[draggedIndex!!]
             val targetDrawable = getCustomDrawable(app.packageName) ?: app.icon
@@ -433,4 +427,12 @@ fun HomeScreen(
             val b = activeBounds!!
             val currentX = b.left * (1f - p)
             val currentY = b.top * (1f - p)
-            val currentW = b.width() 
+            val currentW = b.width() + (screenWidthPx - b.width()) * p
+            val currentH = b.height() + (screenHeightPx - b.height()) * p
+            val initialCornerPx = (b.width() * (settingsManager.iconCornerRadius / 100f))
+            val currentRadius = initialCornerPx * (1f - p)
+
+            with(density) {
+                Box(
+                    modifier = Modifier
+                        
