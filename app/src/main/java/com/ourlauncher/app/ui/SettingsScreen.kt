@@ -62,16 +62,13 @@ fun SettingsScreen(
     var cornerX2 by remember { mutableStateOf(settingsManager.cornerCurveX2) }
     var cornerY2 by remember { mutableStateOf(settingsManager.cornerCurveY2) }
 
-    var swipeUp by remember { mutableStateOf(settingsManager.swipeUpAction) }
-    var swipeDown by remember { mutableStateOf(settingsManager.swipeDownAction) }
-    var swipeLeft by remember { mutableStateOf(settingsManager.swipeLeftAction) }
-    var swipeRight by remember { mutableStateOf(settingsManager.swipeRightAction) }
-
     if (currentSubPage == "liquid_glass") {
-        LiquidGlassScreen(
-            onBack = { currentSubPage = "main" },
-            settingsManager = settingsManager
-        )
+        LiquidGlassScreen(onBack = { currentSubPage = "main" }, settingsManager = settingsManager)
+        return
+    }
+
+    if (currentSubPage == "swipe") {
+        SwipeActionsScreen(onBack = { currentSubPage = "main" }, settingsManager = settingsManager)
         return
     }
 
@@ -264,13 +261,6 @@ fun SettingsScreen(
                             Slider(value = dockRadius, onValueChange = { dockRadius = it; settingsManager.dockRadius = it }, valueRange = 8f..50f)
                         }
                     }
-                }
-
-                "swipe" -> {
-                    SwipeActionPicker("Swipe Up", swipeUp) { swipeUp = it; settingsManager.swipeUpAction = it }
-                    SwipeActionPicker("Swipe Down", swipeDown) { swipeDown = it; settingsManager.swipeDownAction = it }
-                    SwipeActionPicker("Swipe Left", swipeLeft) { swipeLeft = it; settingsManager.swipeLeftAction = it }
-                    SwipeActionPicker("Swipe Right", swipeRight) { swipeRight = it; settingsManager.swipeRightAction = it }
                 }
 
                 else -> {
