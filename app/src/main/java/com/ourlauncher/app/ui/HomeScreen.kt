@@ -186,13 +186,9 @@ fun HomeScreen(
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-
-                // --- 120HZ HORIZONTAL PAGER WITH FIXED LAZY GRID ---
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
+                    modifier = Modifier.fillMaxWidth().weight(1f)
                 ) { pageIndex ->
                     val pageStart = pageIndex * pageSize
                     val pageEnd = minOf(pageStart + pageSize, gridApps.size)
@@ -275,18 +271,21 @@ fun HomeScreen(
                     }
                 }
 
-                // --- LIQUID SEARCH + DOTS FLOATING CAPSULE ---
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    LiquidSearchDotsCapsule(
-                        totalPages = totalPages,
-                        currentPage = pagerState.currentPage,
-                        onSearchClick = onOpenDrawer
-                    )
+                // Dynamic Offset Floating Search & Dots Capsule
+                if (!settingsManager.hideSearchCapsule) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset { IntOffset(0, settingsManager.searchOffset.roundToInt()) }
+                            .padding(bottom = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LiquidSearchDotsCapsule(
+                            totalPages = totalPages,
+                            currentPage = pagerState.currentPage,
+                            onSearchClick = onOpenDrawer
+                        )
+                    }
                 }
 
                 Dock(
