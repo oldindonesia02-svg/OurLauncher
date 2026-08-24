@@ -241,7 +241,7 @@ fun AppLaunchOverlay(
             contentAlignment = Alignment.Center
         ) {
             val targetDrawable = getCustomDrawable(activeApp.packageName) ?: activeApp.icon
-            val cacheKey = "${activeApp.packageName}_${targetDrawable.hashCode()}"
+            val cacheKey = "${activeApp.packageName}_${targetDrawable?.hashCode() ?: 0}"
             val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
 
             if (bitmap != null) {
