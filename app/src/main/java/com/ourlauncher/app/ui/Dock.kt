@@ -4,20 +4,18 @@ import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
+import kotlin.math.roundToInt
 
 @Composable
 fun Dock(
@@ -52,7 +50,8 @@ fun Dock(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .offset { IntOffset(0, settingsManager.dockOffset.dp.roundToPx()) }
+            .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
         Row(
             horizontalArrangement = Arrangement.SpaceEvenly,
