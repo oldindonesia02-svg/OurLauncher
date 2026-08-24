@@ -1,18 +1,11 @@
 package com.ourlauncher.app.ui
 
+import android.graphics.drawable.Drawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -20,11 +13,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,20 +34,19 @@ import com.ourlauncher.app.AppInfo
 @Composable
 fun AppDrawer(
     apps: List<AppInfo>,
+    cornerRadiusPercent: Float = 25f,
+    iconOpacity: Float = 1.0f,
+    getCustomDrawable: (String) -> Drawable? = { null },
     onAppClick: (AppInfo) -> Unit,
     onAppClickWithBounds: (AppInfo, android.graphics.Rect) -> Unit,
     onCloseDrawer: () -> Unit
 ) {
     val gridState = rememberLazyGridState()
-
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredApps = remember(searchQuery, apps) {
-        if (searchQuery.isEmpty()) {
-            apps
-        } else {
-            apps.filter { it.label.contains(searchQuery, ignoreCase = true) }
-        }
+        if (searchQuery.isEmpty()) apps
+        else apps.filter { it.label.contains(searchQuery, ignoreCase = true) }
     }
 
     val nestedScrollConnection = remember {
@@ -74,19 +62,11 @@ fun AppDrawer(
     }
 
     val sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-
     val glassBgGradient = Brush.verticalGradient(
-        colors = listOf(
-            Color(0xFF141418).copy(alpha = 0.72f),
-            Color(0xFF0A0A0D).copy(alpha = 0.88f)
-        )
+        colors = listOf(Color(0xFF141418).copy(alpha = 0.72f), Color(0xFF0A0A0D).copy(alpha = 0.88f))
     )
-
     val glassBorderGradient = Brush.verticalGradient(
-        colors = listOf(
-            Color.White.copy(alpha = 0.45f),
-            Color.White.copy(alpha = 0.08f)
-        )
+        colors = listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f))
     )
 
     Box(
@@ -138,11 +118,7 @@ fun AppDrawer(
                     modifier = Modifier.fillMaxWidth(),
                     decorationBox = { innerTextField ->
                         if (searchQuery.isEmpty()) {
-                            Text(
-                                text = "Search apps...",
-                                color = Color.White.copy(alpha = 0.4f),
-                                fontSize = 16.sp
-                            )
+                            Text(text = "Search apps...", color = Color.White.copy(alpha = 0.4f), fontSize = 16.sp)
                         }
                         innerTextField()
                     }
@@ -157,12 +133,12 @@ fun AppDrawer(
                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 40.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(
-                    items = filteredApps,
-                    key = { app -> app.packageName }
-                ) { app ->
+                items(items = filteredApps, key = { it.packageName }) { app ->
                     AppIcon(
                         app = app,
+                        cornerRadiusPercent = cornerRadiusPercent,
+                        iconOpacity = iconOpacity,
+                        customDrawable = getCustomDrawable(app.packageName),
                         onClick = { onAppClick(app) },
                         onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) }
                     )
