@@ -6,7 +6,11 @@ import android.content.SharedPreferences
 class SettingsManager(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("void_settings", Context.MODE_PRIVATE)
 
-    // Layout Persistence
+    // Layout & Folder Persistence (JSON Format)
+    var homeGridStructure: String
+        get() = prefs.getString("home_grid_structure", "") ?: ""
+        set(value) = prefs.edit().putString("home_grid_structure", value).apply()
+
     var homeGridApps: List<String>
         get() = prefs.getString("home_grid_apps", "")?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
         set(value) = prefs.edit().putString("home_grid_apps", value.joinToString(",")).apply()
