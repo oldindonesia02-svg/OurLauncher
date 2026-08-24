@@ -1,10 +1,12 @@
 package com.ourlauncher.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -34,6 +36,13 @@ fun SettingsScreen(
     var iconSize by remember { mutableStateOf(settingsManager.iconSize) }
     var iconCornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
     var iconOpacity by remember { mutableStateOf(settingsManager.iconOpacity) }
+
+    var iconTheme by remember { mutableStateOf(settingsManager.iconTheme) }
+    var lensLightEnabled by remember { mutableStateOf(settingsManager.lensLightEnabled) }
+    var lensAngle by remember { mutableStateOf(settingsManager.lensAngle) }
+    var lensIntensity by remember { mutableStateOf(settingsManager.lensIntensity) }
+    var lensStroke by remember { mutableStateOf(settingsManager.lensStrokeWidth) }
+    var graphicPreset by remember { mutableStateOf(settingsManager.graphicPreset) }
 
     var animEnabled by remember { mutableStateOf(settingsManager.animEnabled) }
     var animAdvancedTexture by remember { mutableStateOf(settingsManager.animAdvancedTexture) }
@@ -183,7 +192,7 @@ fun SettingsScreen(
                             BezierCanvas(heightX1, heightY1, heightX2, heightY2)
                             CurveSlider("Initial Tension (X1)", "Delays height growth", heightX1) { heightX1 = it; settingsManager.heightCurveX1 = it }
                             CurveSlider("Initial Velocity (Y1)", "Height speed burst", heightY1) { heightY1 = it; settingsManager.heightCurveY1 = it }
-                            CurveSlider("Final Tension (X2)", "Delays end height", heightX2) { heightX2 = it; settingsManager.heightCurveX2 = it }
+                            CurveSlider("Final Tension (X2)", "Delays end height", heightX2) { heightX2 = it; settingsManager.heightCurveY2 = it }
                             CurveSlider("Final Velocity (Y2)", "Height overshoot", heightY2) { heightY2 = it; settingsManager.heightCurveY2 = it }
                         }
                     }
@@ -203,44 +212,78 @@ fun SettingsScreen(
                     SettingsGroup {
                         PhoneMockupPreview(durationMs = animDuration.toInt())
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    SettingsGroup {
-                        SettingsNavRow("Reset Curves to Default", "Restores original curves") {
-                            posX1 = 0.25f; posY1 = 0.50f; posX2 = 0.00f; posY2 = 1.00f
-                            widthX1 = 0.15f; widthY1 = 0.10f; widthX2 = 0.15f; widthY2 = 1.00f
-                            heightX1 = 0.30f; heightY1 = 0.10f; heightX2 = 0.15f; heightY2 = 1.00f
-                            cornerX1 = 0.30f; cornerY1 = 0.00f; cornerX2 = 1.00f; cornerY2 = 0.20f
-                            settingsManager.posCurveX1 = posX1; settingsManager.posCurveY1 = posY1; settingsManager.posCurveX2 = posX2; settingsManager.posCurveY2 = posY2
-                            settingsManager.widthCurveX1 = widthX1; settingsManager.widthCurveY1 = widthY1; settingsManager.widthCurveX2 = widthX2; settingsManager.widthCurveY2 = widthY2
-                            settingsManager.heightCurveX1 = heightX1; settingsManager.heightCurveY1 = heightY1; settingsManager.heightCurveX2 = heightX2; settingsManager.heightCurveY2 = heightY2
-                            settingsManager.cornerCurveX1 = cornerX1; settingsManager.cornerCurveY1 = cornerY1; settingsManager.cornerCurveX2 = cornerX2; settingsManager.cornerCurveY2 = cornerY2
-                        }
-                    }
                 }
 
                 "icons" -> {
-                    SettingsSectionHeader("ICON SIZE")
+                    SettingsSectionHeader("GRAPHICS PRESET")
                     SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Size: ${iconSize.toInt()} dp", color = Color.White)
+                        val presets = listOf("ultra" to "Ultra (Full Blur & Refraction)", "high" to "High", "medium" to "Medium", "low" to "Low (Battery Saver)")
+                        presets.forEachIndexed { i, (key, label) ->
+                            if (i > 0) SettingsDivider()
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { graphicPreset = key; settingsManager.graphicPreset = key }.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(selected = graphicPreset == key, onClick = { graphicPreset = key; settingsManager.graphicPreset = key }, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF)))
+                                Text(label, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+
+                    SettingsSectionHeader("ICON THEME")
+                    SettingsGroup {
+                        val themes = listOf("standard" to "Standard Colors", "dark" to "Dark (Monochrome)", "transparent" to "Transparent Glass", "tinted" to "Tinted Blue")
+                        themes.forEachIndexed { i, (key, label) ->
+                            if (i > 0) SettingsDivider()
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { iconTheme = key; settingsManager.iconTheme = key }.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(selected = iconTheme == key, onClick = { iconTheme = key; settingsManager.iconTheme = key }, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF)))
+                                Text(label, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+
+                    SettingsSectionHeader("LENS LIGHTING ENGINE")
+                    SettingsGroup {
+                        SettingsToggleRow("Enable Lens Highlight", "Adds reflective edge light to icons", lensLightEnabled) {
+                            lensLightEnabled = it
+                            settingsManager.lensLightEnabled = it
+                        }
+                        if (lensLightEnabled) {
+                            SettingsDivider()
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text("Light Angle: ${lensAngle.toInt()}°", color = Color.White, fontSize = 13.sp)
+                                Slider(value = lensAngle, onValueChange = { lensAngle = it; settingsManager.lensAngle = it }, valueRange = 0f..360f)
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Light Intensity: ${(lensIntensity * 100).toInt()}%", color = Color.White, fontSize = 13.sp)
+                                Slider(value = lensIntensity, onValueChange = { lensIntensity = it; settingsManager.lensIntensity = it }, valueRange = 0.1f..1.0f)
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Stroke Width: ${String.format("%.1f", lensStroke)} dp", color = Color.White, fontSize = 13.sp)
+                                Slider(value = lensStroke, onValueChange = { lensStroke = it; settingsManager.lensStrokeWidth = it }, valueRange = 0.5f..3.0f)
+                            }
+                        }
+                    }
+
+                    SettingsSectionHeader("ICON SIZE & SHAPE")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text("Size: ${iconSize.toInt()} dp", color = Color.White, fontSize = 13.sp)
                             Slider(value = iconSize, onValueChange = { iconSize = it; settingsManager.iconSize = it }, valueRange = 40f..72f)
-                        }
-                    }
-                    SettingsSectionHeader("SHAPE & CORNER RADIUS")
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Corner Radius: ${iconCornerRadius.toInt()}%", color = Color.White)
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Corner Radius: ${iconCornerRadius.toInt()}%", color = Color.White, fontSize = 13.sp)
                             Slider(value = iconCornerRadius, onValueChange = { iconCornerRadius = it; settingsManager.iconCornerRadius = it }, valueRange = 0f..50f)
-                        }
-                    }
-                    SettingsSectionHeader("ICON OPACITY")
-                    SettingsGroup {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Opacity: ${(iconOpacity * 100).toInt()}%", color = Color.White)
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Opacity: ${(iconOpacity * 100).toInt()}%", color = Color.White, fontSize = 13.sp)
                             Slider(value = iconOpacity, onValueChange = { iconOpacity = it; settingsManager.iconOpacity = it }, valueRange = 0.2f..1.0f)
                         }
                     }
+
                     SettingsSectionHeader("ICON PACK")
                     SettingsGroup {
                         Row(
@@ -252,7 +295,7 @@ fun SettingsScreen(
                                 onClick = { onIconPackSelect("default") },
                                 colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF))
                             )
-                            Text("Default System Icons", color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
+                            Text("Default System Icons", color = Color.White, fontSize = 15.sp, modifier = Modifier.padding(start = 8.dp))
                         }
                         installedIconPacks.forEach { pack ->
                             SettingsDivider()
@@ -265,7 +308,7 @@ fun SettingsScreen(
                                     onClick = { onIconPackSelect(pack.packageName) },
                                     colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF))
                                 )
-                                Text(pack.label, color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
+                                Text(pack.label, color = Color.White, fontSize = 15.sp, modifier = Modifier.padding(start = 8.dp))
                             }
                         }
                     }
@@ -274,7 +317,7 @@ fun SettingsScreen(
                 else -> {
                     SettingsSectionHeader("CUSTOMIZATION")
                     SettingsGroup {
-                        SettingsNavRow("App icons", "Shape, Size & Icon Pack") { currentSubPage = "icons" }
+                        SettingsNavRow("App icons", "Themes, Lens Light, Shape & Size") { currentSubPage = "icons" }
                         SettingsDivider()
                         SettingsNavRow("App Open Animation", "Duration & Bezier Curves") { currentSubPage = "animation" }
                         SettingsDivider()
