@@ -61,8 +61,8 @@ fun HomeScreen(
     val dockApps = remember(apps) { apps.take(4) }
 
     var gridItems by remember(apps) {
-        val initialItems = apps.drop(4).map { GridItem.SingleApp(it) }.toMutableList()
-        mutableStateOf(initialItems)
+        val initialList: MutableList<GridItem> = apps.drop(4).map { GridItem.SingleApp(it) as GridItem }.toMutableList()
+        mutableStateOf(initialList)
     }
 
     val pageSize = 20
@@ -222,7 +222,7 @@ fun HomeScreen(
                                         if (draggedIndex != null && targetHoverIndex != null) {
                                             val from = draggedIndex!!
                                             val to = targetHoverIndex!!
-                                            val list = gridItems.toMutableList()
+                                            val list: MutableList<GridItem> = gridItems.toMutableList()
                                             val sourceItem = list[from]
                                             val targetItem = list[to]
 
@@ -401,5 +401,4 @@ fun HomeScreen(
                 activeBounds = activeBounds!!,
                 progress = p,
                 screenWidthPx = screenWidthPx,
-                screenHeightPx = screenHeightPx,
-                settingsManager = settingsM
+                screenHeightPx = scr
