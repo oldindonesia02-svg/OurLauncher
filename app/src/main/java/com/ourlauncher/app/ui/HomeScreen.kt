@@ -549,8 +549,8 @@ fun HomeScreen(
 
         AnimatedVisibility(
             visible = showHomeSettingsSheet,
-            enter = slideInVertically { it } + fadeIn(),
-            exit = slideOutVertically { it } + fadeOut(),
+            enter = slideInVertically(initialOffsetY = { fullHeight: Int -> fullHeight }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { fullHeight: Int -> fullHeight }) + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             HomeQuickSettingsSheet(
@@ -569,8 +569,8 @@ fun HomeScreen(
 
         AnimatedVisibility(
             visible = showIconCustomizeSheet,
-            enter = slideInVertically { it } + fadeIn(),
-            exit = slideOutVertically { it } + fadeOut(),
+            enter = slideInVertically(initialOffsetY = { fullHeight: Int -> fullHeight }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { fullHeight: Int -> fullHeight }) + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             IconCustomizeSheet(
