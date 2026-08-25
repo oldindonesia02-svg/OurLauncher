@@ -495,9 +495,8 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         LiquidSearchAiCapsule(
+                            pagerState = pagerState,
                             totalPages = totalPages,
-                            currentPage = pagerState.currentPage,
-                            isScrollInProgress = pagerState.isScrollInProgress,
                             onSearchClick = onOpenDrawer,
                             onAiClick = { launchGeminiAi(context) }
                         )
