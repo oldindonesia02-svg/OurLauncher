@@ -28,7 +28,15 @@ class SettingsManager(context: Context) {
         get() = prefs.getFloat("icon_opacity", 1.0f)
         set(value) = prefs.edit().putFloat("icon_opacity", value).apply()
 
-    // ================= Lens & Lighting =================
+    // ================= Lens, Lighting & Graphics =================
+    var lensLightEnabled: Boolean
+        get() = prefs.getBoolean("lens_light_enabled", true)
+        set(value) = prefs.edit().putBoolean("lens_light_enabled", value).apply()
+
+    var graphicPreset: String
+        get() = prefs.getString("graphic_preset", "Highlight") ?: "Highlight"
+        set(value) = prefs.edit().putString("graphic_preset", value).apply()
+
     var lensStrokeWidth: Float
         get() = prefs.getFloat("lens_stroke_width", 1.5f)
         set(value) = prefs.edit().putFloat("lens_stroke_width", value).apply()
@@ -48,6 +56,23 @@ class SettingsManager(context: Context) {
     var lensAngle: Float
         get() = prefs.getFloat("lens_angle", 75f)
         set(value) = prefs.edit().putFloat("lens_angle", value).apply()
+
+    // ================= Dock Settings =================
+    var showDockBg: Boolean
+        get() = prefs.getBoolean("show_dock_bg", true)
+        set(value) = prefs.edit().putBoolean("show_dock_bg", value).apply()
+
+    var dockPadding: Float
+        get() = prefs.getFloat("dock_padding", 12f)
+        set(value) = prefs.edit().putFloat("dock_padding", value).apply()
+
+    var dockGap: Float
+        get() = prefs.getFloat("dock_gap", 8f)
+        set(value) = prefs.edit().putFloat("dock_gap", value).apply()
+
+    var dockCornerRadius: Float
+        get() = prefs.getFloat("dock_corner_radius", 24f)
+        set(value) = prefs.edit().putFloat("dock_corner_radius", value).apply()
 
     // ================= Search Bar =================
     var searchBarOffset: Float
