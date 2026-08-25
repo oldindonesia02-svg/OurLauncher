@@ -259,7 +259,8 @@ fun HomeScreen(
             onAppClickWithBounds(app, bounds)
         }
     }
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenWidthPx = constraints.maxWidth.toFloat()
         val screenHeightPx = constraints.maxHeight.toFloat()
         val p = animProgress.value
@@ -507,7 +508,7 @@ fun HomeScreen(
                             totalPages = totalPages,
                             currentPage = pagerState.currentPage,
                             onSearchClick = onOpenDrawer,
-                            onAiClick = { isAiListening = true }
+                            onAiClick = { launchGeminiAi(context) }
                         )
                     }
                 }
