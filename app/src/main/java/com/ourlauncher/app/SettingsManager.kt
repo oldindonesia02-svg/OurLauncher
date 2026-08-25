@@ -4,148 +4,168 @@ import android.content.Context
 import android.content.SharedPreferences
 
 class SettingsManager(context: Context) {
-    private val prefs: SharedPreferences =
-        context.getSharedPreferences("ourlauncher_settings", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = context.getSharedPreferences("void_settings", Context.MODE_PRIVATE)
 
-    // ================= App & Icons =================
+    // Layout & Folder Persistence (JSON Format)
+    var homeGridStructure: String
+        get() = prefs.getString("home_grid_structure", "") ?: ""
+        set(value) = prefs.edit().putString("home_grid_structure", value).apply()
+
+    var homeGridApps: List<String>
+        get() = prefs.getString("home_grid_apps", "")?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+        set(value) = prefs.edit().putString("home_grid_apps", value.joinToString(",")).apply()
+
+    // Home Screen Grid Customization
+    var gridColumns: Int
+        get() = prefs.getInt("grid_columns", 4)
+        set(value) = prefs.edit().putInt("grid_columns", value).apply()
+
+    var gridRows: Int
+        get() = prefs.getInt("grid_rows", 5)
+        set(value) = prefs.edit().putInt("grid_rows", value).apply()
+
+    // Live Search Bar Position Settings
+    var searchOffset: Float
+        get() = prefs.getFloat("search_offset", 0f)
+        set(value) = prefs.edit().putFloat("search_offset", value).apply()
+
+    var hideSearchCapsule: Boolean
+        get() = prefs.getBoolean("hide_search_capsule", false)
+        set(value) = prefs.edit().putBoolean("hide_search_capsule", value).apply()
+
+    // Live Dock Customization Settings
+    var dockRadius: Float
+        get() = prefs.getFloat("dock_radius", 33f)
+        set(value) = prefs.edit().putFloat("dock_radius", value).apply()
+
+    var dockOffset: Float
+        get() = prefs.getFloat("dock_offset", 0f)
+        set(value) = prefs.edit().putFloat("dock_offset", value).apply()
+
+    var showDockBg: Boolean
+        get() = prefs.getBoolean("show_dock_bg", true)
+        set(value) = prefs.edit().putBoolean("show_dock_bg", value).apply()
+
+    // Icon Customization & Themes
     var showLabels: Boolean
         get() = prefs.getBoolean("show_labels", true)
         set(value) = prefs.edit().putBoolean("show_labels", value).apply()
 
     var fontFamily: String
-        get() = prefs.getString("font_family", "Default") ?: "Default"
+        get() = prefs.getString("font_family", "sans-serif") ?: "sans-serif"
         set(value) = prefs.edit().putString("font_family", value).apply()
 
     var iconSize: Float
-        get() = prefs.getFloat("icon_size", 56f)
+        get() = prefs.getFloat("icon_size", 54f)
         set(value) = prefs.edit().putFloat("icon_size", value).apply()
 
     var iconCornerRadius: Float
-        get() = prefs.getFloat("icon_corner_radius", 22f)
+        get() = prefs.getFloat("icon_corner_radius", 25f)
         set(value) = prefs.edit().putFloat("icon_corner_radius", value).apply()
 
     var iconOpacity: Float
         get() = prefs.getFloat("icon_opacity", 1.0f)
         set(value) = prefs.edit().putFloat("icon_opacity", value).apply()
 
+    var iconPack: String
+        get() = prefs.getString("icon_pack", "default") ?: "default"
+        set(value) = prefs.edit().putString("icon_pack", value).apply()
+
+    // Icon Themes: "standard", "dark", "transparent", "tinted"
     var iconTheme: String
-        get() = prefs.getString("icon_theme", "Standard") ?: "Standard"
+        get() = prefs.getString("icon_theme", "standard") ?: "standard"
         set(value) = prefs.edit().putString("icon_theme", value).apply()
 
     var iconTintColor: Long
-        get() = prefs.getLong("icon_tint_color", 0xFF0A84FFL)
+        get() = prefs.getLong("icon_tint_color", 0xFF0A84FF)
         set(value) = prefs.edit().putLong("icon_tint_color", value).apply()
 
-    // ================= Lens, Lighting & Graphics =================
+    // Lens Highlights Engine
     var lensLightEnabled: Boolean
         get() = prefs.getBoolean("lens_light_enabled", true)
         set(value) = prefs.edit().putBoolean("lens_light_enabled", value).apply()
 
-    var graphicPreset: String
-        get() = prefs.getString("graphic_preset", "Highlight") ?: "Highlight"
-        set(value) = prefs.edit().putString("graphic_preset", value).apply()
-
-    var lensStrokeWidth: Float
-        get() = prefs.getFloat("lens_stroke_width", 1.5f)
-        set(value) = prefs.edit().putFloat("lens_stroke_width", value).apply()
-
-    var lensBlur: Float
-        get() = prefs.getFloat("lens_blur", 0.5f)
-        set(value) = prefs.edit().putFloat("lens_blur", value).apply()
-
-    var lensFalloff: Float
-        get() = prefs.getFloat("lens_falloff", 1.5f)
-        set(value) = prefs.edit().putFloat("lens_falloff", value).apply()
-
-    var lensIntensity: Float
-        get() = prefs.getFloat("lens_intensity", 100f)
-        set(value) = prefs.edit().putFloat("lens_intensity", value).apply()
-
     var lensAngle: Float
-        get() = prefs.getFloat("lens_angle", 75f)
+        get() = prefs.getFloat("lens_angle", 45f)
         set(value) = prefs.edit().putFloat("lens_angle", value).apply()
 
-    // ================= Dock Settings =================
-    var showDockBg: Boolean
-        get() = prefs.getBoolean("show_dock_bg", true)
-        set(value) = prefs.edit().putBoolean("show_dock_bg", value).apply()
+    var lensIntensity: Float
+        get() = prefs.getFloat("lens_intensity", 0.75f)
+        set(value) = prefs.edit().putFloat("lens_intensity", value).apply()
 
-    var dockPadding: Float
-        get() = prefs.getFloat("dock_padding", 12f)
-        set(value) = prefs.edit().putFloat("dock_padding", value).apply()
+    var lensStrokeWidth: Float
+        get() = prefs.getFloat("lens_stroke_width", 1.2f)
+        set(value) = prefs.edit().putFloat("lens_stroke_width", value).apply()
 
-    var dockGap: Float
-        get() = prefs.getFloat("dock_gap", 8f)
-        set(value) = prefs.edit().putFloat("dock_gap", value).apply()
+    // Graphic Presets: "ultra", "high", "medium", "low"
+    var graphicPreset: String
+        get() = prefs.getString("graphic_preset", "ultra") ?: "ultra"
+        set(value) = prefs.edit().putString("graphic_preset", value).apply()
 
-    var dockRadius: Float
-        get() = prefs.getFloat("dock_radius", 24f)
-        set(value) = prefs.edit().putFloat("dock_radius", value).apply()
-
-    var dockCornerRadius: Float
-        get() = prefs.getFloat("dock_corner_radius", 24f)
-        set(value) = prefs.edit().putFloat("dock_corner_radius", value).apply()
-
-    var dockOffset: Float
-        get() = prefs.getFloat("dock_offset", 0f)
-        set(value) = prefs.edit().putFloat("dock_offset", value).apply()
-
-    // ================= Search Bar =================
-    var searchBarOffset: Float
-        get() = prefs.getFloat("search_bar_offset", 0f)
-        set(value) {
-            prefs.edit().putFloat("search_bar_offset", value).apply()
-        }
-
-    var searchOffset: Float
-        get() = searchBarOffset
-        set(value) {
-            searchBarOffset = value
-        }
-
-    var isSearchCapsuleHidden: Boolean
-        get() = prefs.getBoolean("is_search_capsule_hidden", false)
-        set(value) {
-            prefs.edit().putBoolean("is_search_capsule_hidden", value).apply()
-        }
-
-    var hideSearchCapsule: Boolean
-        get() = isSearchCapsuleHidden
-        set(value) {
-            isSearchCapsuleHidden = value
-        }
-
-    // ================= Swipe Actions =================
+    // Gesture Actions
     var leftPullDownAction: String
-        get() = prefs.getString("left_pull_down_action", "Notifications") ?: "Notifications"
-        set(value) = prefs.edit().putString("left_pull_down_action", value).apply()
+        get() = prefs.getString("left_pull_down", "notifications") ?: "notifications"
+        set(value) = prefs.edit().putString("left_pull_down", value).apply()
 
     var rightPullDownAction: String
-        get() = prefs.getString("right_pull_down_action", "Quick Settings") ?: "Quick Settings"
-        set(value) = prefs.edit().putString("right_pull_down_action", value).apply()
+        get() = prefs.getString("right_pull_down", "system_control_center") ?: "system_control_center"
+        set(value) = prefs.edit().putString("right_pull_down", value).apply()
 
-    // ================= Liquid Glass =================
+    // Liquid Glass Properties
     var glassMode: String
-        get() = prefs.getString("glass_mode", "Liquid") ?: "Liquid"
+        get() = prefs.getString("glass_mode", "easy") ?: "easy"
         set(value) = prefs.edit().putString("glass_mode", value).apply()
 
     var glassTransparency: Float
-        get() = prefs.getFloat("glass_transparency", 0.35f)
+        get() = prefs.getFloat("glass_transparency", 0.15f)
         set(value) = prefs.edit().putFloat("glass_transparency", value).apply()
 
     var glassBlurRadius: Float
-        get() = prefs.getFloat("glass_blur_radius", 20f)
+        get() = prefs.getFloat("glass_blur_radius", 0.30f)
         set(value) = prefs.edit().putFloat("glass_blur_radius", value).apply()
 
     var glassRefractionHeight: Float
-        get() = prefs.getFloat("glass_refraction_height", 1.5f)
+        get() = prefs.getFloat("glass_refraction_height", 20f)
         set(value) = prefs.edit().putFloat("glass_refraction_height", value).apply()
 
     var glassRefractionAmount: Float
-        get() = prefs.getFloat("glass_refraction_amount", 50f)
+        get() = prefs.getFloat("glass_refraction_amount", 35f)
         set(value) = prefs.edit().putFloat("glass_refraction_amount", value).apply()
 
     var glassDepthEnabled: Boolean
-        get() = prefs.getBoolean("glass_depth_enabled", true)
+        get() = prefs.getBoolean("glass_depth_enabled", false)
         set(value) = prefs.edit().putBoolean("glass_depth_enabled", value).apply()
+
+    // App Open Animation
+    var animEnabled: Boolean
+        get() = prefs.getBoolean("anim_enabled", true)
+        set(value) = prefs.edit().putBoolean("anim_enabled", value).apply()
+
+    var animAdvancedTexture: Boolean
+        get() = prefs.getBoolean("anim_adv_texture", false)
+        set(value) = prefs.edit().putBoolean("anim_adv_texture", value).apply()
+
+    var animDuration: Float
+        get() = prefs.getFloat("anim_duration", 300f)
+        set(value) = prefs.edit().putFloat("anim_duration", value).apply()
+
+    var posCurveX1: Float get() = prefs.getFloat("pos_x1", 0.25f); set(v) = prefs.edit().putFloat("pos_x1", v).apply()
+    var posCurveY1: Float get() = prefs.getFloat("pos_y1", 0.50f); set(v) = prefs.edit().putFloat("pos_y1", v).apply()
+    var posCurveX2: Float get() = prefs.getFloat("pos_x2", 0.00f); set(v) = prefs.edit().putFloat("pos_x2", v).apply()
+    var posCurveY2: Float get() = prefs.getFloat("pos_y2", 1.00f); set(v) = prefs.edit().putFloat("pos_y2", v).apply()
+
+    var widthCurveX1: Float get() = prefs.getFloat("w_x1", 0.15f); set(v) = prefs.edit().putFloat("w_x1", v).apply()
+    var widthCurveY1: Float get() = prefs.getFloat("w_y1", 0.10f); set(v) = prefs.edit().putFloat("w_y1", v).apply()
+    var widthCurveX2: Float get() = prefs.getFloat("w_x2", 0.15f); set(v) = prefs.edit().putFloat("w_x2", v).apply()
+    var widthCurveY2: Float get() = prefs.getFloat("w_y2", 1.00f); set(v) = prefs.edit().putFloat("w_y2", v).apply()
+
+    var heightCurveX1: Float get() = prefs.getFloat("h_x1", 0.30f); set(v) = prefs.edit().putFloat("h_x1", v).apply()
+    var heightCurveY1: Float get() = prefs.getFloat("h_y1", 0.10f); set(v) = prefs.edit().putFloat("h_y1", v).apply()
+    var heightCurveX2: Float get() = prefs.getFloat("h_x2", 0.15f); set(v) = prefs.edit().putFloat("h_x2", v).apply()
+    var heightCurveY2: Float get() = prefs.getFloat("h_y2", 1.00f); set(v) = prefs.edit().putFloat("h_y2", v).apply()
+
+    var cornerCurveX1: Float get() = prefs.getFloat("c_x1", 0.30f); set(v) = prefs.edit().putFloat("c_x1", v).apply()
+    var cornerCurveY1: Float get() = prefs.getFloat("c_y1", 0.00f); set(v) = prefs.edit().putFloat("c_y1", v).apply()
+    var cornerCurveX2: Float get() = prefs.getFloat("c_x2", 1.00f); set(v) = prefs.edit().putFloat("c_x2", v).apply()
+    var cornerCurveY2: Float get() = prefs.getFloat("c_y2", 0.20f); set(v) = prefs.edit().putFloat("c_y2", v).apply()
 }
