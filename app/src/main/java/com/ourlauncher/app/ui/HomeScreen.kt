@@ -9,8 +9,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -47,7 +47,7 @@ fun HomeScreen(
     var showQuickSettings by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
 
-    // ১. ডিভাইসের অ্যাপ লোড
+    // ১. ডিভাইসের অ্যাপ লোড করা
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val pm = context.packageManager
@@ -82,6 +82,13 @@ fun HomeScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
             .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = {
+                        isEditMode = true
+                    }
+                )
+            }
+            .pointerInput(Unit) {
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
                         change.consume()
@@ -102,7 +109,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(bottom = 12.dp)
         ) {
-            // ==================== APP GRID (Full Custom AppIcon) ====================
+            // ==================== APP GRID ====================
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
@@ -125,24 +132,16 @@ fun HomeScreen(
                     items(pageApps, key = { it.packageName }) { app ->
                         Box(
                             contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .combinedClickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = {
-                                        val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
-                                        if (launchIntent != null) {
-                                            context.startActivity(launchIntent)
-                                        }
-                                    },
-                                    onLongClick = { showQuickSettings = true }
-                                )
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            // আসল AppIcon কম্পোনেন্ট (Theme, Lens Light, Shader সহ)
                             AppIcon(
                                 app = app,
-                                settingsManager = settingsManager
+                                onClick = {
+                                    val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
+                                    if (launchIntent != null) {
+                                        context.startActivity(launchIntent)
+                                    }
+                                }
                             )
 
                             if (isEditMode) {
@@ -183,7 +182,7 @@ fun HomeScreen(
                 }
             }
 
-            // ==================== BOTTOM DOCK (Full Glass & AppIcons) ====================
+            // ==================== BOTTOM DOCK ====================
             if (!isEditMode && dockApps.isNotEmpty()) {
                 Box(
                     modifier = Modifier
@@ -207,23 +206,15 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         dockApps.forEach { app ->
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) {
+                            AppIcon(
+                                app = app,
+                                onClick = {
                                     val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
                                     if (launchIntent != null) {
                                         context.startActivity(launchIntent)
                                     }
                                 }
-                            ) {
-                                AppIcon(
-                                    app = app,
-                                    settingsManager = settingsManager
-                                )
-                            }
+                            )
                         }
                     }
                 }
