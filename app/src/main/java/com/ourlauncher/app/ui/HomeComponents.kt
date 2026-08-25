@@ -6,17 +6,20 @@ import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.widget.Toast
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Slider
@@ -26,6 +29,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
@@ -38,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -> Unit) {
@@ -90,114 +97,149 @@ fun launchGeminiAi(context: Context) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LiquidSearchAiCapsule(
+    pagerState: PagerState,
     totalPages: Int,
-    currentPage: Int,
-    isScrollInProgress: Boolean = false,
     onSearchClick: () -> Unit,
     onAiClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showDots by remember { mutableStateOf(false) }
+    var isScrolling by remember { mutableStateOf(false) }
 
-    LaunchedEffect(isScrollInProgress) {
-        if (isScrollInProgress) {
-            showDots = true
+    LaunchedEffect(pagerState.isScrollInProgress) {
+        if (pagerState.isScrollInProgress) {
+            isScrolling = true
         } else {
-            delay(1000L)
-            showDots = false
+            delay(900L)
+            isScrolling = false
         }
     }
 
-    Crossfade(
-        targetState = showDots,
-        animationSpec = tween(240),
-        label = "CapsuleMorph"
-    ) { displayingDots ->
-        if (displayingDots && totalPages > 1) {
+    val morphProgress by animateFloatAsState(
+        targetValue = if (isScrolling && totalPages > 1) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = 300f),
+        label = "morphProgress"
+    )
+
+    val targetCapsuleWidth = if (morphProgress > 0.5f) {
+        ((totalPages * 14) + 36).coerceIn(80, 180).dp
+    } else {
+        138.dp
+    }
+
+    val animatedWidth by animateDpAsState(
+        targetValue = targetCapsuleWidth,
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = 320f),
+        label = "capsuleWidth"
+    )
+
+    Box(
+        modifier = modifier
+            .width(animatedWidth)
+            .height(35.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.55f))
+            .border(0.8.dp, Color.White.copy(alpha = 0.22f), CircleShape)
+            .padding(horizontal = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // --- State 1: Search + AI Button (At Rest) ---
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    alpha = (1f - (morphProgress * 2.2f)).coerceIn(0f, 1f)
+                    scaleX = 1f - (morphProgress * 0.2f)
+                    scaleY = 1f - (morphProgress * 0.2f)
+                }
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        enabled = morphProgress < 0.2f
+                    ) { onSearchClick() },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Text(
+                    text = "search",
+                    color = Color.White.copy(alpha = 0.95f),
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.3.sp
+                )
+            }
+
             Box(
-                modifier = modifier
-                    .height(34.dp)
+                modifier = Modifier
+                    .size(23.dp)
                     .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.52f))
-                    .border(0.8.dp, Color.White.copy(alpha = 0.18f), CircleShape)
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
+                    .background(Color.White.copy(alpha = 0.18f))
+                    .clickable(enabled = morphProgress < 0.2f) { onAiClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    repeat(totalPages) { index ->
-                        val isSelected = index == currentPage
-                        val dotWidth by animateDpAsState(
-                            targetValue = if (isSelected) 14.dp else 5.dp,
-                            animationSpec = spring(dampingRatio = 0.75f, stiffness = 320f),
-                            label = "dotWidth"
-                        )
-                        Box(
-                            modifier = Modifier
-                                .height(5.dp)
-                                .width(dotWidth)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isSelected) Color.White else Color.White.copy(alpha = 0.35f)
-                                )
-                        )
+                Canvas(modifier = Modifier.size(12.dp)) {
+                    val cx = size.width / 2
+                    val cy = size.height / 2
+                    val path = Path().apply {
+                        moveTo(cx, 0f)
+                        quadraticBezierTo(cx, cy, size.width, cy)
+                        quadraticBezierTo(cx, cy, cx, size.height)
+                        quadraticBezierTo(cx, cy, 0f, cy)
+                        quadraticBezierTo(cx, cy, cx, 0f)
+                        close()
                     }
+                    drawPath(path, color = Color.White)
                 }
             }
-        } else {
-            Row(
-                modifier = modifier
-                    .height(34.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.52f))
-                    .border(0.8.dp, Color.White.copy(alpha = 0.18f), CircleShape)
-                    .padding(start = 14.dp, end = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+        }
+
+        // --- State 2: Hardware-Accelerated Liquid Page Indicator (During Scroll) ---
+        if (totalPages > 1) {
+            val scrollOffset = pagerState.currentPage + pagerState.currentPageOffsetFraction
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = ((morphProgress - 0.35f) / 0.65f).coerceIn(0f, 1f)
+                    }
+                    .padding(horizontal = 14.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { onSearchClick() },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "search",
-                        color = Color.White.copy(alpha = 0.95f),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
+                val totalWidth = size.width
+                val centerY = size.height / 2
+                val spacing = if (totalPages > 1) totalWidth / (totalPages - 1) else 0f
+                val dotRadius = 2.5.dp.toPx()
+
+                // Background Inactive Dots
+                for (i in 0 until totalPages) {
+                    val dotX = i * spacing
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.3f),
+                        radius = dotRadius,
+                        center = Offset(dotX, centerY)
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.18f))
-                        .clickable { onAiClick() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Canvas(modifier = Modifier.size(13.dp)) {
-                        val cx = size.width / 2
-                        val cy = size.height / 2
-                        val path = Path().apply {
-                            moveTo(cx, 0f)
-                            quadraticBezierTo(cx, cy, size.width, cy)
-                            quadraticBezierTo(cx, cy, cx, size.height)
-                            quadraticBezierTo(cx, cy, 0f, cy)
-                            quadraticBezierTo(cx, cy, cx, 0f)
-                            close()
-                        }
-                        drawPath(path, color = Color.White)
-                    }
-                }
+                // Smooth Liquid Active Pill Tracker
+                val activeX = (scrollOffset.coerceIn(0f, (totalPages - 1).toFloat())) * spacing
+                val activePillWidth = 13.dp.toPx()
+                val activePillHeight = 5.dp.toPx()
+
+                drawRoundRect(
+                    color = Color.White,
+                    topLeft = Offset(activeX - (activePillWidth / 2f), centerY - (activePillHeight / 2f)),
+                    size = Size(activePillWidth, activePillHeight),
+                    cornerRadius = CornerRadius(activePillHeight / 2f, activePillHeight / 2f)
+                )
             }
         }
     }
