@@ -90,7 +90,7 @@ class SettingsManager(context: Context) {
         get() = prefs.getFloat("dock_offset", 0f)
         set(value) = prefs.edit().putFloat("dock_offset", value).apply()
 
-    // ================= Search Bar Settings & Aliases =================
+    // ================= Search Bar =================
     var searchBarOffset: Float
         get() = prefs.getFloat("search_bar_offset", 0f)
         set(value) {
