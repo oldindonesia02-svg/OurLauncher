@@ -34,6 +34,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -265,7 +266,7 @@ fun HomeScreen(
                 .scale(bgScale)
                 .alpha(bgAlpha)
                 .pointerInput(Unit) {
-                    detectTransformGestures { _, _, zoom, _ ->
+                    detectTransformGestures { _, _, zoom: Float, _ ->
                         if (zoom < 0.88f && !isOverviewMode) {
                             isOverviewMode = true
                         }
@@ -276,16 +277,16 @@ fun HomeScreen(
                     var totalDragY = 0f
                     var totalDragX = 0f
                     detectDragGestures(
-                        onDragStart = { startOffset ->
+                        onDragStart = { startOffset: Offset ->
                             startX = startOffset.x
                             totalDragY = 0f
                             totalDragX = 0f
                         },
-                        onDrag = { change, dragAmount ->
+                        onDrag = { change: PointerInputChange, dragAmount: Offset ->
                             if (draggedExternalApp != null) {
                                 change.consume()
                                 dragOffset += dragAmount
-                                val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
+                                val hovered = itemBoundsMap.entries.firstOrNull { (_, rect: Rect) ->
                                     rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
                                 }
                                 targetHoverIndex = hovered?.key
@@ -347,7 +348,7 @@ fun HomeScreen(
                             scaleX = 1f - (0.28f * ov)
                             scaleY = 1f - (0.28f * ov)
                         }
-                ) { pageIndex ->
+                ) { pageIndex: Int ->
                     val pageStart = pageIndex * pageSize
                     val pageEnd = minOf(pageStart + pageSize, gridItems.size)
                     val currentGridItems = if (pageStart < gridItems.size) gridItems.subList(pageStart, pageEnd) else emptyList()
@@ -376,8 +377,8 @@ fun HomeScreen(
                                 .pointerInput(pageIndex) {
                                     if (!isOverviewMode) {
                                         detectDragGesturesAfterLongPress(
-                                            onDragStart = { startPos ->
-                                                val found = itemBoundsMap.entries.firstOrNull { (_, rect) ->
+                                            onDragStart = { startPos: Offset ->
+                                                val found = itemBoundsMap.entries.firstOrNull { (_, rect: Rect) ->
                                                     rect.contains(startPos.x.toInt(), startPos.y.toInt())
                                                 }
                                                 if (found != null && found.key < gridItems.size) {
@@ -385,11 +386,11 @@ fun HomeScreen(
                                                     dragOffset = startPos
                                                 }
                                             },
-                                            onDrag = { change, amount ->
+                                            onDrag = { change: PointerInputChange, amount: Offset ->
                                                 change.consume()
                                                 dragOffset += amount
 
-                                                val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
+                                                val hovered = itemBoundsMap.entries.firstOrNull { (_, rect: Rect) ->
                                                     rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
                                                 }
                                                 targetHoverIndex = if (hovered != null && hovered.key != draggedIndex) hovered.key else null
@@ -408,14 +409,14 @@ fun HomeScreen(
                                                                 name = "Folder",
                                                                 apps = mutableListOf(targetItem.app, sourceItem.app)
                                                             )
-                                                            val updated = gridItems.filterIndexed { idx, _ -> idx != from }.mapIndexed { idx, item ->
+                                                            val updated = gridItems.filterIndexed { idx: Int, _ -> idx != from }.mapIndexed { idx: Int, item: GridItem ->
                                                                 val adjustedTo = if (from < to) to - 1 else to
                                                                 if (idx == adjustedTo) GridItem.Folder(newFolder) else item
                                                             }
                                                             sanitizeAndSaveFolders(updated)
                                                         } else if (targetItem is GridItem.Folder) {
                                                             targetItem.folder.apps.add(sourceItem.app)
-                                                            val updated = gridItems.filterIndexed { idx, _ -> idx != from }
+                                                            val updated = gridItems.filterIndexed { idx: Int, _ -> idx != from }
                                                             sanitizeAndSaveFolders(updated)
                                                         }
                                                     } else {
@@ -435,7 +436,7 @@ fun HomeScreen(
                                     }
                                 }
                         ) {
-                            itemsIndexed(currentGridItems, key = { _, item -> item.id }) { indexInPage, item ->
+                            itemsIndexed(currentGridItems, key = { _: Int, item: GridItem -> item.id }) { indexInPage: Int, item: GridItem ->
                                 val globalIndex = pageStart + indexInPage
                                 val isBeingDragged = draggedIndex == globalIndex
                                 val isHovered = targetHoverIndex == globalIndex
@@ -507,8 +508,8 @@ fun HomeScreen(
                     pinnedApps = dockApps,
                     settingsManager = settingsManager,
                     getCustomDrawable = getCustomDrawable,
-                    onAppClick = { handleAppOpen(it, null) },
-                    onAppClickWithBounds = { app, bounds -> handleAppOpen(app, bounds) }
+                    onAppClick = { app: AppInfo -> handleAppOpen(app, null) },
+                    onAppClickWithBounds = { app: AppInfo, bounds: Rect -> handleAppOpen(app, bounds) }
                 )
             }
         }
@@ -518,13 +519,13 @@ fun HomeScreen(
                 folder = activeFolder!!,
                 settingsManager = settingsManager,
                 getCustomDrawable = getCustomDrawable,
-                onAppClick = { app -> handleAppOpen(app, null) },
-                onAppClickWithBounds = { app, bounds -> handleAppOpen(app, bounds) },
-                onRenameFolder = { newName ->
+                onAppClick = { app: AppInfo -> handleAppOpen(app, null) },
+                onAppClickWithBounds = { app: AppInfo, bounds: Rect -> handleAppOpen(app, bounds) },
+                onRenameFolder = { newName: String ->
                     activeFolder?.name = newName
                     saveGridStructure(gridItems, settingsManager)
                 },
-                onStartDragOut = { appToExtract, initialPos ->
+                onStartDragOut = { appToExtract: AppInfo, initialPos: Offset ->
                     val folder = activeFolder
                     if (folder != null) {
                         folder.apps.remove(appToExtract)
