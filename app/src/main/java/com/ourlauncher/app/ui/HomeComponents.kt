@@ -410,7 +410,6 @@ fun TopLiquidSearchBarPositionCard(
         }
     }
 }
-
 @Composable
 fun Dock(
     pinnedApps: List<AppInfo>,
