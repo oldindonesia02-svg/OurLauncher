@@ -503,6 +503,7 @@ fun HomeScreen(
                         LiquidSearchAiCapsule(
                             totalPages = totalPages,
                             currentPage = pagerState.currentPage,
+                            isScrollInProgress = pagerState.isScrollInProgress,
                             onSearchClick = onOpenDrawer,
                             onAiClick = { launchGeminiAi(context) }
                         )
