@@ -168,7 +168,6 @@ fun HomeScreen(
     var showIconCustomizeSheet by remember { mutableStateOf(false) }
     var showSearchBarPositionSheet by remember { mutableStateOf(false) }
 
-    // Live Real-Time Search Bar Position State
     var liveSearchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
     var liveHideCapsule by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
 
@@ -281,11 +280,11 @@ fun HomeScreen(
                     var totalVertical = 0f
                     var startX = 0f
                     detectVerticalDragGestures(
-                        onDragStart = { offset ->
+                        onDragStart = { offset: Offset ->
                             startX = offset.x
                             totalVertical = 0f
                         },
-                        onVerticalDrag = { _, dragAmount ->
+                        onVerticalDrag = { _: PointerInputChange, dragAmount: Float ->
                             totalVertical += dragAmount
                         },
                         onDragEnd = {
@@ -469,7 +468,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Live Preview Capsule with Real-Time Offset
                 if (!liveHideCapsule && !isOverviewMode) {
                     Box(
                         modifier = Modifier
@@ -551,14 +549,13 @@ fun HomeScreen(
         }
 
         if (showSearchBarPositionSheet) {
-            SearchBarPositionSheet(
-                settingsManager = settingsManager,
+            TopLiquidSearchBarPositionCard(
                 currentOffset = liveSearchOffset,
                 isCapsuleHidden = liveHideCapsule,
-                onOffsetChange = { newOffset ->
+                onOffsetChange = { newOffset: Float ->
                     liveSearchOffset = newOffset
                 },
-                onHideCapsuleChange = { newHidden ->
+                onHideCapsuleChange = { newHidden: Boolean ->
                     liveHideCapsule = newHidden
                 },
                 onOpenDockPosition = {
@@ -632,7 +629,7 @@ fun HomeScreen(
                 progress = p,
                 screenWidthPx = screenWidthPx,
                 screenHeightPx = screenHeightPx,
-                  settingsManager = settingsManager,
+                settingsManager = settingsManager,
                 getCustomDrawable = getCustomDrawable
             )
         }
