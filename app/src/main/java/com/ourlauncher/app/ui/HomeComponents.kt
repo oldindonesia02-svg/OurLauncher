@@ -2,7 +2,6 @@ package com.ourlauncher.app.ui
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -16,12 +15,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Slider
@@ -31,43 +26,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
-
-sealed class GridItem {
-    abstract val id: String
-    data class SingleApp(val app: AppInfo) : GridItem() {
-        override val id: String get() = app.packageName
-    }
-    data class Folder(val folder: FolderInfo) : GridItem() {
-        override val id: String get() = folder.id
-    }
-}
-
-data class FolderInfo(
-    val id: String,
-    var name: String,
-    val apps: MutableList<AppInfo>
-)
 
 fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -> Unit) {
     when (action) {
@@ -225,137 +196,6 @@ fun LiquidSearchAiCapsule(
                             close()
                         }
                         drawPath(path, color = Color.White)
-                    }
-                }
-            }
-        }
-    }
-}
-@Composable
-fun FolderIcon(
-    folder: FolderInfo,
-    onClick: () -> Unit,
-    settingsManager: SettingsManager,
-    getCustomDrawable: (String) -> Drawable?,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = modifier
-            .clickable { onClick() }
-            .padding(4.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(settingsManager.iconSize.dp)
-                .clip(RoundedCornerShape(settingsManager.iconCornerRadius.toInt()))
-                .background(Color.White.copy(alpha = 0.22f))
-                .border(0.8.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(settingsManager.iconCornerRadius.toInt()))
-                .padding(4.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            val previewApps = folder.apps.take(4)
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                userScrollEnabled = false,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(previewApps) { app ->
-                    val targetDrawable = getCustomDrawable(app.packageName) ?: app.icon
-                    val cacheKey = "${app.packageName}_${targetDrawable?.hashCode() ?: 0}"
-                    val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(settingsManager.iconCornerRadius.toInt() / 2))
-                        )
-                    }
-                }
-            }
-        }
-        if (settingsManager.showLabels) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = folder.name,
-                color = Color.White,
-                fontSize = 11.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-@Composable
-fun FolderPopup(
-    folder: FolderInfo,
-    settingsManager: SettingsManager,
-    getCustomDrawable: (String) -> Drawable?,
-    onAppClick: (AppInfo) -> Unit,
-    onAppClickWithBounds: (AppInfo, Rect) -> Unit,
-    onRenameFolder: (String) -> Unit,
-    onStartDragOut: (AppInfo, Offset) -> Unit,
-    onDismiss: () -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .clip(RoundedCornerShape(28.dp))
-                .background(Color(0xFF1E1E1E).copy(alpha = 0.95f))
-                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(28.dp))
-                .padding(20.dp)
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = folder.name,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(folder.apps) { app ->
-                        var bounds by remember { mutableStateOf(Rect()) }
-                        AppIcon(
-                            app = app,
-                            onClick = { onAppClick(app) },
-                            showLabel = true,
-                            fontFamilyName = settingsManager.fontFamily,
-                            iconSizeDp = settingsManager.iconSize,
-                            cornerRadiusPercent = settingsManager.iconCornerRadius,
-                            iconOpacity = 1f,
-                            customDrawable = getCustomDrawable(app.packageName),
-                            onClickWithBounds = { b -> onAppClickWithBounds(app, b) },
-                            modifier = Modifier
-                                .onGloballyPositioned { coords ->
-                                    val b = coords.boundsInRoot()
-                                    bounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
-                                }
-                                .pointerInput(app) {
-                                    detectDragGesturesAfterLongPress(
-                                        onDragStart = { offset ->
-                                            onStartDragOut(app, Offset(bounds.left + offset.x, bounds.top + offset.y))
-                                        },
-                                        onDrag = { _, _ -> },
-                                        onDragEnd = {},
-                                        onDragCancel = {}
-                                    )
-                                }
-                        )
                     }
                 }
             }
