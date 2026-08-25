@@ -7,10 +7,14 @@ class SettingsManager(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("ourlauncher_settings", Context.MODE_PRIVATE)
 
-    // App & Layout Settings
+    // ================= App & Icons =================
     var showLabels: Boolean
         get() = prefs.getBoolean("show_labels", true)
         set(value) = prefs.edit().putBoolean("show_labels", value).apply()
+
+    var fontFamily: String
+        get() = prefs.getString("font_family", "Default") ?: "Default"
+        set(value) = prefs.edit().putString("font_family", value).apply()
 
     var iconSize: Float
         get() = prefs.getFloat("icon_size", 56f)
@@ -20,7 +24,32 @@ class SettingsManager(context: Context) {
         get() = prefs.getFloat("icon_corner_radius", 22f)
         set(value) = prefs.edit().putFloat("icon_corner_radius", value).apply()
 
-    // Search Bar Settings
+    var iconOpacity: Float
+        get() = prefs.getFloat("icon_opacity", 1.0f)
+        set(value) = prefs.edit().putFloat("icon_opacity", value).apply()
+
+    // ================= Lens & Lighting =================
+    var lensStrokeWidth: Float
+        get() = prefs.getFloat("lens_stroke_width", 1.5f)
+        set(value) = prefs.edit().putFloat("lens_stroke_width", value).apply()
+
+    var lensBlur: Float
+        get() = prefs.getFloat("lens_blur", 0.5f)
+        set(value) = prefs.edit().putFloat("lens_blur", value).apply()
+
+    var lensFalloff: Float
+        get() = prefs.getFloat("lens_falloff", 1.5f)
+        set(value) = prefs.edit().putFloat("lens_falloff", value).apply()
+
+    var lensIntensity: Float
+        get() = prefs.getFloat("lens_intensity", 100f)
+        set(value) = prefs.edit().putFloat("lens_intensity", value).apply()
+
+    var lensAngle: Float
+        get() = prefs.getFloat("lens_angle", 75f)
+        set(value) = prefs.edit().putFloat("lens_angle", value).apply()
+
+    // ================= Search Bar =================
     var searchBarOffset: Float
         get() = prefs.getFloat("search_bar_offset", 0f)
         set(value) = prefs.edit().putFloat("search_bar_offset", value).apply()
@@ -29,7 +58,7 @@ class SettingsManager(context: Context) {
         get() = prefs.getBoolean("is_search_capsule_hidden", false)
         set(value) = prefs.edit().putBoolean("is_search_capsule_hidden", value).apply()
 
-    // Swipe Gestures
+    // ================= Swipe Actions =================
     var leftPullDownAction: String
         get() = prefs.getString("left_pull_down_action", "Notifications") ?: "Notifications"
         set(value) = prefs.edit().putString("left_pull_down_action", value).apply()
@@ -38,7 +67,7 @@ class SettingsManager(context: Context) {
         get() = prefs.getString("right_pull_down_action", "Quick Settings") ?: "Quick Settings"
         set(value) = prefs.edit().putString("right_pull_down_action", value).apply()
 
-    // Liquid Glass Settings
+    // ================= Liquid Glass =================
     var glassMode: String
         get() = prefs.getString("glass_mode", "Liquid") ?: "Liquid"
         set(value) = prefs.edit().putString("glass_mode", value).apply()
