@@ -18,14 +18,10 @@ class MainActivity : ComponentActivity() {
         settingsManager = SettingsManager(this)
 
         setContent {
-            // Screen Navigation State
             var currentScreen by remember { mutableStateOf("home") }
-
-            // Dialog / Sheet States
             var showSearchBarPositionDialog by remember { mutableStateOf(false) }
             var showIconStudioSheet by remember { mutableStateOf(false) }
 
-            // Back Button Handling
             BackHandler(enabled = currentScreen != "home") {
                 if (currentScreen == "liquid_glass" || currentScreen == "swipe_actions") {
                     currentScreen = "settings"
@@ -35,7 +31,6 @@ class MainActivity : ComponentActivity() {
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
-                // ==================== SCREEN ROUTING ====================
                 when (currentScreen) {
                     "home" -> {
                         HomeScreen(
@@ -52,10 +47,7 @@ class MainActivity : ComponentActivity() {
                             onOpenAppIcons = { showIconStudioSheet = true },
                             onOpenLiquidGlass = { currentScreen = "liquid_glass" },
                             onOpenSwipeActions = { currentScreen = "swipe_actions" },
-                            onOpenSearchBarPosition = { showSearchBarPositionDialog = true },
-                            onOpenDesktopGrid = { /* Future Grid Sheet */ },
-                            onOpenAppAnimation = { /* Future Animation Sheet */ },
-                            onOpenDock = { /* Future Dock Sheet */ }
+                            onOpenSearchBarPosition = { showSearchBarPositionDialog = true }
                         )
                     }
 
@@ -74,22 +66,18 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // ==================== OVERLAYS & SHEETS ====================
-
-                // Search Bar Position Dialog
                 if (showSearchBarPositionDialog) {
                     TopLiquidSearchBarPositionCard(
                         currentOffset = settingsManager.searchBarOffset,
                         isCapsuleHidden = settingsManager.isSearchCapsuleHidden,
                         onOffsetChange = { settingsManager.searchBarOffset = it },
                         onHideCapsuleChange = { settingsManager.isSearchCapsuleHidden = it },
-                        onOpenDockPosition = { /* Dock position shortcut */ },
+                        onOpenDockPosition = { },
                         onApply = { showSearchBarPositionDialog = false },
                         onDismiss = { showSearchBarPositionDialog = false }
                     )
                 }
 
-                // Icon Studio Sheet (Themes, Lens Light, Radius)
                 if (showIconStudioSheet) {
                     IconStudioSheet(
                         settingsManager = settingsManager,
