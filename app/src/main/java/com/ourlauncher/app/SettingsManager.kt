@@ -28,6 +28,14 @@ class SettingsManager(context: Context) {
         get() = prefs.getFloat("icon_opacity", 1.0f)
         set(value) = prefs.edit().putFloat("icon_opacity", value).apply()
 
+    var iconTheme: String
+        get() = prefs.getString("icon_theme", "Standard") ?: "Standard"
+        set(value) = prefs.edit().putString("icon_theme", value).apply()
+
+    var iconTintColor: Long
+        get() = prefs.getLong("icon_tint_color", 0xFF0A84FFL)
+        set(value) = prefs.edit().putLong("icon_tint_color", value).apply()
+
     // ================= Lens, Lighting & Graphics =================
     var lensLightEnabled: Boolean
         get() = prefs.getBoolean("lens_light_enabled", true)
@@ -70,9 +78,17 @@ class SettingsManager(context: Context) {
         get() = prefs.getFloat("dock_gap", 8f)
         set(value) = prefs.edit().putFloat("dock_gap", value).apply()
 
+    var dockRadius: Float
+        get() = prefs.getFloat("dock_radius", 24f)
+        set(value) = prefs.edit().putFloat("dock_radius", value).apply()
+
     var dockCornerRadius: Float
         get() = prefs.getFloat("dock_corner_radius", 24f)
         set(value) = prefs.edit().putFloat("dock_corner_radius", value).apply()
+
+    var dockOffset: Float
+        get() = prefs.getFloat("dock_offset", 0f)
+        set(value) = prefs.edit().putFloat("dock_offset", value).apply()
 
     // ================= Search Bar =================
     var searchBarOffset: Float
