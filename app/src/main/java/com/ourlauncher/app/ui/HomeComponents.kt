@@ -109,84 +109,96 @@ fun LiquidSearchAiCapsule(
     onAiClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    var isDirectDragging by remember { mutableStateOf(false) }
     var showDots by remember { mutableStateOf(false) }
 
-    LaunchedEffect(pagerState.isScrollInProgress, pagerState.currentPageOffsetFraction) {
-        if (pagerState.isScrollInProgress || abs(pagerState.currentPageOffsetFraction) > 0.01f) {
+    LaunchedEffect(pagerState.isScrollInProgress, pagerState.currentPageOffsetFraction, isDirectDragging) {
+        if (pagerState.isScrollInProgress || isDirectDragging || abs(pagerState.currentPageOffsetFraction) > 0.01f) {
             showDots = true
         } else {
-            delay(550L)
+            delay(500L)
             showDots = false
         }
     }
 
-    val isSwiping = showDots && totalPages > 1
-    val dotsWidth = ((totalPages * 18) + 36).coerceIn(80, 180).dp
-    val capsuleWidth by animateDpAsState(
-        targetValue = if (isSwiping) dotsWidth else 146.dp,
-        animationSpec = spring(dampingRatio = 0.82f, stiffness = 420f),
-        label = "capsuleWidth"
-    )
+    val isSwiping = (showDots || isDirectDragging) && totalPages > 1
 
-    // সোয়াইপ অবস্থার লিকুইড গ্লাস গ্র্যাডিয়েন্ট (Red Mark)
-    val liquidGlassDotsBg = Brush.verticalGradient(
-        listOf(
-            Color.White.copy(alpha = 0.20f),
-            Color(0xFF0F0F14).copy(alpha = 0.35f)
-        )
-    )
-    val liquidGlassDotsBorder = Brush.verticalGradient(
-        listOf(
-            Color.White.copy(alpha = 0.60f),
-            Color.White.copy(alpha = 0.12f)
-        )
-    )
-
-    // স্থির অবস্থার বাটন গ্লাস গ্র্যাডিয়েন্ট (Green Mark)
-    val buttonGlassBg = Brush.verticalGradient(
+    val glassBg = Brush.verticalGradient(
         listOf(
             Color.White.copy(alpha = 0.18f),
             Color(0xFF141418).copy(alpha = 0.45f)
         )
     )
-    val buttonGlassBorder = Brush.verticalGradient(
+    val glassBorder = Brush.verticalGradient(
         listOf(
-            Color.White.copy(alpha = 0.45f),
-            Color.White.copy(alpha = 0.10f)
+            Color.White.copy(alpha = 0.50f),
+            Color.White.copy(alpha = 0.12f)
         )
     )
 
-    // মেইন কন্টেইনার সম্পূর্ণ ট্রান্সপারেন্ট (কোনো কালো ডক নেই)
-    Box(
-        modifier = modifier
-            .width(capsuleWidth)
-            .height(36.dp),
-        contentAlignment = Alignment.Center
+    Row(
+        modifier = modifier.wrapContentSize(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Crossfade(
-            targetState = isSwiping,
-            animationSpec = tween(140),
-            label = "SearchOrDotsMorph"
-        ) { swiping ->
-            if (swiping) {
-                // সোয়াইপ অবস্থা: লিকুইড গ্লাস ডট ক্যাপসুল + ফিঙ্গার ওয়ার্ম অ্যানিমেশন
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape)
-                        .background(brush = liquidGlassDotsBg)
-                        .border(0.9.dp, brush = liquidGlassDotsBorder, shape = CircleShape)
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
+        // ১. SEARCH PILL (যার ভেতর Sliding Liquid Pill Effect কাজ করবে)
+        val searchPillWidth = if (totalPages > 1) ((totalPages * 18) + 40).coerceIn(108, 175).dp else 108.dp
+
+        Box(
+            modifier = Modifier
+                .width(searchPillWidth)
+                .height(36.dp)
+                .clip(CircleShape)
+                .background(brush = glassBg)
+                .border(0.9.dp, brush = glassBorder, shape = CircleShape)
+                .pointerInput(totalPages) {
+                    if (totalPages > 1) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { isDirectDragging = true },
+                            onDragEnd = { isDirectDragging = false },
+                            onDragCancel = { isDirectDragging = false },
+                            onHorizontalDrag = { _, dragAmount ->
+                                val targetPage = if (dragAmount < -10f) {
+                                    (pagerState.currentPage + 1).coerceAtMost(totalPages - 1)
+                                } else if (dragAmount > 10f) {
+                                    (pagerState.currentPage - 1).coerceAtLeast(0)
+                                } else pagerState.currentPage
+
+                                if (targetPage != pagerState.currentPage) {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(targetPage)
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = !isSwiping
+                ) { onSearchClick() },
+            contentAlignment = Alignment.Center
+        ) {
+            Crossfade(
+                targetState = isSwiping,
+                animationSpec = tween(140),
+                label = "SearchMorph"
+            ) { swiping ->
+                if (swiping) {
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 14.dp)
+                    ) {
                         val totalWidth = size.width
                         val centerY = size.height / 2f
                         val spacing = if (totalPages > 1) totalWidth / (totalPages - 1) else 0f
-                        val dotRadius = 2.8.dp.toPx()
-                        val wormHeight = 5.6.dp.toPx()
+                        val dotRadius = 2.5.dp.toPx()
+                        val pillHeight = 16.dp.toPx()
+                        val minPillWidth = 22.dp.toPx()
 
-                        // ব্যাকগ্রাউন্ড ডটস
                         for (i in 0 until totalPages) {
                             drawCircle(
                                 color = Color.White.copy(alpha = 0.35f),
@@ -195,7 +207,6 @@ fun LiquidSearchAiCapsule(
                             )
                         }
 
-                        // আঙুলের সাথে ১:১ লিকুইড স্ট্রেচ ফিজিক্স
                         val continuousPos = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
                             .coerceIn(0f, (totalPages - 1).toFloat())
                         val base = floor(continuousPos).toInt()
@@ -210,77 +221,61 @@ fun LiquidSearchAiCapsule(
                         val leftCenter = (base + smoothTail) * spacing
                         val rightCenter = (base + smoothHead) * spacing
 
-                        val wormLeft = leftCenter - dotRadius
-                        val wormRight = rightCenter + dotRadius
-                        val wormWidth = (wormRight - wormLeft).coerceAtLeast(wormHeight)
+                        val pillLeft = leftCenter - (minPillWidth / 2f)
+                        val pillRight = rightCenter + (minPillWidth / 2f)
+                        val currentPillWidth = (pillRight - pillLeft).coerceAtLeast(minPillWidth)
 
                         drawRoundRect(
+                            color = Color.White.copy(alpha = 0.28f),
+                            topLeft = Offset(pillLeft, centerY - (pillHeight / 2f)),
+                            size = Size(currentPillWidth, pillHeight),
+                            cornerRadius = CornerRadius(pillHeight / 2f, pillHeight / 2f)
+                        )
+                        drawRoundRect(
                             color = Color.White,
-                            topLeft = Offset(wormLeft, centerY - (wormHeight / 2f)),
-                            size = Size(wormWidth, wormHeight),
-                            cornerRadius = CornerRadius(wormHeight / 2f, wormHeight / 2f)
+                            topLeft = Offset(leftCenter - 3.dp.toPx(), centerY - 3.dp.toPx()),
+                            size = Size(6.dp.toPx(), 6.dp.toPx()),
+                            cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
                         )
                     }
-                }
-            } else {
-                // স্থির অবস্থা: ভাসমান গ্লাস Search ও AI বাটন (পেছনে কালো ডক ছাড়া)
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(34.dp)
-                            .clip(CircleShape)
-                            .background(brush = buttonGlassBg)
-                            .border(0.9.dp, brush = buttonGlassBorder, shape = CircleShape)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { onSearchClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "search",
-                            color = Color.White.copy(alpha = 0.95f),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            letterSpacing = 0.35.sp
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(brush = buttonGlassBg)
-                            .border(0.9.dp, brush = buttonGlassBorder, shape = CircleShape)
-                            .clickable { onAiClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Canvas(modifier = Modifier.size(13.5.dp)) {
-                            val cx = size.width / 2
-                            val cy = size.height / 2
-                            val path = Path().apply {
-                                moveTo(cx, 0f)
-                                quadraticBezierTo(cx, cy, size.width, cy)
-                                quadraticBezierTo(cx, cy, cx, size.height)
-                                quadraticBezierTo(cx, cy, 0f, cy)
-                                quadraticBezierTo(cx, cy, cx, 0f)
-                                close()
-                            }
-                            drawPath(path, color = Color.White)
-                        }
-                    }
+                } else {
+                    Text(
+                        text = "search",
+                        color = Color.White.copy(alpha = 0.95f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.35.sp
+                    )
                 }
             }
         }
+
+        // ২. AI (✦) BUTTON (১০০% স্থির)
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(brush = glassBg)
+                .border(0.9.dp, brush = glassBorder, shape = CircleShape)
+                .clickable { onAiClick() },
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.size(13.5.dp)) {
+                val cx = size.width / 2
+                val cy = size.height / 2
+                val path = Path().apply {
+                    moveTo(cx, 0f)
+                    quadraticBezierTo(cx, cy, size.width, cy)
+                    quadraticBezierTo(cx, cy, cx, size.height)
+                    quadraticBezierTo(cx, cy, 0f, cy)
+                    quadraticBezierTo(cx, cy, cx, 0f)
+                    close()
+                }
+                drawPath(path, color = Color.White)
+            }
+        }
     }
-}
+}         
 
 @Composable
 fun TopLiquidSearchBarPositionCard(
