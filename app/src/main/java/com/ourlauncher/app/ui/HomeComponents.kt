@@ -41,13 +41,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.delay
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.roundToInt
 
 fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -> Unit) {
@@ -122,28 +119,28 @@ fun LiquidSearchAiCapsule(
 
     val morphProgress by animateFloatAsState(
         targetValue = if (isScrolling && totalPages > 1) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.85f, stiffness = 360f),
+        animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f),
         label = "morphProgress"
     )
 
-    val dotsCalculatedWidth = ((totalPages * 16) + 36).coerceIn(84, 180).dp
+    val dotsCalculatedWidth = ((totalPages * 16) + 38).coerceIn(84, 180).dp
     val capsuleWidth by animateDpAsState(
-        targetValue = if (morphProgress > 0.4f) dotsCalculatedWidth else 142.dp,
-        animationSpec = spring(dampingRatio = 0.85f, stiffness = 360f),
+        targetValue = if (morphProgress > 0.45f) dotsCalculatedWidth else 146.dp,
+        animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f),
         label = "capsuleWidth"
     )
 
     Box(
         modifier = modifier
             .width(capsuleWidth)
-            .height(35.dp)
+            .height(36.dp)
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.58f))
+            .background(Color.Black.copy(alpha = 0.60f))
             .border(0.8.dp, Color.White.copy(alpha = 0.22f), CircleShape)
             .padding(horizontal = 4.dp),
         contentAlignment = Alignment.Center
     ) {
-        // --- 1. Rest State: Distinct Search Capsule + AI Sparkle Icon ---
+        // --- 1. Distinct Search & AI Buttons (Rest State) ---
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -152,16 +149,18 @@ fun LiquidSearchAiCapsule(
                     scaleX = 1f - (morphProgress * 0.15f)
                     scaleY = 1f - (morphProgress * 0.15f)
                 }
-                .padding(horizontal = 6.dp),
+                .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // Distinct Search Button Pill
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(27.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.15f))
+                    .height(28.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color.White.copy(alpha = 0.16f))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -174,17 +173,19 @@ fun LiquidSearchAiCapsule(
                     color = Color.White.copy(alpha = 0.95f),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.3.sp
+                    letterSpacing = 0.4.sp
                 )
             }
 
             Spacer(modifier = Modifier.width(6.dp))
 
+            // Distinct AI Sparkle Icon Pill
             Box(
                 modifier = Modifier
-                    .size(27.dp)
+                    .size(28.dp)
                     .clip(CircleShape)
                     .background(Color.White.copy(alpha = 0.18f))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.15f), CircleShape)
                     .clickable(enabled = morphProgress < 0.1f) { onAiClick() },
                 contentAlignment = Alignment.Center
             ) {
@@ -204,7 +205,7 @@ fun LiquidSearchAiCapsule(
             }
         }
 
-        // --- 2. Scroll State: Real-Time Finger Liquid Worm Dots ---
+        // --- 2. Finger Liquid Worm Animation (Swipe State) ---
         if (totalPages > 1) {
             Canvas(
                 modifier = Modifier
@@ -215,11 +216,11 @@ fun LiquidSearchAiCapsule(
                     .padding(horizontal = 14.dp)
             ) {
                 val totalWidth = size.width
-                val centerY = size.height / 2
+                val centerY = size.height / 2f
                 val spacing = if (totalPages > 1) totalWidth / (totalPages - 1) else 0f
                 val dotRadius = 2.5.dp.toPx()
 
-                // Inactive Static Background Dots
+                // Static Background Dots
                 for (i in 0 until totalPages) {
                     drawCircle(
                         color = Color.White.copy(alpha = 0.32f),
@@ -228,11 +229,11 @@ fun LiquidSearchAiCapsule(
                     )
                 }
 
-                // Liquid Worm Physics for Active Dot
+                // Liquid Stretch Tracking Finger Position
                 val page = pagerState.currentPage
                 val fraction = pagerState.currentPageOffsetFraction
 
-                val activePillHeight = 5.dp.toPx()
+                val wormHeight = 5.dp.toPx()
                 val minPillWidth = 12.dp.toPx()
                 val stretch = abs(fraction) * spacing * 0.75f
 
@@ -246,17 +247,17 @@ fun LiquidSearchAiCapsule(
 
                 drawRoundRect(
                     color = Color.White,
-                    topLeft = Offset(leftX - (minPillWidth / 2f), centerY - (activePillHeight / 2f)),
-                    size = Size(currentPillWidth, activePillHeight),
-                    cornerRadius = CornerRadius(activePillHeight / 2f, activePillHeight / 2f)
+                    topLeft = Offset(leftX - (minPillWidth / 2f), centerY - (wormHeight / 2f)),
+                    size = Size(currentPillWidth, wormHeight),
+                    cornerRadius = CornerRadius(wormHeight / 2f, wormHeight / 2f)
                 )
             }
         }
     }
 }
+
 @Composable
-fun SearchBarPositionSheet(
-    settingsManager: SettingsManager,
+fun TopLiquidSearchBarPositionCard(
     currentOffset: Float,
     isCapsuleHidden: Boolean,
     onOffsetChange: (Float) -> Unit,
@@ -265,159 +266,152 @@ fun SearchBarPositionSheet(
     onApply: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.95f)
-                .clip(RoundedCornerShape(28.dp))
-                .background(Color(0xFF18181A).copy(alpha = 0.94f))
-                .border(0.8.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(28.dp))
-                .padding(20.dp)
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Reset",
-                        color = Color(0xFF0A84FF),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.clickable {
-                            onOffsetChange(0f)
-                            onHideCapsuleChange(false)
-                        }
-                    )
-                    Text(
-                        text = "Search Bar Position",
-                        color = Color.White,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "⤢",
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 18.sp,
-                        modifier = Modifier.clickable { onDismiss() }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Vertical Offset Section
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 50.dp, start = 16.dp, end = 16.dp)
+            .clip(RoundedCornerShape(26.dp))
+            .background(Color(0xFF141416).copy(alpha = 0.88f))
+            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(26.dp))
+            .padding(18.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "VERTICAL OFFSET",
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold
+                    text = "Reset",
+                    color = Color(0xFF0A84FF),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.clickable {
+                        onOffsetChange(0f)
+                        onHideCapsuleChange(false)
+                    }
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Search Bar Position",
+                    color = Color.White,
+                    fontSize = 16.5.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "✕",
+                    color = Color.White.copy(alpha = 0.65f),
+                    fontSize = 16.sp,
+                    modifier = Modifier.clickable { onDismiss() }
+                )
+            }
 
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Text(
+                text = "VERTICAL OFFSET",
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Slider(
+                    value = currentOffset,
+                    onValueChange = { onOffsetChange(it) },
+                    valueRange = -150f..150f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color(0xFF0A84FF),
+                        activeTrackColor = Color(0xFF0A84FF),
+                        inactiveTrackColor = Color.White.copy(alpha = 0.2f)
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "${currentOffset.toInt()} px",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.width(48.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Slider(
-                        value = currentOffset,
-                        onValueChange = { onOffsetChange(it) },
-                        valueRange = -150f..150f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = Color(0xFF0A84FF),
-                            activeTrackColor = Color(0xFF0A84FF),
-                            inactiveTrackColor = Color.White.copy(alpha = 0.2f)
-                        ),
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "${currentOffset.toInt()} px",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.width(48.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Hide Search Capsule Toggle Box
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.07f))
-                        .padding(horizontal = 14.dp, vertical = 12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Hide search capsule",
-                                color = Color.White,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Hides the capsule on home screen (fades in on scroll or Edit Mode)",
-                                color = Color.White.copy(alpha = 0.55f),
-                                fontSize = 11.5.sp,
-                                lineHeight = 15.sp
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Switch(
-                            checked = isCapsuleHidden,
-                            onCheckedChange = { onHideCapsuleChange(it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFF0A84FF),
-                                uncheckedThumbColor = Color.White,
-                                uncheckedTrackColor = Color.White.copy(alpha = 0.25f)
-                            )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Hide search capsule",
+                            color = Color.White,
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Hides the capsule on home screen",
+                            color = Color.White.copy(alpha = 0.55f),
+                            fontSize = 11.5.sp
                         )
                     }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = "Change dock position?",
-                    color = Color(0xFF0A84FF),
-                    fontSize = 13.5.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clickable { onOpenDockPosition() }
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Apply Button
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color(0xFF0A84FF))
-                        .clickable {
-                            onApply()
-                            onDismiss()
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Apply",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                    Switch(
+                        checked = isCapsuleHidden,
+                        onCheckedChange = { onHideCapsuleChange(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFF0A84FF),
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = Color.White.copy(alpha = 0.25f)
+                        )
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Change dock position?",
+                color = Color(0xFF0A84FF),
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.clickable { onOpenDockPosition() }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(Color(0xFF0A84FF))
+                    .clickable {
+                        onApply()
+                        onDismiss()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Apply",
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -524,30 +518,30 @@ fun HomeQuickSettingsSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Show App Labels", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                Text(if (showLabels) "On" else "Off", color = if (showLabels) Color(0xFF0A84FF) else Color.Gray, fontSize = 14.sp)
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable {
-                        onDismiss()
-                        onOpenFullSettings()
+                        Text("Show App Labels", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Text(if (showLabels) "On" else "Off", color = if (showLabels) Color(0xFF0A84FF) else Color.Gray, fontSize = 14.sp)
                     }
-                    .padding(vertical = 12.dp, horizontal = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("More Settings", color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                Text("›", color = Color(0xFF0A84FF), fontSize = 20.sp)
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable {
+                                onDismiss()
+                                onOpenFullSettings()
+                            }
+                            .padding(vertical = 12.dp, horizontal = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("More Settings", color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Text("›", color = Color(0xFF0A84FF), fontSize = 20.sp)
+                    }
+                }
             }
         }
-    }
-}
 
 @Composable
 fun IconCustomizeSheet(
