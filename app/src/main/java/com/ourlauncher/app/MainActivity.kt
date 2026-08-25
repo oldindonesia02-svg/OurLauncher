@@ -7,78 +7,52 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import com.ourlauncher.app.ui.AppDrawer
-import com.ourlauncher.app.ui.HomeScreen
-import com.ourlauncher.app.ui.SettingsScreen
-import com.ourlauncher.app.ui.clearIconCache
-
-private enum class Screen { HOME, DRAWER, SETTINGS }
+import com.ourlauncher.app.ui.*
 
 class MainActivity : ComponentActivity() {
-    private val isResumedTrigger = mutableStateOf(0L)
-
-    override fun onResume() {
-        super.onResume()
-        isResumedTrigger.value = System.currentTimeMillis()
-    }
+    private lateinit var settingsManager: SettingsManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val repository = AppRepository(this)
-        val settingsManager = SettingsManager(this)
-        val iconPackManager = IconPackManager(this)
+        settingsManager = SettingsManager(this)
 
         setContent {
-            var screen by remember { mutableStateOf(Screen.HOME) }
-            val apps = remember { repository.getInstalledApps() }
-            val installedPacks = remember { iconPackManager.getInstalledIconPacks() }
-            var selectedIconPack by remember { mutableStateOf(settingsManager.iconPack) }
-
-            LaunchedEffect(selectedIconPack) {
-                iconPackManager.loadIconPack(selectedIconPack)
-                clearIconCache()
-            }
+            var currentScreen by remember { mutableStateOf("home") }
+            var showSearchBarPositionDialog by remember { mutableStateOf(false) }
+            var showIconStudioSheet by remember { mutableStateOf(false) }
 
             Box(modifier = Modifier.fillMaxSize()) {
-                when (screen) {
-                    Screen.HOME -> HomeScreen(
-                        apps = apps,
-                        settingsManager = settingsManager,
-                        resumeTrigger = isResumedTrigger.value,
-                        getCustomDrawable = { pkg -> iconPackManager.getCustomIcon(pkg) },
-                        onAppClick = { app -> repository.launchApp(app) },
-                        onAppClickWithBounds = { app, bounds -> repository.launchApp(app, bounds) },
-                        onOpenDrawer = { screen = Screen.DRAWER },
-                        onOpenSettings = { screen = Screen.SETTINGS }
-                    )
+                when (currentScreen) {
+                    "home" -> {
+                        HomeScreen(
+                            settingsManager = settingsManager,
+                            onOpenSettings = { currentScreen = "settings" },
+                            onOpenIconStudio = { showIconStudioSheet = true }
+                        )
+                    }
+                    "settings" -> {
+                        SettingsScreen(
+                            settingsManager = settingsManager,
+                            onBack = { currentScreen = "home" },
+                            onOpenSearchBarPosition = {
+                                showSearchBarPositionDialog = true
+                            },
+                            onOpenAppIcons = {
+                                showIconStudioSheet = true
+                            }
+                        )
+                    }
+                }
 
-                    Screen.DRAWER -> AppDrawer(
-                        apps = apps,
-                        iconSize = settingsManager.iconSize,
-                        cornerRadiusPercent = settingsManager.iconCornerRadius,
-                        iconOpacity = settingsManager.iconOpacity,
-                        getCustomDrawable = { pkg -> iconPackManager.getCustomIcon(pkg) },
-                        onAppClick = { app ->
-                            repository.launchApp(app)
-                            screen = Screen.HOME
-                        },
-                        onAppClickWithBounds = { app, bounds ->
-                            repository.launchApp(app, bounds)
-                            screen = Screen.HOME
-                        },
-                        onCloseDrawer = { screen = Screen.HOME }
-                    )
-
-                    Screen.SETTINGS -> SettingsScreen(
-                        onBack = { screen = Screen.HOME },
-                        settingsManager = settingsManager,
-                        installedIconPacks = installedPacks,
-                        selectedIconPack = selectedIconPack,
-                        onIconPackSelect = {
-                            selectedIconPack = it
-                            settingsManager.iconPack = it
-                        }
+                if (showSearchBarPositionDialog) {
+                    TopLiquidSearchBarPositionCard(
+                        currentOffset = settingsManager.searchBarOffset,
+                        isCapsuleHidden = settingsManager.isSearchCapsuleHidden,
+                        onOffsetChange = { settingsManager.searchBarOffset = it },
+                        onHideCapsuleChange = { settingsManager.isSearchCapsuleHidden = it },
+                        onOpenDockPosition = { },
+                        onApply = { showSearchBarPositionDialog = false },
+                        onDismiss = { showSearchBarPositionDialog = false }
                     )
                 }
             }
