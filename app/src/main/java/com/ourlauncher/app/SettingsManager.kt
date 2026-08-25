@@ -90,14 +90,30 @@ class SettingsManager(context: Context) {
         get() = prefs.getFloat("dock_offset", 0f)
         set(value) = prefs.edit().putFloat("dock_offset", value).apply()
 
-    // ================= Search Bar =================
+    // ================= Search Bar Settings & Aliases =================
     var searchBarOffset: Float
         get() = prefs.getFloat("search_bar_offset", 0f)
-        set(value) = prefs.edit().putFloat("search_bar_offset", value).apply()
+        set(value) {
+            prefs.edit().putFloat("search_bar_offset", value).apply()
+        }
+
+    var searchOffset: Float
+        get() = searchBarOffset
+        set(value) {
+            searchBarOffset = value
+        }
 
     var isSearchCapsuleHidden: Boolean
         get() = prefs.getBoolean("is_search_capsule_hidden", false)
-        set(value) = prefs.edit().putBoolean("is_search_capsule_hidden", value).apply()
+        set(value) {
+            prefs.edit().putBoolean("is_search_capsule_hidden", value).apply()
+        }
+
+    var hideSearchCapsule: Boolean
+        get() = isSearchCapsuleHidden
+        set(value) {
+            isSearchCapsuleHidden = value
+        }
 
     // ================= Swipe Actions =================
     var leftPullDownAction: String
