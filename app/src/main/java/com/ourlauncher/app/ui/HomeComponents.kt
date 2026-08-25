@@ -146,7 +146,6 @@ fun LiquidSearchAiCapsule(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // ১. SEARCH PILL (Sliding Liquid Pill + Direct Drag)
         val searchPillWidth = if (totalPages > 1) ((totalPages * 18) + 40).coerceIn(108, 175).dp else 108.dp
 
         Box(
@@ -200,7 +199,6 @@ fun LiquidSearchAiCapsule(
                         val pillHeight = 16.dp.toPx()
                         val minPillWidth = 22.dp.toPx()
 
-                        // Static Inactive Dots
                         for (i in 0 until totalPages) {
                             drawCircle(
                                 color = Color.White.copy(alpha = 0.35f),
@@ -209,13 +207,11 @@ fun LiquidSearchAiCapsule(
                             )
                         }
 
-                        // Real-time Position
                         val continuousPos = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
                             .coerceIn(0f, (totalPages - 1).toFloat())
                         val base = floor(continuousPos).toInt()
                         val fraction = continuousPos - base
 
-                        // Iconify Liquid Pill Physics
                         val headProgress = (fraction / 0.65f).coerceIn(0f, 1f)
                         val tailProgress = ((fraction - 0.35f) / 0.65f).coerceIn(0f, 1f)
 
@@ -229,7 +225,6 @@ fun LiquidSearchAiCapsule(
                         val pillRight = rightCenter + (minPillWidth / 2f)
                         val currentPillWidth = (pillRight - pillLeft).coerceAtLeast(minPillWidth)
 
-                        // Sliding Liquid Pill Indicator
                         drawRoundRect(
                             color = Color.White.copy(alpha = 0.28f),
                             topLeft = Offset(pillLeft, centerY - (pillHeight / 2f)),
@@ -255,7 +250,6 @@ fun LiquidSearchAiCapsule(
             }
         }
 
-        // ২. AI (✦) BUTTON (১০০% স্থির ও অপরিবর্তিত)
         Box(
             modifier = Modifier
                 .size(36.dp)
@@ -288,7 +282,7 @@ fun TopLiquidSearchBarPositionCard(
     isCapsuleHidden: Boolean,
     onOffsetChange: (Float) -> Unit,
     onHideCapsuleChange: (Boolean) -> Unit,
-    onOpenDockPosition: () -> Unit,
+    onOpenDockPosition: () -> Unit = {},
     onApply: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -346,7 +340,6 @@ fun TopLiquidSearchBarPositionCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Embedded Live Preview Window
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -508,12 +501,12 @@ fun TopLiquidSearchBarPositionCard(
     }
 }
 
-// Search Bar Position সরানো হয়েছে (শুধুমাত্র Icons, Labels ও More Settings রয়েছে)
 @Composable
 fun HomeQuickSettingsSheet(
     settingsManager: SettingsManager,
     onOpenFullSettings: () -> Unit,
     onOpenIconCustomize: () -> Unit,
+    onOpenSearchBarPosition: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     var showLabels by remember { mutableStateOf(settingsManager.showLabels) }
@@ -573,115 +566,6 @@ fun HomeQuickSettingsSheet(
             ) {
                 Text("More Settings", color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text("›", color = Color(0xFF0A84FF), fontSize = 20.sp)
-            }
-        }
-    }
-}
-
-@Composable
-fun IconCustomizeSheet(
-    settingsManager: SettingsManager,
-    onApply: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    var iconSize by remember { mutableStateOf(settingsManager.iconSize) }
-    var cornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-            .background(Color(0xFF1C1C1E).copy(alpha = 0.98f))
-            .padding(20.dp)
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text("Customize Icons", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Text("Icon Size: ${iconSize.toInt()} dp", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
-            Slider(
-                value = iconSize,
-                onValueChange = {
-                    iconSize = it
-                    settingsManager.iconSize = it
-                },
-                valueRange = 40f..80f,
-                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text("Corner Radius: ${cornerRadius.toInt()} %", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
-            Slider(
-                value = cornerRadius,
-                onValueChange = {
-                    cornerRadius = it
-                    settingsManager.iconCornerRadius = it
-                },
-                valueRange = 0f..50f,
-                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xFF0A84FF))
-                    .clickable {
-                        onApply()
-                        onDismiss()
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Apply", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            }
-        }
-    }
-}
-
-@Composable
-fun AppLaunchOverlay(
-    activeApp: AppInfo,
-    activeBounds: Rect,
-    progress: Float,
-    screenWidthPx: Float,
-    screenHeightPx: Float,
-    settingsManager: SettingsManager,
-    getCustomDrawable: (String) -> Drawable?
-) {
-    val density = LocalDensity.current
-    val currentX = activeBounds.left * (1f - progress)
-    val currentY = activeBounds.top * (1f - progress)
-    val currentW = activeBounds.width() + (screenWidthPx - activeBounds.width()) * progress
-    val currentH = activeBounds.height() + (screenHeightPx - activeBounds.height()) * progress
-    val initialCornerPx = (activeBounds.width() * (settingsManager.iconCornerRadius / 100f))
-    val currentRadius = initialCornerPx * (1f - progress)
-
-    with(density) {
-        Box(
-            modifier = Modifier
-                .offset { IntOffset(currentX.roundToInt(), currentY.roundToInt()) }
-                .size(currentW.toDp(), currentH.toDp())
-                .clip(RoundedCornerShape(currentRadius.toDp()))
-                .background(Color(0xFF141416))
-                .graphicsLayer { alpha = progress.coerceIn(0f, 1f) },
-            contentAlignment = Alignment.Center
-        ) {
-            val targetDrawable = getCustomDrawable(activeApp.packageName) ?: activeApp.icon
-            val cacheKey = "${activeApp.packageName}_${targetDrawable?.hashCode() ?: 0}"
-            val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
-
-            if (bitmap != null) {
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size((settingsManager.iconSize * (1f + 0.35f * progress)).dp)
-                        .clip(RoundedCornerShape((settingsManager.iconCornerRadius * (1f - progress)).toInt()))
-                )
             }
         }
     }
