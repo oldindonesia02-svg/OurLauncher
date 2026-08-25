@@ -1,39 +1,34 @@
 package com.ourlauncher.app.ui
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
+import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -41,602 +36,523 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
-import com.ourlauncher.app.AppRepository
 import com.ourlauncher.app.SettingsManager
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
-import java.util.Collections
-import java.util.UUID
-import kotlin.math.abs
-import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-fun saveGridStructure(items: List<GridItem>, settingsManager: SettingsManager) {
-    try {
-        val jsonArray = JSONArray()
-        for (item in items) {
-            val obj = JSONObject()
-            when (item) {
-                is GridItem.SingleApp -> {
-                    obj.put("type", "app")
-                    obj.put("package", item.app.packageName)
-                }
-                is GridItem.Folder -> {
-                    obj.put("type", "folder")
-                    obj.put("id", item.folder.id)
-                    obj.put("name", item.folder.name)
-                    val appsArray = JSONArray()
-                    item.folder.apps.forEach { appsArray.put(it.packageName) }
-                    obj.put("apps", appsArray)
-                }
+// Launch Google Gemini AI
+fun launchGeminiAi(context: Context) {
+    val pm = context.packageManager
+    val geminiPackage = "com.google.android.apps.bard"
+    val launchIntent = pm.getLaunchIntentForPackage(geminiPackage)
+    if (launchIntent != null) {
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(launchIntent)
+    } else {
+        try {
+            val voiceIntent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
-            jsonArray.put(obj)
+            context.startActivity(voiceIntent)
+        } catch (e: Exception) {
+            try {
+                val assistIntent = Intent(RecognizerIntent.ACTION_WEB_SEARCH).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(assistIntent)
+            } catch (e2: Exception) {
+                e2.printStackTrace()
+            }
         }
-        settingsManager.homeGridStructure = jsonArray.toString()
-    } catch (e: Exception) {
-        e.printStackTrace()
     }
 }
 
-fun loadGridStructure(rawJson: String, apps: List<AppInfo>): List<GridItem> {
-    val appMap = apps.associateBy { it.packageName }
-    if (rawJson.isBlank()) {
-        return apps.drop(4).map { GridItem.SingleApp(it) }
-    }
-    return try {
-        val jsonArray = JSONArray(rawJson)
-        val loadedItems = mutableListOf<GridItem>()
-        val usedPackages = mutableSetOf<String>()
-
-        for (i in 0 until jsonArray.length()) {
-            val obj = jsonArray.getJSONObject(i)
-            val type = obj.optString("type")
-            if (type == "app") {
-                val pkg = obj.optString("package")
-                appMap[pkg]?.let {
-                    loadedItems.add(GridItem.SingleApp(it))
-                    usedPackages.add(pkg)
-                }
-            } else if (type == "folder") {
-                val id = obj.optString("id", UUID.randomUUID().toString())
-                val name = obj.optString("name", "Folder")
-                val appsArr = obj.optJSONArray("apps") ?: JSONArray()
-                val folderApps = mutableListOf<AppInfo>()
-                for (j in 0 until appsArr.length()) {
-                    val pkg = appsArr.getString(j)
-                    appMap[pkg]?.let {
-                        folderApps.add(it)
-                        usedPackages.add(pkg)
-                    }
-                }
-                if (folderApps.isNotEmpty()) {
-                    loadedItems.add(GridItem.Folder(FolderInfo(id, name, folderApps)))
-                }
+fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -> Unit) {
+    when (action) {
+        "notifications" -> {
+            try {
+                val service = context.getSystemService("statusbar")
+                val clz = Class.forName("android.app.StatusBarManager")
+                clz.getMethod("expandNotificationsPanel").invoke(service)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
-
-        val dockPackages = apps.take(4).map { it.packageName }.toSet()
-        val remaining = apps.drop(4).filter { it.packageName !in usedPackages && it.packageName !in dockPackages }
-        loadedItems.addAll(remaining.map { GridItem.SingleApp(it) })
-        loadedItems
-    } catch (e: Exception) {
-        apps.drop(4).map { GridItem.SingleApp(it) }
+        "system_control_center" -> {
+            try {
+                val service = context.getSystemService("statusbar")
+                val clz = Class.forName("android.app.StatusBarManager")
+                clz.getMethod("expandSettingsPanel").invoke(service)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        "builtin_control_center" -> onOpenSettings()
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+// Search Capsule with Finger-tracking Ripple & Gemini
 @Composable
-fun HomeScreen(
-    apps: List<AppInfo>,
-    settingsManager: SettingsManager,
-    resumeTrigger: Long = 0L,
-    getCustomDrawable: (String) -> Drawable? = { null },
-    onAppClick: (AppInfo) -> Unit,
-    onAppClickWithBounds: (AppInfo, Rect) -> Unit,
-    onOpenDrawer: () -> Unit,
-    onOpenSettings: () -> Unit
+fun LiquidSearchAiCapsule(
+    totalPages: Int,
+    currentPage: Int,
+    onSearchClick: () -> Unit,
+    onAiClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val repository = remember { AppRepository(context) }
-    val dockApps = remember(apps) { apps.take(4) }
-
-    var gridItems by remember(apps) {
-        mutableStateOf(loadGridStructure(settingsManager.homeGridStructure, apps))
-    }
-
-    val columns = settingsManager.gridColumns
-    val rows = settingsManager.gridRows
-    val pageSize = remember(columns, rows) { columns * rows }
-
-    var extraPagesCount by remember { mutableStateOf(0) }
-    val basePages = remember(gridItems, pageSize) { maxOf(1, ceil(gridItems.size.toFloat() / pageSize).toInt()) }
-    val totalPages = basePages + extraPagesCount
-    val pagerState = rememberPagerState(pageCount = { totalPages })
-
+    val pillShape = RoundedCornerShape(22.dp)
     val coroutineScope = rememberCoroutineScope()
-    val density = LocalDensity.current
+    var touchPos by remember { mutableStateOf<Offset?>(null) }
+    val touchGlowAlpha = remember { Animatable(0f) }
 
-    var isOverviewMode by remember { mutableStateOf(false) }
-    val overviewAnim = remember { Animatable(0f) }
-
-    var showHomeSettingsSheet by remember { mutableStateOf(false) }
-    var showIconCustomizeSheet by remember { mutableStateOf(false) }
-    var isAiListening by remember { mutableStateOf(false) }
-
-    LaunchedEffect(isOverviewMode) {
-        overviewAnim.animateTo(
-            targetValue = if (isOverviewMode) 1f else 0f,
-            animationSpec = spring(dampingRatio = 0.8f, stiffness = 320f)
-        )
-    }
-
-    BackHandler(enabled = isOverviewMode || showHomeSettingsSheet || showIconCustomizeSheet || isAiListening) {
-        when {
-            isAiListening -> isAiListening = false
-            showIconCustomizeSheet -> showIconCustomizeSheet = false
-            showHomeSettingsSheet -> showHomeSettingsSheet = false
-            isOverviewMode -> isOverviewMode = false
-        }
-    }
-
-    var draggedIndex by remember { mutableStateOf<Int?>(null) }
-    var draggedExternalApp by remember { mutableStateOf<AppInfo?>(null) }
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
-    var targetHoverIndex by remember { mutableStateOf<Int?>(null) }
-    val itemBoundsMap = remember { mutableStateMapOf<Int, Rect>() }
-
-    var activeFolder by remember { mutableStateOf<FolderInfo?>(null) }
-    var activeApp by remember { mutableStateOf<AppInfo?>(null) }
-    var activeBounds by remember { mutableStateOf<Rect?>(null) }
-    val animProgress = remember { Animatable(0f) }
-    var animJob by remember { mutableStateOf<Job?>(null) }
-
-    val posEasing = remember(settingsManager.posCurveX1, settingsManager.posCurveY1, settingsManager.posCurveX2, settingsManager.posCurveY2) {
-        CubicBezierEasing(
-            settingsManager.posCurveX1.coerceIn(0f, 1f),
-            settingsManager.posCurveY1.coerceIn(0f, 1.5f),
-            settingsManager.posCurveX2.coerceIn(0f, 1f),
-            settingsManager.posCurveY2.coerceIn(0f, 1.5f)
-        )
-    }
-
-    fun sanitizeAndSaveFolders(items: List<GridItem>) {
-        val sanitized = items.mapNotNull { item ->
-            when (item) {
-                is GridItem.SingleApp -> item
-                is GridItem.Folder -> {
-                    when (item.folder.apps.size) {
-                        0 -> null
-                        1 -> GridItem.SingleApp(item.folder.apps.first())
-                        else -> item
-                    }
+    Box(
+        modifier = modifier
+            .wrapContentWidth()
+            .height(36.dp)
+            .clip(pillShape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.22f), Color.Black.copy(alpha = 0.45f))
+                )
+            )
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    touchPos = down.position
+                    coroutineScope.launch { touchGlowAlpha.animateTo(1f, tween(120)) }
+                    do {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull()
+                        if (change != null && change.pressed) {
+                            touchPos = change.position
+                        }
+                    } while (event.changes.any { it.pressed })
+                    coroutineScope.launch { touchGlowAlpha.animateTo(0f, tween(300)) }
+                    touchPos = null
                 }
             }
-        }
-        gridItems = sanitized
-        saveGridStructure(sanitized, settingsManager)
-    }
-
-    LaunchedEffect(resumeTrigger) {
-        if (resumeTrigger > 0L && activeApp != null && activeBounds != null) {
-            animJob?.cancel()
-            animJob = coroutineScope.launch {
-                animProgress.snapTo(1f)
-                animProgress.animateTo(0f, tween(durationMillis = 260, easing = posEasing))
-                activeApp = null
-                activeBounds = null
-            }
-        }
-    }
-
-    fun handleAppOpen(app: AppInfo, bounds: Rect?) {
-        if (isOverviewMode || showHomeSettingsSheet || showIconCustomizeSheet) return
-        if (!settingsManager.animEnabled || bounds == null) {
-            onAppClick(app)
-            return
-        }
-        animJob?.cancel()
-        activeApp = app
-        activeBounds = bounds
-        animJob = coroutineScope.launch {
-            animProgress.snapTo(0f)
-            launch {
-                animProgress.animateTo(1f, tween(settingsManager.animDuration.toInt(), easing = posEasing))
-            }
-            delay((settingsManager.animDuration * 0.72f).toLong())
-            onAppClickWithBounds(app, bounds)
-        }
-    }
-
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val screenWidthPx = constraints.maxWidth.toFloat()
-        val screenHeightPx = constraints.maxHeight.toFloat()
-        val p = animProgress.value
-        val ov = overviewAnim.value
-
-        val bgScale = if (activeApp != null && settingsManager.animAdvancedTexture) 1f - (0.05f * p) else 1f
-        val bgAlpha = if (activeApp != null && settingsManager.animAdvancedTexture) 1f - (0.35f * p) else 1f
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .scale(bgScale)
-                .alpha(bgAlpha)
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, _, zoom, _ ->
-                        if (zoom < 0.88f && !isOverviewMode) {
-                            isOverviewMode = true
-                        }
-                    }
-                }
-                .pointerInput(Unit) {
-                    var startX = 0f
-                    var totalDragY = 0f
-                    var totalDragX = 0f
-                    detectDragGestures(
-                        onDragStart = { startOffset ->
-                            startX = startOffset.x
-                            totalDragY = 0f
-                            totalDragX = 0f
-                        },
-                        onDrag = { change, dragAmount ->
-                            if (draggedExternalApp != null) {
-                                change.consume()
-                                dragOffset += dragAmount
-                                val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
-                                    rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
-                                }
-                                targetHoverIndex = hovered?.key
-                            } else {
-                                totalDragY += dragAmount.y
-                                totalDragX += dragAmount.x
-                            }
-                        },
-                        onDragEnd = {
-                            if (draggedExternalApp != null) {
-                                val targetApp = draggedExternalApp!!
-                                val insertIndex = targetHoverIndex ?: gridItems.size
-                                val list = gridItems.toMutableList()
-                                val safeIndex = insertIndex.coerceIn(0, list.size)
-                                list.add(safeIndex, GridItem.SingleApp(targetApp))
-                                sanitizeAndSaveFolders(list)
-                                draggedExternalApp = null
-                                targetHoverIndex = null
-                            } else if (!isOverviewMode && !showHomeSettingsSheet && !showIconCustomizeSheet) {
-                                val threshold = 45f
-                                if (abs(totalDragY) > abs(totalDragX) * 1.5f) {
-                                    if (totalDragY < -threshold) {
-                                        onOpenDrawer()
-                                    } else if (totalDragY > threshold) {
-                                        if (startX < screenWidthPx / 2f) {
-                                            triggerPullDownAction(settingsManager.leftPullDownAction, context, onOpenSettings)
-                                        } else {
-                                            triggerPullDownAction(settingsManager.rightPullDownAction, context, onOpenSettings)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    )
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onTap = {
-                            if (isOverviewMode) isOverviewMode = false
-                            showHomeSettingsSheet = false
-                            showIconCustomizeSheet = false
-                            isAiListening = false
-                        },
-                        onLongPress = {
-                            if (!isOverviewMode) {
-                                showHomeSettingsSheet = true
-                            }
-                        }
-                    )
-                }
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                HorizontalPager(
-                    state = pagerState,
-                    userScrollEnabled = !isOverviewMode,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .graphicsLayer {
-                            scaleX = 1f - (0.28f * ov)
-                            scaleY = 1f - (0.28f * ov)
-                        }
-                ) { pageIndex ->
-                    val pageStart = pageIndex * pageSize
-                    val pageEnd = minOf(pageStart + pageSize, gridItems.size)
-                    val currentGridItems = if (pageStart < gridItems.size) gridItems.subList(pageStart, pageEnd) else emptyList()
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .then(
-                                if (isOverviewMode) {
-                                    Modifier
-                                        .padding(16.dp)
-                                        .clip(RoundedCornerShape(24.dp))
-                                        .background(Color.White.copy(alpha = 0.08f))
-                                        .border(1.5.dp, Color(0xFF0A84FF).copy(alpha = 0.6f), RoundedCornerShape(24.dp))
-                                        .clickable { isOverviewMode = false }
-                                } else Modifier
-                            )
-                    ) {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(columns),
-                            contentPadding = PaddingValues(top = 48.dp, start = 12.dp, end = 12.dp, bottom = 4.dp),
-                            userScrollEnabled = false,
-                            verticalArrangement = Arrangement.SpaceAround,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .pointerInput(pageIndex) {
-                                    if (!isOverviewMode) {
-                                        detectDragGesturesAfterLongPress(
-                                            onDragStart = { startPos ->
-                                                val found = itemBoundsMap.entries.firstOrNull { (_, rect) ->
-                                                    rect.contains(startPos.x.toInt(), startPos.y.toInt())
-                                                }
-                                                if (found != null && found.key < gridItems.size) {
-                                                    draggedIndex = found.key
-                                                    dragOffset = startPos
-                                                }
-                                            },
-                                            onDrag = { change, amount ->
-                                                change.consume()
-                                                dragOffset += amount
-
-                                                val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
-                                                    rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
-                                                }
-                                                targetHoverIndex = if (hovered != null && hovered.key != draggedIndex) hovered.key else null
-                                            },
-                                            onDragEnd = {
-                                                if (draggedIndex != null && targetHoverIndex != null) {
-                                                    val from = draggedIndex!!
-                                                    val to = targetHoverIndex!!
-                                                    val sourceItem = gridItems[from]
-                                                    val targetItem = gridItems[to]
-
-                                                    if (sourceItem is GridItem.SingleApp) {
-                                                        if (targetItem is GridItem.SingleApp) {
-                                                            val newFolder = FolderInfo(
-                                                                id = UUID.randomUUID().toString(),
-                                                                name = "Folder",
-                                                                apps = mutableListOf(targetItem.app, sourceItem.app)
-                                                            )
-                                                            val updated = gridItems.filterIndexed { idx, _ -> idx != from }.mapIndexed { idx, item ->
-                                                                val adjustedTo = if (from < to) to - 1 else to
-                                                                if (idx == adjustedTo) GridItem.Folder(newFolder) else item
-                                                            }
-                                                            sanitizeAndSaveFolders(updated)
-                                                        } else if (targetItem is GridItem.Folder) {
-                                                            targetItem.folder.apps.add(sourceItem.app)
-                                                            val updated = gridItems.filterIndexed { idx, _ -> idx != from }
-                                                            sanitizeAndSaveFolders(updated)
-                                                        }
-                                                    } else {
-                                                        val updated = gridItems.toMutableList()
-                                                        Collections.swap(updated, from, to)
-                                                        sanitizeAndSaveFolders(updated)
-                                                    }
-                                                }
-                                                draggedIndex = null
-                                                targetHoverIndex = null
-                                            },
-                                            onDragCancel = {
-                                                draggedIndex = null
-                                                targetHoverIndex = null
-                                            }
-                                        )
-                                    }
-                                }
-                        ) {
-                            itemsIndexed(currentGridItems, key = { _, item -> item.id }) { indexInPage, item ->
-                                val globalIndex = pageStart + indexInPage
-                                val isBeingDragged = draggedIndex == globalIndex
-                                val isHovered = targetHoverIndex == globalIndex
-
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(90.dp)
-                                        .onGloballyPositioned { coords ->
-                                            val b = coords.boundsInRoot()
-                                            itemBoundsMap[globalIndex] = Rect(
-                                                b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt()
-                                            )
-                                        }
-                                        .scale(if (isHovered) 1.08f else 1f)
-                                        .alpha(if (isBeingDragged) 0.05f else 1f),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    when (item) {
-                                        is GridItem.SingleApp -> {
-                                            AppIcon(
-                                                app = item.app,
-                                                onClick = { handleAppOpen(item.app, null) },
-                                                showLabel = settingsManager.showLabels,
-                                                fontFamilyName = settingsManager.fontFamily,
-                                                iconSizeDp = settingsManager.iconSize,
-                                                cornerRadiusPercent = settingsManager.iconCornerRadius,
-                                                iconOpacity = settingsManager.iconOpacity,
-                                                customDrawable = getCustomDrawable(item.app.packageName),
-                                                onClickWithBounds = { bounds: Rect -> handleAppOpen(item.app, bounds) },
-                                                modifier = Modifier.width(82.dp)
-                                            )
-                                        }
-                                        is GridItem.Folder -> {
-                                            FolderIcon(
-                                                folder = item.folder,
-                                                onClick = { activeFolder = item.folder },
-                                                settingsManager = settingsManager,
-                                                getCustomDrawable = getCustomDrawable,
-                                                modifier = Modifier.width(82.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (!settingsManager.hideSearchCapsule && !isOverviewMode) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .offset { IntOffset(0, settingsManager.searchOffset.roundToInt()) }
-                            .padding(bottom = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        LiquidSearchAiCapsule(
-                            totalPages = totalPages,
-                            currentPage = pagerState.currentPage,
-                            onSearchClick = onOpenDrawer,
-                            onAiClick = { launchGeminiAi(context) }
+            .drawBehind {
+                touchPos?.let { pos ->
+                    val alpha = touchGlowAlpha.value
+                    if (alpha > 0f) {
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.55f * alpha),
+                                    Color(0xFF64D2FF).copy(alpha = 0.35f * alpha),
+                                    Color.Transparent
+                                ),
+                                center = pos,
+                                radius = 65.dp.toPx()
+                            ),
+                            center = pos,
+                            radius = 65.dp.toPx()
                         )
                     }
                 }
+            }
+            .border(
+                1.2.dp,
+                Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.12f))
+                ),
+                pillShape
+            )
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "search",
+                color = Color.White.copy(alpha = 0.92f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.clickable { onSearchClick() }
+            )
 
-                Dock(
-                    pinnedApps = dockApps,
-                    settingsManager = settingsManager,
-                    getCustomDrawable = getCustomDrawable,
-                    onAppClick = { handleAppOpen(it, null) },
-                    onAppClickWithBounds = { app, bounds -> handleAppOpen(app, bounds) }
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.18f))
+                    .clickable { onAiClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "✦",
+                    color = Color(0xFF64D2FF),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
-        }
 
-        if (activeFolder != null) {
-            FolderPopup(
-                folder = activeFolder!!,
-                settingsManager = settingsManager,
-                getCustomDrawable = getCustomDrawable,
-                onAppClick = { app -> handleAppOpen(app, null) },
-                onAppClickWithBounds = { app, bounds -> handleAppOpen(app, bounds) },
-                onRenameFolder = { newName ->
-                    activeFolder?.name = newName
-                    saveGridStructure(gridItems, settingsManager)
-                },
-                onStartDragOut = { appToExtract, initialPos ->
-                    val folder = activeFolder
-                    if (folder != null) {
-                        folder.apps.remove(appToExtract)
-                        val folderIndex = gridItems.indexOfFirst { it is GridItem.Folder && it.folder.id == folder.id }
-                        targetHoverIndex = if (folderIndex >= 0) folderIndex + 1 else null
-                        sanitizeAndSaveFolders(gridItems)
-                    }
-                    draggedExternalApp = appToExtract
-                    dragOffset = initialPos
-                    activeFolder = null
-                },
-                onDismiss = { activeFolder = null }
-            )
-        }
-
-        AnimatedVisibility(
-            visible = isAiListening,
-            enter = slideInVertically { it } + fadeIn(),
-            exit = slideOutVertically { it } + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            AiListeningBar(onDismiss = { isAiListening = false })
-        }
-
-        AnimatedVisibility(
-            visible = showHomeSettingsSheet,
-            enter = slideInVertically { it } + fadeIn(),
-            exit = slideOutVertically { it } + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            HomeQuickSettingsSheet(
-                settingsManager = settingsManager,
-                onOpenFullSettings = {
-                    showHomeSettingsSheet = false
-                    onOpenSettings()
-                },
-                onOpenIconCustomize = {
-                    showHomeSettingsSheet = false
-                    showIconCustomizeSheet = true
-                },
-                onDismiss = { showHomeSettingsSheet = false }
-            )
-        }
-
-        AnimatedVisibility(
-            visible = showIconCustomizeSheet,
-            enter = slideInVertically { it } + fadeIn(),
-            exit = slideOutVertically { it } + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            IconCustomizeSheet(
-                settingsManager = settingsManager,
-                onApply = { showIconCustomizeSheet = false },
-                onDismiss = { showIconCustomizeSheet = false }
-            )
-        }
-
-        val floatingApp = if (draggedIndex != null && draggedIndex!! < gridItems.size) {
-            val item = gridItems[draggedIndex!!]
-            if (item is GridItem.SingleApp) item.app else null
-        } else draggedExternalApp
-
-        if (floatingApp != null) {
-            val targetDrawable = getCustomDrawable(floatingApp.packageName) ?: floatingApp.icon
-            val cacheKey = "${floatingApp.packageName}_${targetDrawable?.hashCode() ?: 0}"
-            val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
-
-            with(density) {
+            if (totalPages > 1) {
+                Spacer(modifier = Modifier.width(10.dp))
                 Box(
                     modifier = Modifier
-                        .offset {
-                            IntOffset(
-                                (dragOffset.x - (settingsManager.iconSize.dp.toPx() / 2)).roundToInt(),
-                                (dragOffset.y - (settingsManager.iconSize.dp.toPx() / 2) - 30.dp.toPx()).roundToInt()
-                            )
-                        }
-                        .scale(1.15f),
-                    contentAlignment = Alignment.Center
+                        .width(1.dp)
+                        .height(12.dp)
+                        .background(Color.White.copy(alpha = 0.25f))
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = null,
+                    repeat(totalPages) { index ->
+                        val isSelected = currentPage == index
+                        Box(
                             modifier = Modifier
-                                .size(settingsManager.iconSize.dp)
-                                .clip(RoundedCornerShape(settingsManager.iconCornerRadius.toInt()))
+                                .height(4.dp)
+                                .width(if (isSelected) 12.dp else 4.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSelected) Color.White.copy(alpha = 0.95f)
+                                    else Color.White.copy(alpha = 0.35f)
+                                )
                         )
                     }
                 }
             }
         }
+    }
+}
+// AI Voice Listening Wave Bar
+@Composable
+fun AiListeningBar(
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BackHandler { onDismiss() }
 
-        if (activeApp != null && activeBounds != null && p > 0.005f) {
-            AppLaunchOverlay(
-                activeApp = activeApp!!,
-                activeBounds = activeBounds!!,
-                progress = p,
-                screenWidthPx = screenWidthPx,
-                screenHeightPx = screenHeightPx,
-                settingsManager = settingsManager,
-                getCustomDrawable = getCustomDrawable
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val waveScale by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(650, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "wave"
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 24.dp)
+            .height(58.dp)
+            .clip(RoundedCornerShape(29.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF1C1C1E).copy(alpha = 0.95f), Color(0xFF000000).copy(alpha = 0.98f))
+                )
             )
+            .border(
+                1.2.dp,
+                Brush.horizontalGradient(
+                    listOf(Color(0xFF0A84FF), Color(0xFFBF5AF2), Color(0xFF64D2FF))
+                ),
+                RoundedCornerShape(29.dp)
+            )
+            .clickable { onDismiss() }
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .scale(waveScale)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.radialGradient(listOf(Color(0xFF64D2FF), Color(0xFF0A84FF), Color.Transparent))
+                        )
+                )
+
+                Spacer(modifier = Modifier.width(14.dp))
+                Text(
+                    text = "Listening...",
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Text(
+                text = "✕",
+                color = Color.White.copy(alpha = 0.6f),
+                fontSize = 14.sp,
+                modifier = Modifier.clickable { onDismiss() }
+            )
+        }
+    }
+}
+
+// Icon Customizer Bottom Sheet
+@Composable
+fun IconCustomizeSheet(
+    settingsManager: SettingsManager,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedTheme by remember { mutableStateOf(settingsManager.iconTheme) }
+    var cornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF2C2C2E).copy(alpha = 0.96f), Color(0xFF141416).copy(alpha = 0.98f))
+                )
+            )
+            .border(
+                1.dp,
+                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)),
+                RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+            )
+            .padding(20.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(modifier = Modifier.width(36.dp).height(4.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.3f)))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text("Customize", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                val themes = listOf(
+                    "standard" to "Standard",
+                    "dark" to "Dark",
+                    "transparent" to "Transparent",
+                    "tinted" to "Tinted"
+                )
+                themes.forEach { (key, title) ->
+                    val isSelected = selectedTheme == key
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (isSelected) Color.White.copy(alpha = 0.15f) else Color.Transparent)
+                            .border(
+                                if (isSelected) 1.5.dp else 1.dp,
+                                if (isSelected) Color(0xFF0A84FF) else Color.White.copy(alpha = 0.1f),
+                                RoundedCornerShape(14.dp)
+                            )
+                            .clickable {
+                                selectedTheme = key
+                                settingsManager.iconTheme = key
+                            }
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(cornerRadius.toInt().coerceIn(0, 50)))
+                                .background(
+                                    when (key) {
+                                        "dark" -> Color(0xFF3A3A3C)
+                                        "transparent" -> Color.White.copy(alpha = 0.12f)
+                                        "tinted" -> Color(0xFF0A84FF).copy(alpha = 0.4f)
+                                        else -> Color(0xFFE5E5EA)
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("✦", color = Color.White, fontSize = 16.sp)
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(title, color = Color.White, fontSize = 11.sp, maxLines = 1)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Corner Radius: ${cornerRadius.toInt()}%", color = Color.White.copy(alpha = 0.85f), fontSize = 13.5.sp)
+            }
+            Slider(
+                value = cornerRadius,
+                onValueChange = {
+                    cornerRadius = it
+                    settingsManager.iconCornerRadius = it
+                },
+                valueRange = 0f..50f,
+                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp)
+                    .clip(RoundedCornerShape(23.dp))
+                    .background(Color(0xFF0A84FF))
+                    .clickable {
+                        onApply()
+                        onDismiss()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Apply", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+// Home Screen Quick Settings Sheet
+@Composable
+fun HomeQuickSettingsSheet(
+    settingsManager: SettingsManager,
+    onOpenFullSettings: () -> Unit,
+    onOpenIconCustomize: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var showLabels by remember { mutableStateOf(settingsManager.showLabels) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFF2C2C2E).copy(alpha = 0.96f), Color(0xFF141416).copy(alpha = 0.98f))
+                )
+            )
+            .border(
+                1.dp,
+                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)),
+                RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+            )
+            .padding(20.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier.align(Alignment.CenterHorizontally).width(36.dp).height(4.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.3f)))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text("Home screen settings", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onOpenIconCustomize() }
+                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Customize App Icons", color = Color.White, fontSize = 14.5.sp)
+                Text("›", color = Color.White.copy(alpha = 0.5f), fontSize = 20.sp)
+            }
+
+            Box(modifier = Modifier.fillMaxWidth().height(0.6.dp).background(Color.White.copy(alpha = 0.1f)))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable {
+                        showLabels = !showLabels
+                        settingsManager.showLabels = showLabels
+                    }
+                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Show label", color = Color.White, fontSize = 14.5.sp)
+                Text(if (showLabels) "On" else "Off", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            }
+
+            Box(modifier = Modifier.fillMaxWidth().height(0.6.dp).background(Color.White.copy(alpha = 0.1f)))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable {
+                        onDismiss()
+                        onOpenFullSettings()
+                    }
+                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("More settings", color = Color(0xFF0A84FF), fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
+                Text("›", color = Color(0xFF0A84FF), fontSize = 20.sp)
+            }
+        }
+    }
+}
+
+// App Launch Overlay
+@Composable
+fun AppLaunchOverlay(
+    activeApp: AppInfo,
+    activeBounds: Rect,
+    progress: Float,
+    screenWidthPx: Float,
+    screenHeightPx: Float,
+    settingsManager: SettingsManager,
+    getCustomDrawable: (String) -> Drawable?
+) {
+    val density = LocalDensity.current
+    val currentX = activeBounds.left * (1f - progress)
+    val currentY = activeBounds.top * (1f - progress)
+    val currentW = activeBounds.width() + (screenWidthPx - activeBounds.width()) * progress
+    val currentH = activeBounds.height() + (screenHeightPx - activeBounds.height()) * progress
+    val initialCornerPx = (activeBounds.width() * (settingsManager.iconCornerRadius / 100f))
+    val currentRadius = initialCornerPx * (1f - progress)
+
+    with(density) {
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(currentX.roundToInt(), currentY.roundToInt()) }
+                .size(currentW.toDp(), currentH.toDp())
+                .clip(RoundedCornerShape(currentRadius.toDp()))
+                .background(Color(0xFF141416))
+                .graphicsLayer { alpha = progress.coerceIn(0.1f, 1f) },
+            contentAlignment = Alignment.Center
+        ) {
+            val targetDrawable = getCustomDrawable(activeApp.packageName) ?: activeApp.icon
+            val cacheKey = "${activeApp.packageName}_${targetDrawable?.hashCode() ?: 0}"
+            val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
+
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size((settingsManager.iconSize * 1.35f).dp)
+                        .scale(1f + (0.35f * progress))
+                )
+            }
         }
     }
 }
