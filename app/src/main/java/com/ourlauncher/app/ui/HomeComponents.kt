@@ -46,6 +46,9 @@ import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.PointerInputChange
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -142,7 +145,7 @@ fun LiquidSearchAiCapsule(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // ১. SEARCH PILL (যার ভেতর Sliding Liquid Pill Effect কাজ করবে)
+        // ১. SEARCH PILL
         val searchPillWidth = if (totalPages > 1) ((totalPages * 18) + 40).coerceIn(108, 175).dp else 108.dp
 
         Box(
@@ -158,7 +161,7 @@ fun LiquidSearchAiCapsule(
                             onDragStart = { isDirectDragging = true },
                             onDragEnd = { isDirectDragging = false },
                             onDragCancel = { isDirectDragging = false },
-                            onHorizontalDrag = { _, dragAmount ->
+                            onHorizontalDrag = { _: PointerInputChange, dragAmount: Float ->
                                 val targetPage = if (dragAmount < -10f) {
                                     (pagerState.currentPage + 1).coerceAtMost(totalPages - 1)
                                 } else if (dragAmount > 10f) {
@@ -250,7 +253,7 @@ fun LiquidSearchAiCapsule(
             }
         }
 
-        // ২. AI (✦) BUTTON (১০০% স্থির)
+        // ২. AI (✦) BUTTON
         Box(
             modifier = Modifier
                 .size(36.dp)
@@ -275,7 +278,7 @@ fun LiquidSearchAiCapsule(
             }
         }
     }
-}         
+}
 
 @Composable
 fun TopLiquidSearchBarPositionCard(
