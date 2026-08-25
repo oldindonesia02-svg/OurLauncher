@@ -4,24 +4,19 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
-import android.util.LruCache
 import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -35,11 +30,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
@@ -47,9 +40,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -77,23 +68,6 @@ data class FolderInfo(
     var name: String,
     val apps: MutableList<AppInfo>
 )
-
-private val bitmapCache = LruCache<String, Bitmap>(150)
-
-fun getCachedBitmap(key: String, drawable: Drawable?): Bitmap? {
-    if (drawable == null) return null
-    val cached = bitmapCache.get(key)
-    if (cached != null && !cached.isRecycled) return cached
-
-    val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 96
-    val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 96
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    val canvas = android.graphics.Canvas(bitmap)
-    drawable.setBounds(0, 0, canvas.width, canvas.height)
-    drawable.draw(canvas)
-    bitmapCache.put(key, bitmap)
-    return bitmap
-}
 
 fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -> Unit) {
     when (action) {
@@ -171,7 +145,6 @@ fun LiquidSearchAiCapsule(
         label = "CapsuleMorph"
     ) { displayingDots ->
         if (displayingDots && totalPages > 1) {
-            // Page Indicator Dots pill when scrolling
             Box(
                 modifier = modifier
                     .height(34.dp)
@@ -205,7 +178,6 @@ fun LiquidSearchAiCapsule(
                 }
             }
         } else {
-            // Search Pill + AI Icon when resting
             Row(
                 modifier = modifier
                     .height(34.dp)
@@ -257,73 +229,8 @@ fun LiquidSearchAiCapsule(
                 }
             }
         }
-    }@Composable
-fun AppIcon(
-    app: AppInfo,
-    onClick: () -> Unit,
-    showLabel: Boolean,
-    fontFamilyName: String,
-    iconSizeDp: Float,
-    cornerRadiusPercent: Float,
-    iconOpacity: Float,
-    customDrawable: Drawable?,
-    onClickWithBounds: ((Rect) -> Unit)? = null,
-    modifier: Modifier = Modifier
-) {
-    var itemBounds by remember { mutableStateOf(Rect()) }
-    val targetDrawable = customDrawable ?: app.icon
-    val cacheKey = "${app.packageName}_${targetDrawable?.hashCode() ?: 0}"
-    val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = modifier
-            .onGloballyPositioned { coords ->
-                val b = coords.boundsInRoot()
-                itemBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
-            }
-            .clickable {
-                if (onClickWithBounds != null) onClickWithBounds(itemBounds)
-                else onClick()
-            }
-            .padding(4.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(iconSizeDp.dp)
-                .alpha(iconOpacity)
-                .clip(RoundedCornerShape(cornerRadiusPercent.toInt())),
-            contentAlignment = Alignment.Center
-        ) {
-            if (bitmap != null) {
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = app.appName,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
-        if (showLabel) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = app.appName,
-                color = Color.White,
-                fontSize = 11.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                fontFamily = when (fontFamilyName) {
-                    "Serif" -> FontFamily.Serif
-                    "Monospace" -> FontFamily.Monospace
-                    "Cursive" -> FontFamily.Cursive
-                    else -> FontFamily.Default
-                }
-            )
-        }
     }
 }
-
 @Composable
 fun FolderIcon(
     folder: FolderInfo,
@@ -673,6 +580,4 @@ fun AppLaunchOverlay(
             }
         }
     }
-}
-
 }
