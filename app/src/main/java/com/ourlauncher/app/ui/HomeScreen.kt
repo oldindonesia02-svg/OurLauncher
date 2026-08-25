@@ -12,10 +12,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -53,7 +53,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Collections
 import java.util.UUID
-import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -167,6 +166,11 @@ fun HomeScreen(
 
     var showHomeSettingsSheet by remember { mutableStateOf(false) }
     var showIconCustomizeSheet by remember { mutableStateOf(false) }
+    var showSearchBarPositionSheet by remember { mutableStateOf(false) }
+
+    // Live Real-Time Search Bar Position State
+    var liveSearchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
+    var liveHideCapsule by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
 
     LaunchedEffect(isOverviewMode) {
         overviewAnim.animateTo(
@@ -175,8 +179,9 @@ fun HomeScreen(
         )
     }
 
-    BackHandler(enabled = isOverviewMode || showHomeSettingsSheet || showIconCustomizeSheet) {
+    BackHandler(enabled = isOverviewMode || showHomeSettingsSheet || showIconCustomizeSheet || showSearchBarPositionSheet) {
         when {
+            showSearchBarPositionSheet -> showSearchBarPositionSheet = false
             showIconCustomizeSheet -> showIconCustomizeSheet = false
             showHomeSettingsSheet -> showHomeSettingsSheet = false
             isOverviewMode -> isOverviewMode = false
@@ -234,7 +239,7 @@ fun HomeScreen(
     }
 
     fun handleAppOpen(app: AppInfo, bounds: Rect?) {
-        if (isOverviewMode || showHomeSettingsSheet || showIconCustomizeSheet) return
+        if (isOverviewMode || showHomeSettingsSheet || showIconCustomizeSheet || showSearchBarPositionSheet) return
         if (!settingsManager.animEnabled || bounds == null) {
             onAppClick(app)
             return
@@ -273,49 +278,25 @@ fun HomeScreen(
                     }
                 }
                 .pointerInput(Unit) {
+                    var totalVertical = 0f
                     var startX = 0f
-                    var totalDragY = 0f
-                    var totalDragX = 0f
-                    detectDragGestures(
-                        onDragStart = { startOffset: Offset ->
-                            startX = startOffset.x
-                            totalDragY = 0f
-                            totalDragX = 0f
+                    detectVerticalDragGestures(
+                        onDragStart = { offset ->
+                            startX = offset.x
+                            totalVertical = 0f
                         },
-                        onDrag = { change: PointerInputChange, dragAmount: Offset ->
-                            if (draggedExternalApp != null) {
-                                change.consume()
-                                dragOffset += dragAmount
-                                val hovered = itemBoundsMap.entries.firstOrNull { (_, rect: Rect) ->
-                                    rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
-                                }
-                                targetHoverIndex = hovered?.key
-                            } else {
-                                totalDragY += dragAmount.y
-                                totalDragX += dragAmount.x
-                            }
+                        onVerticalDrag = { _, dragAmount ->
+                            totalVertical += dragAmount
                         },
                         onDragEnd = {
-                            if (draggedExternalApp != null) {
-                                val targetApp = draggedExternalApp!!
-                                val insertIndex = targetHoverIndex ?: gridItems.size
-                                val list = gridItems.toMutableList()
-                                val safeIndex = insertIndex.coerceIn(0, list.size)
-                                list.add(safeIndex, GridItem.SingleApp(targetApp))
-                                sanitizeAndSaveFolders(list)
-                                draggedExternalApp = null
-                                targetHoverIndex = null
-                            } else if (!isOverviewMode && !showHomeSettingsSheet && !showIconCustomizeSheet) {
-                                val threshold = 45f
-                                if (abs(totalDragY) > abs(totalDragX) * 1.5f) {
-                                    if (totalDragY < -threshold) {
-                                        onOpenDrawer()
-                                    } else if (totalDragY > threshold) {
-                                        if (startX < screenWidthPx / 2f) {
-                                            triggerPullDownAction(settingsManager.leftPullDownAction, context, onOpenSettings)
-                                        } else {
-                                            triggerPullDownAction(settingsManager.rightPullDownAction, context, onOpenSettings)
-                                        }
+                            if (!isOverviewMode && !showHomeSettingsSheet && !showIconCustomizeSheet && !showSearchBarPositionSheet) {
+                                if (totalVertical < -50f) {
+                                    onOpenDrawer()
+                                } else if (totalVertical > 50f) {
+                                    if (startX < screenWidthPx / 2f) {
+                                        triggerPullDownAction(settingsManager.leftPullDownAction, context, onOpenSettings)
+                                    } else {
+                                        triggerPullDownAction(settingsManager.rightPullDownAction, context, onOpenSettings)
                                     }
                                 }
                             }
@@ -328,6 +309,7 @@ fun HomeScreen(
                             if (isOverviewMode) isOverviewMode = false
                             showHomeSettingsSheet = false
                             showIconCustomizeSheet = false
+                            showSearchBarPositionSheet = false
                         },
                         onLongPress = {
                             if (!isOverviewMode) {
@@ -341,6 +323,7 @@ fun HomeScreen(
                 HorizontalPager(
                     state = pagerState,
                     userScrollEnabled = !isOverviewMode,
+                    beyondBoundsPageCount = 1,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
@@ -486,11 +469,12 @@ fun HomeScreen(
                     }
                 }
 
-                if (!settingsManager.hideSearchCapsule && !isOverviewMode) {
+                // Live Preview Capsule with Real-Time Offset
+                if (!liveHideCapsule && !isOverviewMode) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .offset { IntOffset(0, settingsManager.searchOffset.roundToInt()) }
+                            .offset { IntOffset(0, liveSearchOffset.roundToInt()) }
                             .padding(bottom = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -555,9 +539,42 @@ fun HomeScreen(
                         showHomeSettingsSheet = false
                         showIconCustomizeSheet = true
                     },
+                    onOpenSearchBarPosition = {
+                        showHomeSettingsSheet = false
+                        liveSearchOffset = settingsManager.searchOffset
+                        liveHideCapsule = settingsManager.hideSearchCapsule
+                        showSearchBarPositionSheet = true
+                    },
                     onDismiss = { showHomeSettingsSheet = false }
                 )
             }
+        }
+
+        if (showSearchBarPositionSheet) {
+            SearchBarPositionSheet(
+                settingsManager = settingsManager,
+                currentOffset = liveSearchOffset,
+                isCapsuleHidden = liveHideCapsule,
+                onOffsetChange = { newOffset ->
+                    liveSearchOffset = newOffset
+                },
+                onHideCapsuleChange = { newHidden ->
+                    liveHideCapsule = newHidden
+                },
+                onOpenDockPosition = {
+                    showSearchBarPositionSheet = false
+                    onOpenSettings()
+                },
+                onApply = {
+                    settingsManager.searchOffset = liveSearchOffset
+                    settingsManager.hideSearchCapsule = liveHideCapsule
+                },
+                onDismiss = {
+                    liveSearchOffset = settingsManager.searchOffset
+                    liveHideCapsule = settingsManager.hideSearchCapsule
+                    showSearchBarPositionSheet = false
+                }
+            )
         }
 
         if (showIconCustomizeSheet) {
@@ -615,7 +632,7 @@ fun HomeScreen(
                 progress = p,
                 screenWidthPx = screenWidthPx,
                 screenHeightPx = screenHeightPx,
-                settingsManager = settingsManager,
+                  settingsManager = settingsManager,
                 getCustomDrawable = getCustomDrawable
             )
         }
