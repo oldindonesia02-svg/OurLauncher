@@ -2,18 +2,20 @@ package com.ourlauncher.app.ui
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Rect
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.PagerState
@@ -31,17 +33,21 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.floor
+import kotlin.math.roundToInt
 
 fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -> Unit) {
     when (action) {
@@ -102,199 +108,165 @@ fun LiquidSearchAiCapsule(
     onAiClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    var isDirectDragging by remember { mutableStateOf(false) }
     var showDots by remember { mutableStateOf(false) }
 
-    LaunchedEffect(pagerState.isScrollInProgress, pagerState.currentPageOffsetFraction, isDirectDragging) {
-        if (pagerState.isScrollInProgress || isDirectDragging || abs(pagerState.currentPageOffsetFraction) > 0.01f) {
+    LaunchedEffect(pagerState.isScrollInProgress, pagerState.currentPageOffsetFraction) {
+        if (pagerState.isScrollInProgress || abs(pagerState.currentPageOffsetFraction) > 0.01f) {
             showDots = true
         } else {
-            delay(500L)
+            delay(550L)
             showDots = false
         }
     }
 
-    val isSwiping = (showDots || isDirectDragging) && totalPages > 1
-
-    val glassBg = Brush.verticalGradient(
-        listOf(
-            Color.White.copy(alpha = 0.18f),
-            Color(0xFF141418).copy(alpha = 0.45f)
-        )
-    )
-    val glassBorder = Brush.verticalGradient(
-        listOf(
-            Color.White.copy(alpha = 0.50f),
-            Color.White.copy(alpha = 0.12f)
-        )
+    val isSwiping = showDots && totalPages > 1
+    val dotsWidth = ((totalPages * 18) + 36).coerceIn(80, 180).dp
+    val capsuleWidth by animateDpAsState(
+        targetValue = if (isSwiping) dotsWidth else 142.dp,
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = 420f),
+        label = "capsuleWidth"
     )
 
-    Row(
-        modifier = modifier.wrapContentSize(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Box(
+        modifier = modifier
+            .width(capsuleWidth)
+            .height(36.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.62f))
+            .border(0.8.dp, Color.White.copy(alpha = 0.22f), CircleShape)
+            .padding(horizontal = 4.dp),
+        contentAlignment = Alignment.Center
     ) {
-        val searchPillWidth = if (totalPages > 1) ((totalPages * 18) + 40).coerceIn(108, 175).dp else 108.dp
+        Crossfade(
+            targetState = isSwiping,
+            animationSpec = tween(140),
+            label = "SearchOrDotsMorph"
+        ) { swiping ->
+            if (swiping) {
+                // --- Real-time Liquid Worm (Follows Finger 1:1) ---
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp)
+                ) {
+                    val totalWidth = size.width
+                    val centerY = size.height / 2f
+                    val spacing = if (totalPages > 1) totalWidth / (totalPages - 1) else 0f
+                    val dotRadius = 2.8.dp.toPx()
+                    val wormHeight = 5.6.dp.toPx()
 
-        Box(
-            modifier = Modifier
-                .width(searchPillWidth)
-                .height(36.dp)
-                .clip(CircleShape)
-                .background(brush = glassBg)
-                .border(0.9.dp, brush = glassBorder, shape = CircleShape)
-                .draggable(
-                    enabled = totalPages > 1,
-                    orientation = Orientation.Horizontal,
-                    state = rememberDraggableState { delta ->
-                        val targetPage = if (delta < -8f) {
-                            (pagerState.currentPage + 1).coerceAtMost(totalPages - 1)
-                        } else if (delta > 8f) {
-                            (pagerState.currentPage - 1).coerceAtLeast(0)
-                        } else pagerState.currentPage
-
-                        if (targetPage != pagerState.currentPage) {
-                            coroutineScope.launch {
-                                pagerState.animateScrollToPage(targetPage)
-                            }
-                        }
-                    },
-                    onDragStarted = { isDirectDragging = true },
-                    onDragStopped = { isDirectDragging = false }
-                )
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    enabled = !isSwiping
-                ) { onSearchClick() },
-            contentAlignment = Alignment.Center
-        ) {
-            Crossfade(
-                targetState = isSwiping,
-                animationSpec = tween(140),
-                label = "SearchMorph"
-            ) { swiping ->
-                if (swiping) {
-                    Canvas(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 14.dp)
-                    ) {
-                        val totalWidth = size.width
-                        val centerY = size.height / 2f
-                        val spacing = if (totalPages > 1) totalWidth / (totalPages - 1) else 0f
-                        val dotRadius = 2.5.dp.toPx()
-                        val pillHeight = 16.dp.toPx()
-                        val minPillWidth = 22.dp.toPx()
-
-                        for (i in 0 until totalPages) {
-                            drawCircle(
-                                color = Color.White.copy(alpha = 0.35f),
-                                radius = dotRadius,
-                                center = Offset(i * spacing, centerY)
-                            )
-                        }
-
-                        val continuousPos = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
-                            .coerceIn(0f, (totalPages - 1).toFloat())
-                        val base = floor(continuousPos).toInt()
-                        val fraction = continuousPos - base
-
-                        val headProgress = (fraction / 0.65f).coerceIn(0f, 1f)
-                        val tailProgress = ((fraction - 0.35f) / 0.65f).coerceIn(0f, 1f)
-
-                        val smoothHead = headProgress * headProgress * (3f - 2f * headProgress)
-                        val smoothTail = tailProgress * tailProgress * (3f - 2f * tailProgress)
-
-                        val leftCenter = (base + smoothTail) * spacing
-                        val rightCenter = (base + smoothHead) * spacing
-
-                        val pillLeft = leftCenter - (minPillWidth / 2f)
-                        val pillRight = rightCenter + (minPillWidth / 2f)
-                        val currentPillWidth = (pillRight - pillLeft).coerceAtLeast(minPillWidth)
-
-                        drawRoundRect(
-                            color = Color.White.copy(alpha = 0.28f),
-                            topLeft = Offset(pillLeft, centerY - (pillHeight / 2f)),
-                            size = Size(currentPillWidth, pillHeight),
-                            cornerRadius = CornerRadius(pillHeight / 2f, pillHeight / 2f)
-                        )
-                        drawRoundRect(
-                            color = Color.White,
-                            topLeft = Offset(leftCenter - 3.dp.toPx(), centerY - 3.dp.toPx()),
-                            size = Size(6.dp.toPx(), 6.dp.toPx()),
-                            cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                    // Draw Static Inactive Dots
+                    for (i in 0 until totalPages) {
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.32f),
+                            radius = dotRadius,
+                            center = Offset(i * spacing, centerY)
                         )
                     }
-                } else {
-                    Text(
-                        text = "search",
-                        color = Color.White.copy(alpha = 0.95f),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        letterSpacing = 0.35.sp
+
+                    // Continuous Position tracking
+                    val continuousPos = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+                        .coerceIn(0f, (totalPages - 1).toFloat())
+                    val base = floor(continuousPos).toInt()
+                    val fraction = continuousPos - base
+
+                    // Elastic Head & Tail physics
+                    val headProgress = (fraction / 0.65f).coerceIn(0f, 1f)
+                    val tailProgress = ((fraction - 0.35f) / 0.65f).coerceIn(0f, 1f)
+
+                    val smoothHead = headProgress * headProgress * (3f - 2f * headProgress)
+                    val smoothTail = tailProgress * tailProgress * (3f - 2f * tailProgress)
+
+                    val leftCenter = (base + smoothTail) * spacing
+                    val rightCenter = (base + smoothHead) * spacing
+
+                    val wormLeft = leftCenter - dotRadius
+                    val wormRight = rightCenter + dotRadius
+                    val wormWidth = (wormRight - wormLeft).coerceAtLeast(wormHeight)
+
+                    drawRoundRect(
+                        color = Color.White,
+                        topLeft = Offset(wormLeft, centerY - (wormHeight / 2f)),
+                        size = Size(wormWidth, wormHeight),
+                        cornerRadius = CornerRadius(wormHeight / 2f, wormHeight / 2f)
                     )
                 }
-            }
-        }
+            } else {
+                // --- Rest State: Distinct Search + AI Pill ---
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(28.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.White.copy(alpha = 0.16f))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onSearchClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "search",
+                            color = Color.White.copy(alpha = 0.95f),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.3.sp
+                        )
+                    }
 
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(brush = glassBg)
-                .border(0.9.dp, brush = glassBorder, shape = CircleShape)
-                .clickable { onAiClick() },
-            contentAlignment = Alignment.Center
-        ) {
-            Canvas(modifier = Modifier.size(13.5.dp)) {
-                val cx = size.width / 2
-                val cy = size.height / 2
-                val path = Path().apply {
-                    moveTo(cx, 0f)
-                    quadraticBezierTo(cx, cy, size.width, cy)
-                    quadraticBezierTo(cx, cy, cx, size.height)
-                    quadraticBezierTo(cx, cy, 0f, cy)
-                    quadraticBezierTo(cx, cy, cx, 0f)
-                    close()
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.18f))
+                            .clickable { onAiClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Canvas(modifier = Modifier.size(13.dp)) {
+                            val cx = size.width / 2
+                            val cy = size.height / 2
+                            val path = Path().apply {
+                                moveTo(cx, 0f)
+                                quadraticBezierTo(cx, cy, size.width, cy)
+                                quadraticBezierTo(cx, cy, cx, size.height)
+                                quadraticBezierTo(cx, cy, 0f, cy)
+                                quadraticBezierTo(cx, cy, cx, 0f)
+                                close()
+                            }
+                            drawPath(path, color = Color.White)
+                        }
+                    }
                 }
-                drawPath(path, color = Color.White)
             }
         }
     }
 }
-
 @Composable
 fun TopLiquidSearchBarPositionCard(
     currentOffset: Float,
     isCapsuleHidden: Boolean,
     onOffsetChange: (Float) -> Unit,
     onHideCapsuleChange: (Boolean) -> Unit,
-    onOpenDockPosition: () -> Unit = {},
+    onOpenDockPosition: () -> Unit,
     onApply: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val glassBg = Brush.verticalGradient(
-        colors = listOf(
-            Color.White.copy(alpha = 0.14f),
-            Color(0xFF0A0A0D).copy(alpha = 0.88f)
-        )
-    )
-    val glassBorder = Brush.verticalGradient(
-        colors = listOf(
-            Color.White.copy(alpha = 0.55f),
-            Color.White.copy(alpha = 0.10f)
-        )
-    )
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 44.dp, start = 16.dp, end = 16.dp)
             .clip(RoundedCornerShape(26.dp))
-            .background(brush = glassBg)
-            .border(1.dp, glassBorder, RoundedCornerShape(26.dp))
+            .background(Color(0xFF141416).copy(alpha = 0.92f))
+            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(26.dp))
             .padding(18.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -327,58 +299,7 @@ fun TopLiquidSearchBarPositionCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(68.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.Black.copy(alpha = 0.35f))
-            ) {
-                if (!isCapsuleHidden) {
-                    val previewOffsetDp = (currentOffset / 150f * 20f).dp
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .offset(y = previewOffsetDp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(82.dp)
-                                .height(26.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.18f))
-                                .border(0.8.dp, Color.White.copy(alpha = 0.35f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("search", color = Color.White.copy(alpha = 0.9f), fontSize = 11.5.sp)
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .size(26.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.18f))
-                                .border(0.8.dp, Color.White.copy(alpha = 0.35f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("✦", color = Color.White, fontSize = 11.sp)
-                        }
-                    }
-                } else {
-                    Text(
-                        text = "Capsule hidden",
-                        color = Color.White.copy(alpha = 0.4f),
-                        fontSize = 12.sp,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             Text(
                 text = "VERTICAL OFFSET",
@@ -491,14 +412,54 @@ fun TopLiquidSearchBarPositionCard(
 }
 
 @Composable
-fun HomeQuickSettingsSheet(
+fun Dock(
+    pinnedApps: List<AppInfo>,
     settingsManager: SettingsManager,
-    onOpenFullSettings: () -> Unit,
-    onOpenIconCustomize: () -> Unit,
-    onOpenSearchBarPosition: () -> Unit = {},
+    getCustomDrawable: (String) -> Drawable?,
+    onAppClick: (AppInfo) -> Unit,
+    onAppClickWithBounds: (AppInfo, Rect) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(32.dp))
+            .background(Color.White.copy(alpha = 0.12f))
+            .border(0.8.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(32.dp))
+            .padding(vertical = 8.dp, horizontal = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            pinnedApps.forEach { app ->
+                AppIcon(
+                    app = app,
+                    onClick = { onAppClick(app) },
+                    showLabel = false,
+                    fontFamilyName = settingsManager.fontFamily,
+                    iconSizeDp = settingsManager.iconSize,
+                    cornerRadiusPercent = settingsManager.iconCornerRadius,
+                    iconOpacity = settingsManager.iconOpacity,
+                    customDrawable = getCustomDrawable(app.packageName),
+                    onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
+                    modifier = Modifier.width(60.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun IconCustomizeSheet(
+    settingsManager: SettingsManager,
+    onApply: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var showLabels by remember { mutableStateOf(settingsManager.showLabels) }
+    var iconSize by remember { mutableStateOf(settingsManager.iconSize) }
+    var cornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
 
     Box(
         modifier = Modifier
@@ -508,53 +469,93 @@ fun HomeQuickSettingsSheet(
             .padding(20.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
+            Text("Customize Icons", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text("Icon Size: ${iconSize.toInt()} dp", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+            Slider(
+                value = iconSize,
+                onValueChange = {
+                    iconSize = it
+                    settingsManager.iconSize = it
+                },
+                valueRange = 40f..80f,
+                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text("Corner Radius: ${cornerRadius.toInt()} %", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+            Slider(
+                value = cornerRadius,
+                onValueChange = {
+                    cornerRadius = it
+                    settingsManager.iconCornerRadius = it
+                },
+                valueRange = 0f..50f,
+                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onOpenIconCustomize() }
-                    .padding(vertical = 12.dp, horizontal = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Customize App Icons", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                Text("›", color = Color.White.copy(alpha = 0.5f), fontSize = 20.sp)
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(Color(0xFF0A84FF))
                     .clickable {
-                        showLabels = !showLabels
-                        settingsManager.showLabels = showLabels
-                    }
-                    .padding(vertical = 12.dp, horizontal = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Show App Labels", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                Text(if (showLabels) "On" else "Off", color = if (showLabels) Color(0xFF0A84FF) else Color.Gray, fontSize = 14.sp)
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable {
+                        onApply()
                         onDismiss()
-                        onOpenFullSettings()
-                    }
-                    .padding(vertical = 12.dp, horizontal = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                Text("More Settings", color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                Text("›", color = Color(0xFF0A84FF), fontSize = 20.sp)
+                Text("Apply", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun AppLaunchOverlay(
+    activeApp: AppInfo,
+    activeBounds: Rect,
+    progress: Float,
+    screenWidthPx: Float,
+    screenHeightPx: Float,
+    settingsManager: SettingsManager,
+    getCustomDrawable: (String) -> Drawable?
+) {
+    val density = LocalDensity.current
+    val currentX = activeBounds.left * (1f - progress)
+    val currentY = activeBounds.top * (1f - progress)
+    val currentW = activeBounds.width() + (screenWidthPx - activeBounds.width()) * progress
+    val currentH = activeBounds.height() + (screenHeightPx - activeBounds.height()) * progress
+    val initialCornerPx = (activeBounds.width() * (settingsManager.iconCornerRadius / 100f))
+    val currentRadius = initialCornerPx * (1f - progress)
+
+    with(density) {
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(currentX.roundToInt(), currentY.roundToInt()) }
+                .size(currentW.toDp(), currentH.toDp())
+                .clip(RoundedCornerShape(currentRadius.toDp()))
+                .background(Color(0xFF141416))
+                .graphicsLayer { alpha = progress.coerceIn(0f, 1f) },
+            contentAlignment = Alignment.Center
+        ) {
+            val targetDrawable = getCustomDrawable(activeApp.packageName) ?: activeApp.icon
+            val cacheKey = "${activeApp.packageName}_${targetDrawable?.hashCode() ?: 0}"
+            val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
+
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size((settingsManager.iconSize * (1f + 0.35f * progress)).dp)
+                        .clip(RoundedCornerShape((settingsManager.iconCornerRadius * (1f - progress)).toInt()))
+                )
             }
         }
     }
