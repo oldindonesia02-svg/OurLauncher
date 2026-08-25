@@ -32,7 +32,6 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
-
     val cardBg = Color(0xFF141416).copy(alpha = 0.95f)
     val cardShape = RoundedCornerShape(22.dp)
 
@@ -45,7 +44,6 @@ fun SettingsScreen(
             .verticalScroll(scrollState)
             .padding(horizontal = 18.dp, vertical = 12.dp)
     ) {
-        // --- Top Bar (Back Button + Title) ---
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -81,9 +79,6 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        // =====================================================================
-        // CUSTOMIZATION SECTION
-        // =====================================================================
         Text(
             text = "CUSTOMIZATION",
             color = Color.White.copy(alpha = 0.45f),
@@ -135,7 +130,6 @@ fun SettingsScreen(
             )
             SettingsDivider()
 
-            // Search Bar Position (Blue Mark Item)
             SettingsNavigationRow(
                 title = "Search Bar Position",
                 subtitle = "Adjust the vertical offset of the search pill",
@@ -145,9 +139,6 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // =====================================================================
-        // ACTIONS SECTION
-        // =====================================================================
         Text(
             text = "ACTIONS",
             color = Color.White.copy(alpha = 0.45f),
