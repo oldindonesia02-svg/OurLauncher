@@ -6,9 +6,10 @@ import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -45,6 +46,7 @@ import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.delay
 import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.roundToInt
 
 fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -> Unit) {
@@ -106,27 +108,22 @@ fun LiquidSearchAiCapsule(
     onAiClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isScrolling by remember { mutableStateOf(false) }
+    var showDots by remember { mutableStateOf(false) }
 
-    LaunchedEffect(pagerState.isScrollInProgress) {
-        if (pagerState.isScrollInProgress) {
-            isScrolling = true
+    LaunchedEffect(pagerState.isScrollInProgress, pagerState.currentPageOffsetFraction) {
+        if (pagerState.isScrollInProgress || abs(pagerState.currentPageOffsetFraction) > 0.01f) {
+            showDots = true
         } else {
-            delay(850L)
-            isScrolling = false
+            delay(550L)
+            showDots = false
         }
     }
 
-    val morphProgress by animateFloatAsState(
-        targetValue = if (isScrolling && totalPages > 1) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f),
-        label = "morphProgress"
-    )
-
-    val dotsCalculatedWidth = ((totalPages * 16) + 38).coerceIn(84, 180).dp
+    val isSwiping = showDots && totalPages > 1
+    val dotsWidth = ((totalPages * 18) + 36).coerceIn(80, 180).dp
     val capsuleWidth by animateDpAsState(
-        targetValue = if (morphProgress > 0.45f) dotsCalculatedWidth else 146.dp,
-        animationSpec = spring(dampingRatio = 0.85f, stiffness = 380f),
+        targetValue = if (isSwiping) dotsWidth else 142.dp,
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = 420f),
         label = "capsuleWidth"
     )
 
@@ -135,118 +132,120 @@ fun LiquidSearchAiCapsule(
             .width(capsuleWidth)
             .height(36.dp)
             .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.60f))
+            .background(Color.Black.copy(alpha = 0.62f))
             .border(0.8.dp, Color.White.copy(alpha = 0.22f), CircleShape)
             .padding(horizontal = 4.dp),
         contentAlignment = Alignment.Center
     ) {
-        // --- 1. Distinct Search & AI Buttons (Rest State) ---
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    alpha = (1f - (morphProgress * 2.5f)).coerceIn(0f, 1f)
-                    scaleX = 1f - (morphProgress * 0.15f)
-                    scaleY = 1f - (morphProgress * 0.15f)
-                }
-                .padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(28.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color.White.copy(alpha = 0.16f))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        enabled = morphProgress < 0.1f
-                    ) { onSearchClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "search",
-                    color = Color.White.copy(alpha = 0.95f),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.4.sp
-                )
-            }
+        Crossfade(
+            targetState = isSwiping,
+            animationSpec = tween(140),
+            label = "SearchOrDotsMorph"
+        ) { swiping ->
+            if (swiping) {
+                // --- Real-time Liquid Worm (Follows Finger 1:1) ---
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp)
+                ) {
+                    val totalWidth = size.width
+                    val centerY = size.height / 2f
+                    val spacing = if (totalPages > 1) totalWidth / (totalPages - 1) else 0f
+                    val dotRadius = 2.8.dp.toPx()
+                    val wormHeight = 5.6.dp.toPx()
 
-            Spacer(modifier = Modifier.width(6.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.18f))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.15f), CircleShape)
-                    .clickable(enabled = morphProgress < 0.1f) { onAiClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Canvas(modifier = Modifier.size(13.dp)) {
-                    val cx = size.width / 2
-                    val cy = size.height / 2
-                    val path = Path().apply {
-                        moveTo(cx, 0f)
-                        quadraticBezierTo(cx, cy, size.width, cy)
-                        quadraticBezierTo(cx, cy, cx, size.height)
-                        quadraticBezierTo(cx, cy, 0f, cy)
-                        quadraticBezierTo(cx, cy, cx, 0f)
-                        close()
+                    // Draw Static Inactive Dots
+                    for (i in 0 until totalPages) {
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.32f),
+                            radius = dotRadius,
+                            center = Offset(i * spacing, centerY)
+                        )
                     }
-                    drawPath(path, color = Color.White)
-                }
-            }
-        }
 
-        // --- 2. Finger Liquid Worm Animation (Swipe State) ---
-        if (totalPages > 1) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        alpha = ((morphProgress - 0.25f) / 0.75f).coerceIn(0f, 1f)
-                    }
-                    .padding(horizontal = 14.dp)
-            ) {
-                val totalWidth = size.width
-                val centerY = size.height / 2f
-                val spacing = if (totalPages > 1) totalWidth / (totalPages - 1) else 0f
-                val dotRadius = 2.5.dp.toPx()
+                    // Continuous Position tracking
+                    val continuousPos = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+                        .coerceIn(0f, (totalPages - 1).toFloat())
+                    val base = floor(continuousPos).toInt()
+                    val fraction = continuousPos - base
 
-                for (i in 0 until totalPages) {
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.32f),
-                        radius = dotRadius,
-                        center = Offset(i * spacing, centerY)
+                    // Elastic Head & Tail physics
+                    val headProgress = (fraction / 0.65f).coerceIn(0f, 1f)
+                    val tailProgress = ((fraction - 0.35f) / 0.65f).coerceIn(0f, 1f)
+
+                    val smoothHead = headProgress * headProgress * (3f - 2f * headProgress)
+                    val smoothTail = tailProgress * tailProgress * (3f - 2f * tailProgress)
+
+                    val leftCenter = (base + smoothTail) * spacing
+                    val rightCenter = (base + smoothHead) * spacing
+
+                    val wormLeft = leftCenter - dotRadius
+                    val wormRight = rightCenter + dotRadius
+                    val wormWidth = (wormRight - wormLeft).coerceAtLeast(wormHeight)
+
+                    drawRoundRect(
+                        color = Color.White,
+                        topLeft = Offset(wormLeft, centerY - (wormHeight / 2f)),
+                        size = Size(wormWidth, wormHeight),
+                        cornerRadius = CornerRadius(wormHeight / 2f, wormHeight / 2f)
                     )
                 }
+            } else {
+                // --- Rest State: Distinct Search + AI Pill ---
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(28.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.White.copy(alpha = 0.16f))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onSearchClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "search",
+                            color = Color.White.copy(alpha = 0.95f),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.3.sp
+                        )
+                    }
 
-                val page = pagerState.currentPage
-                val fraction = pagerState.currentPageOffsetFraction
+                    Spacer(modifier = Modifier.width(6.dp))
 
-                val wormHeight = 5.dp.toPx()
-                val minPillWidth = 12.dp.toPx()
-                val stretch = abs(fraction) * spacing * 0.75f
-
-                val leftX = if (fraction >= 0) {
-                    (page * spacing) + (fraction * spacing * 0.25f)
-                } else {
-                    (page * spacing) + (fraction * spacing)
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.18f))
+                            .clickable { onAiClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Canvas(modifier = Modifier.size(13.dp)) {
+                            val cx = size.width / 2
+                            val cy = size.height / 2
+                            val path = Path().apply {
+                                moveTo(cx, 0f)
+                                quadraticBezierTo(cx, cy, size.width, cy)
+                                quadraticBezierTo(cx, cy, cx, size.height)
+                                quadraticBezierTo(cx, cy, 0f, cy)
+                                quadraticBezierTo(cx, cy, cx, 0f)
+                                close()
+                            }
+                            drawPath(path, color = Color.White)
+                        }
+                    }
                 }
-
-                val currentPillWidth = minPillWidth + stretch
-
-                drawRoundRect(
-                    color = Color.White,
-                    topLeft = Offset(leftX - (minPillWidth / 2f), centerY - (wormHeight / 2f)),
-                    size = Size(currentPillWidth, wormHeight),
-                    cornerRadius = CornerRadius(wormHeight / 2f, wormHeight / 2f)
-                )
             }
         }
     }
@@ -264,9 +263,9 @@ fun TopLiquidSearchBarPositionCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 50.dp, start = 16.dp, end = 16.dp)
+            .padding(top = 44.dp, start = 16.dp, end = 16.dp)
             .clip(RoundedCornerShape(26.dp))
-            .background(Color(0xFF141416).copy(alpha = 0.88f))
+            .background(Color(0xFF141416).copy(alpha = 0.92f))
             .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(26.dp))
             .padding(18.dp)
     ) {
