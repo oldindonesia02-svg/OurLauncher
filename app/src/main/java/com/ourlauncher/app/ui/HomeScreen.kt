@@ -36,7 +36,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -45,7 +44,6 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -549,8 +547,8 @@ fun HomeScreen(
 
         AnimatedVisibility(
             visible = showHomeSettingsSheet,
-            enter = slideInVertically(initialOffsetY = { fullHeight: Int -> fullHeight }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { fullHeight: Int -> fullHeight }) + fadeOut(),
+            enter = slideInVertically() + fadeIn(),
+            exit = slideOutVertically() + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             HomeQuickSettingsSheet(
@@ -569,8 +567,8 @@ fun HomeScreen(
 
         AnimatedVisibility(
             visible = showIconCustomizeSheet,
-            enter = slideInVertically(initialOffsetY = { fullHeight: Int -> fullHeight }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { fullHeight: Int -> fullHeight }) + fadeOut(),
+            enter = slideInVertically() + fadeIn(),
+            exit = slideOutVertically() + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
             IconCustomizeSheet(
