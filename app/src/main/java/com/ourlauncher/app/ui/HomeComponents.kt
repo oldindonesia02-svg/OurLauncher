@@ -1,8 +1,10 @@
 package com.ourlauncher.app.ui
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
+import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
@@ -10,11 +12,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -25,24 +28,52 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.AppRepository
 import com.ourlauncher.app.SettingsManager
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+// --- LAUNCH GOOGLE GEMINI AI ---
+fun launchGeminiAi(context: Context) {
+    val pm = context.packageManager
+    val geminiPackage = "com.google.android.apps.bard"
+    val launchIntent = pm.getLaunchIntentForPackage(geminiPackage)
+    if (launchIntent != null) {
+        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(launchIntent)
+    } else {
+        try {
+            val voiceIntent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(voiceIntent)
+        } catch (e: Exception) {
+            try {
+                val assistIntent = Intent(RecognizerIntent.ACTION_WEB_SEARCH).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(assistIntent)
+            } catch (e2: Exception) {
+                e2.printStackTrace()
+            }
+        }
+    }
+}
 
 fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -> Unit) {
     when (action) {
@@ -68,7 +99,7 @@ fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -
     }
 }
 
-// --- LIQUID SEARCH BAR WITH AI ICON & PAGE INDICATOR ---
+// --- LIQUID SEARCH CAPSULE WITH FINGER-TRACKING GLOW & GEMINI AI ---
 @Composable
 fun LiquidSearchAiCapsule(
     totalPages: Int,
@@ -78,21 +109,61 @@ fun LiquidSearchAiCapsule(
     modifier: Modifier = Modifier
 ) {
     val pillShape = RoundedCornerShape(22.dp)
+    val coroutineScope = rememberCoroutineScope()
+    var touchPos by remember { mutableStateOf<Offset?>(null) }
+    val touchGlowAlpha = remember { Animatable(0f) }
 
     Box(
         modifier = modifier
             .wrapContentWidth()
-            .height(34.dp)
+            .height(36.dp)
             .clip(pillShape)
             .background(
                 Brush.verticalGradient(
                     listOf(Color.White.copy(alpha = 0.22f), Color.Black.copy(alpha = 0.45f))
                 )
             )
+            // Real-time finger tracking liquid light & ripple
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    touchPos = down.position
+                    coroutineScope.launch { touchGlowAlpha.animateTo(1f, tween(120)) }
+                    do {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull()
+                        if (change != null && change.pressed) {
+                            touchPos = change.position
+                        }
+                    } while (event.changes.any { it.pressed })
+                    coroutineScope.launch { touchGlowAlpha.animateTo(0f, tween(300)) }
+                    touchPos = null
+                }
+            }
+            .drawBehind {
+                touchPos?.let { pos ->
+                    val alpha = touchGlowAlpha.value
+                    if (alpha > 0f) {
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.55f * alpha),
+                                    Color(0xFF64D2FF).copy(alpha = 0.35f * alpha),
+                                    Color.Transparent
+                                ),
+                                center = pos,
+                                radius = 65.dp.toPx()
+                            ),
+                            center = pos,
+                            radius = 65.dp.toPx()
+                        )
+                    }
+                }
+            }
             .border(
-                1.dp,
+                1.2.dp,
                 Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.08f))
+                    listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.12f))
                 ),
                 pillShape
             )
@@ -103,36 +174,41 @@ fun LiquidSearchAiCapsule(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            // Search Trigger
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            Text(
+                text = "search",
+                color = Color.White.copy(alpha = 0.92f),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
                 modifier = Modifier.clickable { onSearchClick() }
-            ) {
-                Text(
-                    text = "search",
-                    color = Color.White.copy(alpha = 0.9f),
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+            )
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // AI Floating Diamond/Orb Button
+            // Gemini Sparkle Button
             Box(
                 modifier = Modifier
-                    .size(18.dp)
+                    .size(22.dp)
                     .clip(CircleShape)
                     .background(Color.White.copy(alpha = 0.18f))
                     .clickable { onAiClick() },
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "✦", color = Color(0xFF64D2FF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "✦",
+                    color = Color(0xFF64D2FF),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             if (totalPages > 1) {
                 Spacer(modifier = Modifier.width(10.dp))
-                Box(modifier = Modifier.width(1.dp).height(10.dp).background(Color.White.copy(alpha = 0.25f)))
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(12.dp)
+                        .background(Color.White.copy(alpha = 0.25f))
+                )
                 Spacer(modifier = Modifier.width(10.dp))
 
                 Row(
@@ -144,7 +220,7 @@ fun LiquidSearchAiCapsule(
                         Box(
                             modifier = Modifier
                                 .height(4.dp)
-                                .width(if (isSelected) 10.dp else 4.dp)
+                                .width(if (isSelected) 12.dp else 4.dp)
                                 .clip(CircleShape)
                                 .background(
                                     if (isSelected) Color.White.copy(alpha = 0.95f)
@@ -154,83 +230,6 @@ fun LiquidSearchAiCapsule(
                     }
                 }
             }
-        }
-    }
-}
-
-// --- AI VOICE LISTENING BOTTOM BAR ---
-@Composable
-fun AiListeningBar(
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    BackHandler { onDismiss() }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val waveScale by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 1.25f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(650, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "wave"
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 24.dp)
-            .height(58.dp)
-            .clip(RoundedCornerShape(29.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF1C1C1E).copy(alpha = 0.95f), Color(0xFF000000).copy(alpha = 0.98f))
-                )
-            )
-            .border(
-                1.2.dp,
-                Brush.horizontalGradient(
-                    listOf(Color(0xFF0A84FF), Color(0xFFBF5AF2), Color(0xFF64D2FF))
-                ),
-                RoundedCornerShape(29.dp)
-            )
-            .clickable { onDismiss() }
-            .padding(horizontal = 20.dp),
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Pulsing glowing orb
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .scale(waveScale)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(listOf(Color(0xFF64D2FF), Color(0xFF0A84FF), Color.Transparent))
-                        )
-                )
-
-                Spacer(modifier = Modifier.width(14.dp))
-                Text(
-                    text = "Listening...",
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Text(
-                text = "✕",
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 14.sp,
-                modifier = Modifier.clickable { onDismiss() }
-            )
         }
     }
 }
@@ -272,7 +271,6 @@ fun IconCustomizeSheet(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Theme preview cards
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -325,7 +323,6 @@ fun IconCustomizeSheet(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Live Corner Radius Slider
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Corner Radius: ${cornerRadius.toInt()}%", color = Color.White.copy(alpha = 0.85f), fontSize = 13.5.sp)
             }
@@ -341,7 +338,6 @@ fun IconCustomizeSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Blue Apply Button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
