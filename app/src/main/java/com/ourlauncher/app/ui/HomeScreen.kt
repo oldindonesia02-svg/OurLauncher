@@ -3,15 +3,10 @@ package com.ourlauncher.app.ui
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -545,37 +540,37 @@ fun HomeScreen(
             )
         }
 
-        AnimatedVisibility(
-            visible = showHomeSettingsSheet,
-            enter = slideInVertically() + fadeIn(),
-            exit = slideOutVertically() + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            HomeQuickSettingsSheet(
-                settingsManager = settingsManager,
-                onOpenFullSettings = {
-                    showHomeSettingsSheet = false
-                    onOpenSettings()
-                },
-                onOpenIconCustomize = {
-                    showHomeSettingsSheet = false
-                    showIconCustomizeSheet = true
-                },
-                onDismiss = { showHomeSettingsSheet = false }
-            )
+        if (showHomeSettingsSheet) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                HomeQuickSettingsSheet(
+                    settingsManager = settingsManager,
+                    onOpenFullSettings = {
+                        showHomeSettingsSheet = false
+                        onOpenSettings()
+                    },
+                    onOpenIconCustomize = {
+                        showHomeSettingsSheet = false
+                        showIconCustomizeSheet = true
+                    },
+                    onDismiss = { showHomeSettingsSheet = false }
+                )
+            }
         }
 
-        AnimatedVisibility(
-            visible = showIconCustomizeSheet,
-            enter = slideInVertically() + fadeIn(),
-            exit = slideOutVertically() + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            IconCustomizeSheet(
-                settingsManager = settingsManager,
-                onApply = { showIconCustomizeSheet = false },
-                onDismiss = { showIconCustomizeSheet = false }
-            )
+        if (showIconCustomizeSheet) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                IconCustomizeSheet(
+                    settingsManager = settingsManager,
+                    onApply = { showIconCustomizeSheet = false },
+                    onDismiss = { showIconCustomizeSheet = false }
+                )
+            }
         }
 
         val floatingApp = if (draggedIndex != null && draggedIndex!! < gridItems.size) {
