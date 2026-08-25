@@ -26,4 +26,12 @@ class SettingsManager(context: Context) {
     var isSearchCapsuleHidden: Boolean
         get() = prefs.getBoolean("is_search_capsule_hidden", false)
         set(value) = prefs.edit().putBoolean("is_search_capsule_hidden", value).apply()
+
+    var leftPullDownAction: String
+        get() = prefs.getString("left_pull_down_action", "Notifications") ?: "Notifications"
+        set(value) = prefs.edit().putString("left_pull_down_action", value).apply()
+
+    var rightPullDownAction: String
+        get() = prefs.getString("right_pull_down_action", "Quick Settings") ?: "Quick Settings"
+        set(value) = prefs.edit().putString("right_pull_down_action", value).apply()
 }
