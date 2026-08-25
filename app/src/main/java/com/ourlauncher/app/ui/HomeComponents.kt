@@ -251,6 +251,7 @@ fun LiquidSearchAiCapsule(
         }
     }
 }
+
 @Composable
 fun TopLiquidSearchBarPositionCard(
     currentOffset: Float,
@@ -261,13 +262,26 @@ fun TopLiquidSearchBarPositionCard(
     onApply: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val glassBg = Brush.verticalGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.14f),
+            Color(0xFF0A0A0D).copy(alpha = 0.88f)
+        )
+    )
+    val glassBorder = Brush.verticalGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.55f),
+            Color.White.copy(alpha = 0.10f)
+        )
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 44.dp, start = 16.dp, end = 16.dp)
             .clip(RoundedCornerShape(26.dp))
-            .background(Color(0xFF141416).copy(alpha = 0.92f))
-            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(26.dp))
+            .background(brush = glassBg)
+            .border(1.dp, glassBorder, RoundedCornerShape(26.dp))
             .padding(18.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -300,7 +314,42 @@ fun TopLiquidSearchBarPositionCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // --- LIVE PREVIEW: capsule moves here as you drag the slider ---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(70.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.Black.copy(alpha = 0.35f))
+            ) {
+                if (!isCapsuleHidden) {
+                    val previewOffsetDp = (currentOffset / 150f * 22f).dp
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .offset(y = previewOffsetDp)
+                            .width(110.dp)
+                            .height(28.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.62f))
+                            .border(0.8.dp, Color.White.copy(alpha = 0.22f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("search", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+                    }
+                } else {
+                    Text(
+                        text = "Capsule hidden",
+                        color = Color.White.copy(alpha = 0.4f),
+                        fontSize = 12.sp,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             Text(
                 text = "VERTICAL OFFSET",
@@ -411,6 +460,7 @@ fun TopLiquidSearchBarPositionCard(
         }
     }
 }
+
 @Composable
 fun Dock(
     pinnedApps: List<AppInfo>,
