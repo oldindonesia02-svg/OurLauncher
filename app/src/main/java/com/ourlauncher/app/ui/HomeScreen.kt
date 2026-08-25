@@ -2,14 +2,11 @@ package com.ourlauncher.app.ui
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -28,15 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.drawable.toBitmap
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.Dispatchers
@@ -55,7 +47,7 @@ fun HomeScreen(
     var showQuickSettings by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
 
-    // ১. ডিভাইসের সব ইনস্টলড অ্যাপ লোড করা
+    // ১. ডিভাইসের অ্যাপ লোড
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val pm = context.packageManager
@@ -74,7 +66,7 @@ fun HomeScreen(
         }
     }
 
-    // প্রতি পেজে ২০টি করে অ্যাপ (৪x৫ গ্রিড) এবং নিচের ডকের জন্য ৪টি ফেভারিট অ্যাপ
+    // গ্রিড পেজিং ও ডক
     val appsPerPage = 20
     val dockApps = remember(installedApps) { installedApps.take(4) }
     val homeApps = remember(installedApps) { installedApps.drop(4) }
@@ -93,7 +85,6 @@ fun HomeScreen(
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        // সোয়াইপ ডাউন অ্যাকশন
                         if (dragAmount.y > 45) {
                             val screenWidth = context.resources.displayMetrics.widthPixels
                             if (change.position.x < screenWidth / 2) {
@@ -111,7 +102,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(bottom = 12.dp)
         ) {
-            // ==================== APP GRID PAGER ====================
+            // ==================== APP GRID (Full Custom AppIcon) ====================
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
@@ -132,20 +123,37 @@ fun HomeScreen(
                     userScrollEnabled = false
                 ) {
                     items(pageApps, key = { it.packageName }) { app ->
-                        AppItemView(
-                            app = app,
-                            settingsManager = settingsManager,
-                            isEditMode = isEditMode,
-                            onClick = {
-                                val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
-                                if (launchIntent != null) {
-                                    context.startActivity(launchIntent)
-                                }
-                            },
-                            onLongClick = {
-                                showQuickSettings = true
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .combinedClickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = {
+                                        val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
+                                        if (launchIntent != null) {
+                                            context.startActivity(launchIntent)
+                                        }
+                                    },
+                                    onLongClick = { showQuickSettings = true }
+                                )
+                        ) {
+                            // আসল AppIcon কম্পোনেন্ট (Theme, Lens Light, Shader সহ)
+                            AppIcon(
+                                app = app,
+                                settingsManager = settingsManager
+                            )
+
+                            if (isEditMode) {
+                                IconSelectionBadge(
+                                    isSelected = false,
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = 4.dp, y = (-4).dp)
+                                )
                             }
-                        )
+                        }
                     }
                 }
             }
@@ -175,7 +183,7 @@ fun HomeScreen(
                 }
             }
 
-            // ==================== BOTTOM DOCK ====================
+            // ==================== BOTTOM DOCK (Full Glass & AppIcons) ====================
             if (!isEditMode && dockApps.isNotEmpty()) {
                 Box(
                     modifier = Modifier
@@ -199,18 +207,23 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         dockApps.forEach { app ->
-                            AppItemView(
-                                app = app,
-                                settingsManager = settingsManager,
-                                isEditMode = false,
-                                onClick = {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
                                     val launchIntent = context.packageManager.getLaunchIntentForPackage(app.packageName)
                                     if (launchIntent != null) {
                                         context.startActivity(launchIntent)
                                     }
-                                },
-                                onLongClick = { showQuickSettings = true }
-                            )
+                                }
+                            ) {
+                                AppIcon(
+                                    app = app,
+                                    settingsManager = settingsManager
+                                )
+                            }
                         }
                     }
                 }
@@ -257,66 +270,6 @@ fun HomeScreen(
                     onOpenIconStudio()
                 },
                 onDismiss = { showQuickSettings = false }
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun AppItemView(
-    app: AppInfo,
-    settingsManager: SettingsManager,
-    isEditMode: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            val bitmap = remember(app.icon) {
-                app.icon?.toBitmap(128, 128)?.asImageBitmap()
-            }
-
-            if (bitmap != null) {
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = app.label,
-                    modifier = Modifier
-                        .size(settingsManager.iconSize.dp)
-                        .clip(RoundedCornerShape(settingsManager.iconCornerRadius.dp))
-                )
-            }
-
-            if (isEditMode) {
-                IconSelectionBadge(
-                    isSelected = false,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = 4.dp, y = (-4).dp)
-                )
-            }
-        }
-
-        if (settingsManager.showLabels) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = app.label,
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
             )
         }
     }
