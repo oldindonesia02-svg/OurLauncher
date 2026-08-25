@@ -16,6 +16,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.PagerState
@@ -34,10 +37,10 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -46,8 +49,6 @@ import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.delay
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.ui.input.pointer.PointerInputChange
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.floor
@@ -145,7 +146,7 @@ fun LiquidSearchAiCapsule(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // ১. SEARCH PILL
+        // ১. SEARCH PILL (Sliding Liquid Pill + Direct Drag)
         val searchPillWidth = if (totalPages > 1) ((totalPages * 18) + 40).coerceIn(108, 175).dp else 108.dp
 
         Box(
@@ -155,28 +156,25 @@ fun LiquidSearchAiCapsule(
                 .clip(CircleShape)
                 .background(brush = glassBg)
                 .border(0.9.dp, brush = glassBorder, shape = CircleShape)
-                .pointerInput(totalPages) {
-                    if (totalPages > 1) {
-                        detectHorizontalDragGestures(
-                            onDragStart = { isDirectDragging = true },
-                            onDragEnd = { isDirectDragging = false },
-                            onDragCancel = { isDirectDragging = false },
-                            onHorizontalDrag = { _: PointerInputChange, dragAmount: Float ->
-                                val targetPage = if (dragAmount < -10f) {
-                                    (pagerState.currentPage + 1).coerceAtMost(totalPages - 1)
-                                } else if (dragAmount > 10f) {
-                                    (pagerState.currentPage - 1).coerceAtLeast(0)
-                                } else pagerState.currentPage
+                .draggable(
+                    enabled = totalPages > 1,
+                    orientation = Orientation.Horizontal,
+                    state = rememberDraggableState { delta ->
+                        val targetPage = if (delta < -8f) {
+                            (pagerState.currentPage + 1).coerceAtMost(totalPages - 1)
+                        } else if (delta > 8f) {
+                            (pagerState.currentPage - 1).coerceAtLeast(0)
+                        } else pagerState.currentPage
 
-                                if (targetPage != pagerState.currentPage) {
-                                    coroutineScope.launch {
-                                        pagerState.animateScrollToPage(targetPage)
-                                    }
-                                }
+                        if (targetPage != pagerState.currentPage) {
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(targetPage)
                             }
-                        )
-                    }
-                }
+                        }
+                    },
+                    onDragStarted = { isDirectDragging = true },
+                    onDragStopped = { isDirectDragging = false }
+                )
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -202,6 +200,7 @@ fun LiquidSearchAiCapsule(
                         val pillHeight = 16.dp.toPx()
                         val minPillWidth = 22.dp.toPx()
 
+                        // Static Inactive Dots
                         for (i in 0 until totalPages) {
                             drawCircle(
                                 color = Color.White.copy(alpha = 0.35f),
@@ -210,11 +209,13 @@ fun LiquidSearchAiCapsule(
                             )
                         }
 
+                        // Real-time Position
                         val continuousPos = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
                             .coerceIn(0f, (totalPages - 1).toFloat())
                         val base = floor(continuousPos).toInt()
                         val fraction = continuousPos - base
 
+                        // Iconify Liquid Pill Physics
                         val headProgress = (fraction / 0.65f).coerceIn(0f, 1f)
                         val tailProgress = ((fraction - 0.35f) / 0.65f).coerceIn(0f, 1f)
 
@@ -228,6 +229,7 @@ fun LiquidSearchAiCapsule(
                         val pillRight = rightCenter + (minPillWidth / 2f)
                         val currentPillWidth = (pillRight - pillLeft).coerceAtLeast(minPillWidth)
 
+                        // Sliding Liquid Pill Indicator
                         drawRoundRect(
                             color = Color.White.copy(alpha = 0.28f),
                             topLeft = Offset(pillLeft, centerY - (pillHeight / 2f)),
@@ -253,7 +255,7 @@ fun LiquidSearchAiCapsule(
             }
         }
 
-        // ২. AI (✦) BUTTON
+        // ২. AI (✦) BUTTON (১০০% স্থির ও অপরিবর্তিত)
         Box(
             modifier = Modifier
                 .size(36.dp)
