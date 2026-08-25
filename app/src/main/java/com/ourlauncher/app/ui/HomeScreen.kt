@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +27,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +45,6 @@ fun HomeScreen(
     var showQuickSettings by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
 
-    // ১. ডিভাইসের অ্যাপ লোড করা
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val pm = context.packageManager
@@ -66,7 +63,6 @@ fun HomeScreen(
         }
     }
 
-    // গ্রিড পেজিং ও ডক
     val appsPerPage = 20
     val dockApps = remember(installedApps) { installedApps.take(4) }
     val homeApps = remember(installedApps) { installedApps.drop(4) }
@@ -83,9 +79,7 @@ fun HomeScreen(
             .navigationBarsPadding()
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onLongPress = {
-                        isEditMode = true
-                    }
+                    onLongPress = { isEditMode = true }
                 )
             }
             .pointerInput(Unit) {
@@ -109,7 +103,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(bottom = 12.dp)
         ) {
-            // ==================== APP GRID ====================
+            // Main App Grid
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
@@ -157,7 +151,7 @@ fun HomeScreen(
                 }
             }
 
-            // ==================== LIQUID SEARCH CAPSULE ====================
+            // Liquid Search Capsule
             if (!settingsManager.isSearchCapsuleHidden && !isEditMode) {
                 Box(
                     modifier = Modifier
@@ -182,7 +176,7 @@ fun HomeScreen(
                 }
             }
 
-            // ==================== BOTTOM DOCK ====================
+            // Bottom Dock
             if (!isEditMode && dockApps.isNotEmpty()) {
                 Box(
                     modifier = Modifier
@@ -221,7 +215,7 @@ fun HomeScreen(
             }
         }
 
-        // ==================== EDIT MODE OVERLAY ====================
+        // Edit Mode
         AnimatedVisibility(
             visible = isEditMode,
             enter = fadeIn(),
@@ -248,7 +242,7 @@ fun HomeScreen(
             }
         }
 
-        // ==================== QUICK SETTINGS SHEET ====================
+        // Quick Settings Sheet
         if (showQuickSettings) {
             HomeQuickSettingsSheet(
                 settingsManager = settingsManager,
