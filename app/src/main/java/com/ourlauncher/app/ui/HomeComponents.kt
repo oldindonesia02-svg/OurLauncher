@@ -2,24 +2,31 @@ package com.ourlauncher.app.ui
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Rect
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
-import android.speech.RecognizerIntent
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.*
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import android.net.Uri
+import android.util.LruCache
+import android.widget.Toast
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Slider
@@ -28,335 +35,468 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.ourlauncher.app.AppInfo
-import com.ourlauncher.app.AppRepository
 import com.ourlauncher.app.SettingsManager
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
-// --- LAUNCH GOOGLE GEMINI AI ---
-fun launchGeminiAi(context: Context) {
-    val pm = context.packageManager
-    val geminiPackage = "com.google.android.apps.bard"
-    val launchIntent = pm.getLaunchIntentForPackage(geminiPackage)
-    if (launchIntent != null) {
-        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(launchIntent)
-    } else {
-        try {
-            val voiceIntent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            context.startActivity(voiceIntent)
-        } catch (e: Exception) {
-            try {
-                val assistIntent = Intent(RecognizerIntent.ACTION_WEB_SEARCH).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                context.startActivity(assistIntent)
-            } catch (e2: Exception) {
-                e2.printStackTrace()
-            }
-        }
+sealed class GridItem {
+    abstract val id: String
+    data class SingleApp(val app: AppInfo) : GridItem() {
+        override val id: String get() = app.packageName
     }
+    data class Folder(val folder: FolderInfo) : GridItem() {
+        override val id: String get() = folder.id
+    }
+}
+
+data class FolderInfo(
+    val id: String,
+    var name: String,
+    val apps: MutableList<AppInfo>
+)
+
+private val bitmapCache = LruCache<String, Bitmap>(150)
+
+fun getCachedBitmap(key: String, drawable: Drawable?): Bitmap? {
+    if (drawable == null) return null
+    val cached = bitmapCache.get(key)
+    if (cached != null && !cached.isRecycled) return cached
+
+    val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 96
+    val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 96
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    drawable.setBounds(0, 0, canvas.width, canvas.height)
+    drawable.draw(canvas)
+    bitmapCache.put(key, bitmap)
+    return bitmap
 }
 
 fun triggerPullDownAction(action: String, context: Context, onOpenSettings: () -> Unit) {
     when (action) {
-        "notifications" -> {
+        "Notifications" -> {
             try {
                 val service = context.getSystemService("statusbar")
-                val clz = Class.forName("android.app.StatusBarManager")
-                clz.getMethod("expandNotificationsPanel").invoke(service)
+                val statusBarManager = Class.forName("android.app.StatusBarManager")
+                val expand = statusBarManager.getMethod("expandNotificationsPanel")
+                expand.invoke(service)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
-        "system_control_center" -> {
+        "Quick Settings" -> {
             try {
                 val service = context.getSystemService("statusbar")
-                val clz = Class.forName("android.app.StatusBarManager")
-                clz.getMethod("expandSettingsPanel").invoke(service)
+                val statusBarManager = Class.forName("android.app.StatusBarManager")
+                val expand = statusBarManager.getMethod("expandSettingsPanel")
+                expand.invoke(service)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
-        "builtin_control_center" -> onOpenSettings()
+        "Settings" -> onOpenSettings()
+        "AI Assistant" -> launchGeminiAi(context)
+        else -> {}
     }
 }
 
-// --- LIQUID SEARCH CAPSULE WITH FINGER-TRACKING GLOW & GEMINI AI ---
+fun launchGeminiAi(context: Context) {
+    val packages = listOf(
+        "com.google.android.apps.bard",
+        "com.google.android.googlequicksearchbox"
+    )
+    for (pkg in packages) {
+        val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+        if (intent != null) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            return
+        }
+    }
+    try {
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://gemini.google.com"))
+        browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(browserIntent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "AI Assistant not available", Toast.LENGTH_SHORT).show()
+    }
+}
+
 @Composable
 fun LiquidSearchAiCapsule(
     totalPages: Int,
     currentPage: Int,
+    isScrollInProgress: Boolean = false,
     onSearchClick: () -> Unit,
     onAiClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val pillShape = RoundedCornerShape(22.dp)
-    val coroutineScope = rememberCoroutineScope()
-    var touchPos by remember { mutableStateOf<Offset?>(null) }
-    val touchGlowAlpha = remember { Animatable(0f) }
+    var showDots by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = modifier
-            .wrapContentWidth()
-            .height(36.dp)
-            .clip(pillShape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.22f), Color.Black.copy(alpha = 0.45f))
-                )
-            )
-            // Real-time finger tracking liquid light & ripple
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    touchPos = down.position
-                    coroutineScope.launch { touchGlowAlpha.animateTo(1f, tween(120)) }
-                    do {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull()
-                        if (change != null && change.pressed) {
-                            touchPos = change.position
-                        }
-                    } while (event.changes.any { it.pressed })
-                    coroutineScope.launch { touchGlowAlpha.animateTo(0f, tween(300)) }
-                    touchPos = null
-                }
-            }
-            .drawBehind {
-                touchPos?.let { pos ->
-                    val alpha = touchGlowAlpha.value
-                    if (alpha > 0f) {
-                        drawCircle(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.55f * alpha),
-                                    Color(0xFF64D2FF).copy(alpha = 0.35f * alpha),
-                                    Color.Transparent
-                                ),
-                                center = pos,
-                                radius = 65.dp.toPx()
-                            ),
-                            center = pos,
-                            radius = 65.dp.toPx()
-                        )
-                    }
-                }
-            }
-            .border(
-                1.2.dp,
-                Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.12f))
-                ),
-                pillShape
-            )
-            .padding(horizontal = 14.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "search",
-                color = Color.White.copy(alpha = 0.92f),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.clickable { onSearchClick() }
-            )
+    LaunchedEffect(isScrollInProgress) {
+        if (isScrollInProgress) {
+            showDots = true
+        } else {
+            delay(1000L)
+            showDots = false
+        }
+    }
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Gemini Sparkle Button
+    Crossfade(
+        targetState = showDots,
+        animationSpec = tween(240),
+        label = "CapsuleMorph"
+    ) { displayingDots ->
+        if (displayingDots && totalPages > 1) {
+            // Page Indicator Dots pill when scrolling
             Box(
-                modifier = Modifier
-                    .size(22.dp)
+                modifier = modifier
+                    .height(34.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.18f))
-                    .clickable { onAiClick() },
+                    .background(Color.Black.copy(alpha = 0.52f))
+                    .border(0.8.dp, Color.White.copy(alpha = 0.18f), CircleShape)
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "✦",
-                    color = Color(0xFF64D2FF),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (totalPages > 1) {
-                Spacer(modifier = Modifier.width(10.dp))
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(12.dp)
-                        .background(Color.White.copy(alpha = 0.25f))
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     repeat(totalPages) { index ->
-                        val isSelected = currentPage == index
+                        val isSelected = index == currentPage
+                        val dotWidth by animateDpAsState(
+                            targetValue = if (isSelected) 14.dp else 5.dp,
+                            animationSpec = spring(dampingRatio = 0.75f, stiffness = 320f),
+                            label = "dotWidth"
+                        )
                         Box(
                             modifier = Modifier
-                                .height(4.dp)
-                                .width(if (isSelected) 12.dp else 4.dp)
+                                .height(5.dp)
+                                .width(dotWidth)
                                 .clip(CircleShape)
                                 .background(
-                                    if (isSelected) Color.White.copy(alpha = 0.95f)
-                                    else Color.White.copy(alpha = 0.35f)
+                                    if (isSelected) Color.White else Color.White.copy(alpha = 0.35f)
                                 )
                         )
                     }
                 }
             }
-        }
-    }
-}
-
-// --- LIVE ICON CUSTOMIZER BOTTOM SHEET ---
-@Composable
-fun IconCustomizeSheet(
-    settingsManager: SettingsManager,
-    onApply: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    var selectedTheme by remember { mutableStateOf(settingsManager.iconTheme) }
-    var cornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF2C2C2E).copy(alpha = 0.96f), Color(0xFF141416).copy(alpha = 0.98f))
-                )
-            )
-            .border(
-                1.dp,
-                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)),
-                RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-            )
-            .padding(20.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(modifier = Modifier.width(36.dp).height(4.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.3f)))
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Text("Customize", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-
-            Spacer(modifier = Modifier.height(18.dp))
-
+        } else {
+            // Search Pill + AI Icon when resting
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                modifier = modifier
+                    .height(34.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.52f))
+                    .border(0.8.dp, Color.White.copy(alpha = 0.18f), CircleShape)
+                    .padding(start = 14.dp, end = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val themes = listOf(
-                    "standard" to "Standard",
-                    "dark" to "Dark",
-                    "transparent" to "Transparent",
-                    "tinted" to "Tinted"
-                )
-                themes.forEach { (key, title) ->
-                    val isSelected = selectedTheme == key
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (isSelected) Color.White.copy(alpha = 0.15f) else Color.Transparent)
-                            .border(
-                                if (isSelected) 1.5.dp else 1.dp,
-                                if (isSelected) Color(0xFF0A84FF) else Color.White.copy(alpha = 0.1f),
-                                RoundedCornerShape(14.dp)
-                            )
-                            .clickable {
-                                selectedTheme = key
-                                settingsManager.iconTheme = key
-                            }
-                            .padding(horizontal = 10.dp, vertical = 8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(cornerRadius.toInt().coerceIn(0, 50)))
-                                .background(
-                                    when (key) {
-                                        "dark" -> Color(0xFF3A3A3C)
-                                        "transparent" -> Color.White.copy(alpha = 0.12f)
-                                        "tinted" -> Color(0xFF0A84FF).copy(alpha = 0.4f)
-                                        else -> Color(0xFFE5E5EA)
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("✦", color = Color.White, fontSize = 16.sp)
+                Row(
+                    modifier = Modifier
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onSearchClick() },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "search",
+                        color = Color.White.copy(alpha = 0.95f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.18f))
+                        .clickable { onAiClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.size(13.dp)) {
+                        val cx = size.width / 2
+                        val cy = size.height / 2
+                        val path = Path().apply {
+                            moveTo(cx, 0f)
+                            quadraticBezierTo(cx, cy, size.width, cy)
+                            quadraticBezierTo(cx, cy, cx, size.height)
+                            quadraticBezierTo(cx, cy, 0f, cy)
+                            quadraticBezierTo(cx, cy, cx, 0f)
+                            close()
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(title, color = Color.White, fontSize = 11.sp, maxLines = 1)
+                        drawPath(path, color = Color.White)
                     }
                 }
             }
+        }
+    }@Composable
+fun AppIcon(
+    app: AppInfo,
+    onClick: () -> Unit,
+    showLabel: Boolean,
+    fontFamilyName: String,
+    iconSizeDp: Float,
+    cornerRadiusPercent: Float,
+    iconOpacity: Float,
+    customDrawable: Drawable?,
+    onClickWithBounds: ((Rect) -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    var itemBounds by remember { mutableStateOf(Rect()) }
+    val targetDrawable = customDrawable ?: app.icon
+    val cacheKey = "${app.packageName}_${targetDrawable?.hashCode() ?: 0}"
+    val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
 
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Corner Radius: ${cornerRadius.toInt()}%", color = Color.White.copy(alpha = 0.85f), fontSize = 13.5.sp)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = modifier
+            .onGloballyPositioned { coords ->
+                val b = coords.boundsInRoot()
+                itemBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
             }
-            Slider(
-                value = cornerRadius,
-                onValueChange = {
-                    cornerRadius = it
-                    settingsManager.iconCornerRadius = it
-                },
-                valueRange = 0f..50f,
-                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
+            .clickable {
+                if (onClickWithBounds != null) onClickWithBounds(itemBounds)
+                else onClick()
+            }
+            .padding(4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(iconSizeDp.dp)
+                .alpha(iconOpacity)
+                .clip(RoundedCornerShape(cornerRadiusPercent.toInt())),
+            contentAlignment = Alignment.Center
+        ) {
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = app.appName,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+        if (showLabel) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = app.appName,
+                color = Color.White,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                fontFamily = when (fontFamilyName) {
+                    "Serif" -> FontFamily.Serif
+                    "Monospace" -> FontFamily.Monospace
+                    "Cursive" -> FontFamily.Cursive
+                    else -> FontFamily.Default
+                }
             )
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(46.dp)
-                    .clip(RoundedCornerShape(23.dp))
-                    .background(Color(0xFF0A84FF))
-                    .clickable {
-                        onApply()
-                        onDismiss()
-                    },
-                contentAlignment = Alignment.Center
+@Composable
+fun FolderIcon(
+    folder: FolderInfo,
+    onClick: () -> Unit,
+    settingsManager: SettingsManager,
+    getCustomDrawable: (String) -> Drawable?,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = modifier
+            .clickable { onClick() }
+            .padding(4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(settingsManager.iconSize.dp)
+                .clip(RoundedCornerShape(settingsManager.iconCornerRadius.toInt()))
+                .background(Color.White.copy(alpha = 0.22f))
+                .border(0.8.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(settingsManager.iconCornerRadius.toInt()))
+                .padding(4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val previewApps = folder.apps.take(4)
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                userScrollEnabled = false,
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier.fillMaxSize()
             ) {
-                Text("Apply", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                items(previewApps) { app ->
+                    val targetDrawable = getCustomDrawable(app.packageName) ?: app.icon
+                    val cacheKey = "${app.packageName}_${targetDrawable?.hashCode() ?: 0}"
+                    val bitmap = getCachedBitmap(cacheKey, targetDrawable)?.asImageBitmap()
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(settingsManager.iconCornerRadius.toInt() / 2))
+                        )
+                    }
+                }
+            }
+        }
+        if (settingsManager.showLabels) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = folder.name,
+                color = Color.White,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun FolderPopup(
+    folder: FolderInfo,
+    settingsManager: SettingsManager,
+    getCustomDrawable: (String) -> Drawable?,
+    onAppClick: (AppInfo) -> Unit,
+    onAppClickWithBounds: (AppInfo, Rect) -> Unit,
+    onRenameFolder: (String) -> Unit,
+    onStartDragOut: (AppInfo, Offset) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .clip(RoundedCornerShape(28.dp))
+                .background(Color(0xFF1E1E1E).copy(alpha = 0.95f))
+                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(28.dp))
+                .padding(20.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = folder.name,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(folder.apps) { app ->
+                        var bounds by remember { mutableStateOf(Rect()) }
+                        AppIcon(
+                            app = app,
+                            onClick = { onAppClick(app) },
+                            showLabel = true,
+                            fontFamilyName = settingsManager.fontFamily,
+                            iconSizeDp = settingsManager.iconSize,
+                            cornerRadiusPercent = settingsManager.iconCornerRadius,
+                            iconOpacity = 1f,
+                            customDrawable = getCustomDrawable(app.packageName),
+                            onClickWithBounds = { b -> onAppClickWithBounds(app, b) },
+                            modifier = Modifier
+                                .onGloballyPositioned { coords ->
+                                    val b = coords.boundsInRoot()
+                                    bounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
+                                }
+                                .pointerInput(app) {
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = { offset ->
+                                            onStartDragOut(app, Offset(bounds.left + offset.x, bounds.top + offset.y))
+                                        },
+                                        onDrag = { _, _ -> },
+                                        onDragEnd = {},
+                                        onDragCancel = {}
+                                    )
+                                }
+                        )
+                    }
+                }
             }
         }
     }
 }
 
-// --- HOME SCREEN QUICK SETTINGS SHEET ---
+@Composable
+fun Dock(
+    pinnedApps: List<AppInfo>,
+    settingsManager: SettingsManager,
+    getCustomDrawable: (String) -> Drawable?,
+    onAppClick: (AppInfo) -> Unit,
+    onAppClickWithBounds: (AppInfo, Rect) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(32.dp))
+            .background(Color.White.copy(alpha = 0.12f))
+            .border(0.8.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(32.dp))
+            .padding(vertical = 8.dp, horizontal = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            pinnedApps.forEach { app ->
+                AppIcon(
+                    app = app,
+                    onClick = { onAppClick(app) },
+                    showLabel = false,
+                    fontFamilyName = settingsManager.fontFamily,
+                    iconSizeDp = settingsManager.iconSize,
+                    cornerRadiusPercent = settingsManager.iconCornerRadius,
+                    iconOpacity = settingsManager.iconOpacity,
+                    customDrawable = getCustomDrawable(app.packageName),
+                    onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
+                    modifier = Modifier.width(60.dp)
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun HomeQuickSettingsSheet(
     settingsManager: SettingsManager,
@@ -369,41 +509,25 @@ fun HomeQuickSettingsSheet(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF2C2C2E).copy(alpha = 0.96f), Color(0xFF141416).copy(alpha = 0.98f))
-                )
-            )
-            .border(
-                1.dp,
-                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)),
-                RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-            )
+            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+            .background(Color(0xFF1C1C1E).copy(alpha = 0.98f))
             .padding(20.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Box(modifier = Modifier.align(Alignment.CenterHorizontally).width(36.dp).height(4.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.3f)))
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Text("Home screen settings", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .clickable { onOpenIconCustomize() }
-                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                    .padding(vertical = 12.dp, horizontal = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Customize App Icons", color = Color.White, fontSize = 14.5.sp)
+                Text("Customize App Icons", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text("›", color = Color.White.copy(alpha = 0.5f), fontSize = 20.sp)
             }
 
-            Box(modifier = Modifier.fillMaxWidth().height(0.6.dp).background(Color.White.copy(alpha = 0.1f)))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Row(
                 modifier = Modifier
@@ -413,15 +537,15 @@ fun HomeQuickSettingsSheet(
                         showLabels = !showLabels
                         settingsManager.showLabels = showLabels
                     }
-                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                    .padding(vertical = 12.dp, horizontal = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Show label", color = Color.White, fontSize = 14.5.sp)
-                Text(if (showLabels) "On" else "Off", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text("Show App Labels", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                Text(if (showLabels) "On" else "Off", color = if (showLabels) Color(0xFF0A84FF) else Color.Gray, fontSize = 14.sp)
             }
 
-            Box(modifier = Modifier.fillMaxWidth().height(0.6.dp).background(Color.White.copy(alpha = 0.1f)))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Row(
                 modifier = Modifier
@@ -431,18 +555,81 @@ fun HomeQuickSettingsSheet(
                         onDismiss()
                         onOpenFullSettings()
                     }
-                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                    .padding(vertical = 12.dp, horizontal = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("More settings", color = Color(0xFF0A84FF), fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold)
+                Text("More Settings", color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text("›", color = Color(0xFF0A84FF), fontSize = 20.sp)
             }
         }
     }
 }
 
-// --- APP LAUNCH OVERLAY ---
+@Composable
+fun IconCustomizeSheet(
+    settingsManager: SettingsManager,
+    onApply: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var iconSize by remember { mutableStateOf(settingsManager.iconSize) }
+    var cornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+            .background(Color(0xFF1C1C1E).copy(alpha = 0.98f))
+            .padding(20.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text("Customize Icons", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text("Icon Size: ${iconSize.toInt()} dp", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+            Slider(
+                value = iconSize,
+                onValueChange = {
+                    iconSize = it
+                    settingsManager.iconSize = it
+                },
+                valueRange = 40f..80f,
+                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text("Corner Radius: ${cornerRadius.toInt()} %", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+            Slider(
+                value = cornerRadius,
+                onValueChange = {
+                    cornerRadius = it
+                    settingsManager.iconCornerRadius = it
+                },
+                valueRange = 0f..50f,
+                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(Color(0xFF0A84FF))
+                    .clickable {
+                        onApply()
+                        onDismiss()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Apply", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
+        }
+    }
+}
+
 @Composable
 fun AppLaunchOverlay(
     activeApp: AppInfo,
@@ -468,7 +655,7 @@ fun AppLaunchOverlay(
                 .size(currentW.toDp(), currentH.toDp())
                 .clip(RoundedCornerShape(currentRadius.toDp()))
                 .background(Color(0xFF141416))
-                .graphicsLayer { alpha = progress.coerceIn(0.1f, 1f) },
+                .graphicsLayer { alpha = progress.coerceIn(0f, 1f) },
             contentAlignment = Alignment.Center
         ) {
             val targetDrawable = getCustomDrawable(activeApp.packageName) ?: activeApp.icon
@@ -480,10 +667,12 @@ fun AppLaunchOverlay(
                     bitmap = bitmap,
                     contentDescription = null,
                     modifier = Modifier
-                        .size((settingsManager.iconSize * 1.35f).dp)
-                        .scale(1f + (0.35f * progress))
+                        .size((settingsManager.iconSize * (1f + 0.35f * progress)).dp)
+                        .clip(RoundedCornerShape((settingsManager.iconCornerRadius * (1f - progress)).toInt()))
                 )
             }
         }
     }
+}
+
 }
