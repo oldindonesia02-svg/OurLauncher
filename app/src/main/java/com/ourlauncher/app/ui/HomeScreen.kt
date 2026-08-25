@@ -65,11 +65,11 @@ fun HomeScreen(
             val resolveInfos = pm.queryIntentActivities(intent, 0)
             val apps = resolveInfos.map { resolveInfo ->
                 AppInfo(
-                    name = resolveInfo.loadLabel(pm).toString(),
+                    label = resolveInfo.loadLabel(pm).toString(),
                     packageName = resolveInfo.activityInfo.packageName,
                     icon = resolveInfo.loadIcon(pm)
                 )
-            }.sortedBy { it.name.lowercase() }
+            }.sortedBy { it.label.lowercase() }
             installedApps = apps
         }
     }
@@ -290,7 +290,7 @@ fun AppItemView(
             if (bitmap != null) {
                 Image(
                     bitmap = bitmap,
-                    contentDescription = app.name,
+                    contentDescription = app.label,
                     modifier = Modifier
                         .size(settingsManager.iconSize.dp)
                         .clip(RoundedCornerShape(settingsManager.iconCornerRadius.dp))
@@ -310,7 +310,7 @@ fun AppItemView(
         if (settingsManager.showLabels) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = app.name,
+                text = app.label,
                 color = Color.White.copy(alpha = 0.9f),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Normal,
