@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -213,15 +212,4 @@ fun SettingsNavigationRow(
             modifier = Modifier.padding(start = 8.dp)
         )
     }
-}
-
-@Composable
-fun SettingsDivider() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp)
-            .height(0.6.dp)
-            .background(Color.White.copy(alpha = 0.07f))
-    )
 }
