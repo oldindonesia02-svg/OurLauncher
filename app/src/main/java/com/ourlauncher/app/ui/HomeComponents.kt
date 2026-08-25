@@ -508,12 +508,12 @@ fun TopLiquidSearchBarPositionCard(
     }
 }
 
+// Search Bar Position সরানো হয়েছে (শুধুমাত্র Icons, Labels ও More Settings রয়েছে)
 @Composable
 fun HomeQuickSettingsSheet(
     settingsManager: SettingsManager,
     onOpenFullSettings: () -> Unit,
     onOpenIconCustomize: () -> Unit,
-    onOpenSearchBarPosition: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var showLabels by remember { mutableStateOf(settingsManager.showLabels) }
@@ -536,21 +536,6 @@ fun HomeQuickSettingsSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Customize App Icons", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                Text("›", color = Color.White.copy(alpha = 0.5f), fontSize = 20.sp)
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onOpenSearchBarPosition() }
-                    .padding(vertical = 12.dp, horizontal = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Search Bar Position", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text("›", color = Color.White.copy(alpha = 0.5f), fontSize = 20.sp)
             }
 
