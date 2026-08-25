@@ -1,14 +1,18 @@
 package com.ourlauncher.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -16,191 +20,333 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ourlauncher.app.IconPackInfo
 import com.ourlauncher.app.SettingsManager
 
 @Composable
 fun SettingsScreen(
+    onBack: () -> Unit = {},
     settingsManager: SettingsManager,
-    onBack: () -> Unit,
-    onOpenDesktopGrid: () -> Unit = {},
-    onOpenAppIcons: () -> Unit = {},
-    onOpenAppAnimation: () -> Unit = {},
-    onOpenDock: () -> Unit = {},
-    onOpenLiquidGlass: () -> Unit = {},
-    onOpenSearchBarPosition: () -> Unit = {},
-    onOpenSwipeActions: () -> Unit = {},
-    modifier: Modifier = Modifier
+    installedIconPacks: List<IconPackInfo> = emptyList(),
+    selectedIconPack: String = "default",
+    onIconPackSelect: (String) -> Unit = {}
 ) {
-    val scrollState = rememberScrollState()
-    val cardBg = Color(0xFF141416).copy(alpha = 0.95f)
-    val cardShape = RoundedCornerShape(22.dp)
+    var currentSubPage by remember { mutableStateOf("main") }
+
+    var gridColumns by remember { mutableStateOf(settingsManager.gridColumns) }
+    var gridRows by remember { mutableStateOf(settingsManager.gridRows) }
+
+    var iconSize by remember { mutableStateOf(settingsManager.iconSize) }
+    var iconCornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
+    var iconOpacity by remember { mutableStateOf(settingsManager.iconOpacity) }
+
+    var iconTheme by remember { mutableStateOf(settingsManager.iconTheme) }
+    var lensLightEnabled by remember { mutableStateOf(settingsManager.lensLightEnabled) }
+    var lensAngle by remember { mutableStateOf(settingsManager.lensAngle) }
+    var lensIntensity by remember { mutableStateOf(settingsManager.lensIntensity) }
+    var lensStroke by remember { mutableStateOf(settingsManager.lensStrokeWidth) }
+    var graphicPreset by remember { mutableStateOf(settingsManager.graphicPreset) }
+
+    var animEnabled by remember { mutableStateOf(settingsManager.animEnabled) }
+    var animAdvancedTexture by remember { mutableStateOf(settingsManager.animAdvancedTexture) }
+    var animDuration by remember { mutableStateOf(settingsManager.animDuration) }
+
+    var posX1 by remember { mutableStateOf(settingsManager.posCurveX1) }
+    var posY1 by remember { mutableStateOf(settingsManager.posCurveY1) }
+    var posX2 by remember { mutableStateOf(settingsManager.posCurveX2) }
+    var posY2 by remember { mutableStateOf(settingsManager.posCurveY2) }
+
+    var widthX1 by remember { mutableStateOf(settingsManager.widthCurveX1) }
+    var widthY1 by remember { mutableStateOf(settingsManager.widthCurveY1) }
+    var widthX2 by remember { mutableStateOf(settingsManager.widthCurveX2) }
+    var widthY2 by remember { mutableStateOf(settingsManager.widthCurveY2) }
+
+    var heightX1 by remember { mutableStateOf(settingsManager.heightCurveX1) }
+    var heightY1 by remember { mutableStateOf(settingsManager.heightCurveY1) }
+    var heightX2 by remember { mutableStateOf(settingsManager.heightCurveX2) }
+    var heightY2 by remember { mutableStateOf(settingsManager.heightCurveY2) }
+
+    var cornerX1 by remember { mutableStateOf(settingsManager.cornerCurveX1) }
+    var cornerY1 by remember { mutableStateOf(settingsManager.cornerCurveY1) }
+    var cornerX2 by remember { mutableStateOf(settingsManager.cornerCurveX2) }
+    var cornerY2 by remember { mutableStateOf(settingsManager.cornerCurveY2) }
+
+    if (currentSubPage == "liquid_glass") {
+        LiquidGlassScreen(onBack = { currentSubPage = "main" }, settingsManager = settingsManager)
+        return
+    }
+
+    if (currentSubPage == "swipe") {
+        SwipeActionsScreen(onBack = { currentSubPage = "main" }, settingsManager = settingsManager)
+        return
+    }
+
+    if (currentSubPage == "dock_sheet") {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f)), contentAlignment = Alignment.BottomCenter) {
+            DockAdjustmentSheet(
+                settingsManager = settingsManager,
+                onDismiss = { currentSubPage = "main" },
+                onSwitchToSearch = { currentSubPage = "search_sheet" }
+            )
+        }
+        return
+    }
+
+    if (currentSubPage == "search_sheet") {
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.7f)), contentAlignment = Alignment.BottomCenter) {
+            SearchBarAdjustmentSheet(
+                settingsManager = settingsManager,
+                onDismiss = { currentSubPage = "main" },
+                onSwitchToDock = { currentSubPage = "dock_sheet" }
+            )
+        }
+        return
+    }
 
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0C0C0E))
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .verticalScroll(scrollState)
-            .padding(horizontal = 18.dp, vertical = 12.dp)
+            .background(Color(0xFF0D0D0E))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
+                .padding(top = 48.dp, start = 16.dp, end = 16.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .clickable { onBack() },
+                    .background(Color.White.copy(alpha = 0.12f))
+                    .clickable {
+                        if (currentSubPage != "main") currentSubPage = "main" else onBack()
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "‹",
-                    color = Color(0xFF0A84FF),
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Light,
-                    modifier = Modifier.offset(y = (-2).dp)
-                )
+                Text(text = "‹", color = Color(0xFF0A84FF), fontSize = 28.sp)
             }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = "Settings",
                 color = Color.White,
-                fontSize = 24.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
-
-        Text(
-            text = "CUSTOMIZATION",
-            color = Color.White.copy(alpha = 0.45f),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 0.5.sp,
-            modifier = Modifier.padding(start = 6.dp, bottom = 8.dp)
-        )
-
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(cardShape)
-                .background(cardBg)
-                .padding(vertical = 4.dp)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
         ) {
-            SettingsNavigationRow(
-                title = "Desktop Grid",
-                subtitle = "Configure Columns & Rows (4x5, 5x5, 5x6)",
-                onClick = onOpenDesktopGrid
-            )
-            SettingsDivider()
+            when (currentSubPage) {
+                "grid" -> {
+                    SettingsSectionHeader("HOME SCREEN GRID")
+                    SettingsGroup {
+                        val gridPresets = listOf(
+                            (4 to 4) to "4 x 4 (Spacious)",
+                            (4 to 5) to "4 x 5 (Default)",
+                            (4 to 6) to "4 x 6 (Tall)",
+                            (5 to 5) to "5 x 5 (Compact)",
+                            (5 to 6) to "5 x 6 (Dense)"
+                        )
+                        gridPresets.forEachIndexed { i, (pair, label) ->
+                            val (c, r) = pair
+                            val isSelected = gridColumns == c && gridRows == r
+                            if (i > 0) SettingsDivider()
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        gridColumns = c
+                                        gridRows = r
+                                        settingsManager.gridColumns = c
+                                        settingsManager.gridRows = r
+                                    }
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = {
+                                        gridColumns = c
+                                        gridRows = r
+                                        settingsManager.gridColumns = c
+                                        settingsManager.gridRows = r
+                                    },
+                                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF))
+                                )
+                                Text(label, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                }
 
-            SettingsNavigationRow(
-                title = "App icons",
-                subtitle = "Themes, Lens Light, Shape & Size",
-                onClick = onOpenAppIcons
-            )
-            SettingsDivider()
+                "animation" -> {
+                    SettingsSectionHeader("APP OPEN ANIMATION CONFIGURATION")
+                    SettingsGroup {
+                        SettingsToggleRow("Enable Animation", "Launch apps with scale animation", animEnabled) {
+                            animEnabled = it
+                            settingsManager.animEnabled = it
+                        }
+                        SettingsDivider()
+                        SettingsToggleRow("Advanced Texture", "Scales down and blurs workspace", animAdvancedTexture) {
+                            animAdvancedTexture = it
+                            settingsManager.animAdvancedTexture = it
+                        }
+                    }
 
-            SettingsNavigationRow(
-                title = "App Open Animation",
-                subtitle = "Duration & Bezier Curves",
-                onClick = onOpenAppAnimation
-            )
-            SettingsDivider()
+                    SettingsSectionHeader("SPEED & TIMING")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Animation Duration", color = Color.White, fontSize = 14.sp)
+                                Text("${animDuration.toInt()} ms", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(value = animDuration, onValueChange = { animDuration = it; settingsManager.animDuration = it }, valueRange = 100f..800f)
+                        }
+                    }
 
-            SettingsNavigationRow(
-                title = "Dock",
-                subtitle = "Padding, Gap and Corner Radius",
-                onClick = onOpenDock
-            )
-            SettingsDivider()
+                    SettingsSectionHeader("POSITION MOVEMENT CURVE")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            BezierCanvas(posX1, posY1, posX2, posY2)
+                            CurveSlider("Initial Tension (X1)", "Delays start", posX1) { posX1 = it; settingsManager.posCurveX1 = it }
+                            CurveSlider("Initial Velocity (Y1)", "Controls speed burst", posY1) { posY1 = it; settingsManager.posCurveY1 = it }
+                            CurveSlider("Final Tension (X2)", "Delays end", posX2) { posX2 = it; settingsManager.posCurveX2 = it }
+                            CurveSlider("Final Velocity (Y2)", "Values > 1.0 overshoot", posY2) { posY2 = it; settingsManager.posCurveY2 = it }
+                        }
+                    }
 
-            SettingsNavigationRow(
-                title = "Liquid Glass",
-                subtitle = "Adjust transparency, blur and lens refraction",
-                onClick = onOpenLiquidGlass
-            )
-            SettingsDivider()
+                    SettingsSectionHeader("LIVE ANIMATION PREVIEW")
+                    SettingsGroup {
+                        PhoneMockupPreview(durationMs = animDuration.toInt())
+                    }
+                }
 
-            SettingsNavigationRow(
-                title = "Search Bar Position",
-                subtitle = "Adjust the vertical offset of the search pill",
-                onClick = onOpenSearchBarPosition
-            )
+                "icons" -> {
+                    SettingsSectionHeader("GRAPHICS PRESET")
+                    SettingsGroup {
+                        val presets = listOf("ultra" to "Ultra (Full Blur & Refraction)", "high" to "High", "medium" to "Medium", "low" to "Low (Battery Saver)")
+                        presets.forEachIndexed { i, (key, label) ->
+                            if (i > 0) SettingsDivider()
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { graphicPreset = key; settingsManager.graphicPreset = key }.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(selected = graphicPreset == key, onClick = { graphicPreset = key; settingsManager.graphicPreset = key }, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF)))
+                                Text(label, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+
+                    SettingsSectionHeader("ICON THEME")
+                    SettingsGroup {
+                        val themes = listOf("standard" to "Standard Colors", "dark" to "Dark (Monochrome)", "transparent" to "Transparent Glass", "tinted" to "Tinted Blue")
+                        themes.forEachIndexed { i, (key, label) ->
+                            if (i > 0) SettingsDivider()
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { iconTheme = key; settingsManager.iconTheme = key }.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(selected = iconTheme == key, onClick = { iconTheme = key; settingsManager.iconTheme = key }, colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF)))
+                                Text(label, color = Color.White, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+
+                    SettingsSectionHeader("LENS LIGHTING ENGINE")
+                    SettingsGroup {
+                        SettingsToggleRow("Enable Lens Highlight", "Adds reflective edge light to icons", lensLightEnabled) {
+                            lensLightEnabled = it
+                            settingsManager.lensLightEnabled = it
+                        }
+                        if (lensLightEnabled) {
+                            SettingsDivider()
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text("Light Angle: ${lensAngle.toInt()}°", color = Color.White, fontSize = 13.sp)
+                                Slider(value = lensAngle, onValueChange = { lensAngle = it; settingsManager.lensAngle = it }, valueRange = 0f..360f)
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Light Intensity: ${(lensIntensity * 100).toInt()}%", color = Color.White, fontSize = 13.sp)
+                                Slider(value = lensIntensity, onValueChange = { lensIntensity = it; settingsManager.lensIntensity = it }, valueRange = 0.1f..1.0f)
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Stroke Width: ${String.format("%.1f", lensStroke)} dp", color = Color.White, fontSize = 13.sp)
+                                Slider(value = lensStroke, onValueChange = { lensStroke = it; settingsManager.lensStrokeWidth = it }, valueRange = 0.5f..3.0f)
+                            }
+                        }
+                    }
+
+                    SettingsSectionHeader("ICON SIZE & SHAPE")
+                    SettingsGroup {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text("Size: ${iconSize.toInt()} dp", color = Color.White, fontSize = 13.sp)
+                            Slider(value = iconSize, onValueChange = { iconSize = it; settingsManager.iconSize = it }, valueRange = 40f..72f)
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Corner Radius: ${iconCornerRadius.toInt()}%", color = Color.White, fontSize = 13.sp)
+                            Slider(value = iconCornerRadius, onValueChange = { iconCornerRadius = it; settingsManager.iconCornerRadius = it }, valueRange = 0f..50f)
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Opacity: ${(iconOpacity * 100).toInt()}%", color = Color.White, fontSize = 13.sp)
+                            Slider(value = iconOpacity, onValueChange = { iconOpacity = it; settingsManager.iconOpacity = it }, valueRange = 0.2f..1.0f)
+                        }
+                    }
+
+                    SettingsSectionHeader("ICON PACK")
+                    SettingsGroup {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { onIconPackSelect("default") }.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedIconPack == "default",
+                                onClick = { onIconPackSelect("default") },
+                                colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF))
+                            )
+                            Text("Default System Icons", color = Color.White, fontSize = 15.sp, modifier = Modifier.padding(start = 8.dp))
+                        }
+                        installedIconPacks.forEach { pack ->
+                            SettingsDivider()
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { onIconPackSelect(pack.packageName) }.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selectedIconPack == pack.packageName,
+                                    onClick = { onIconPackSelect(pack.packageName) },
+                                    colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF0A84FF))
+                                )
+                                Text(pack.label, color = Color.White, fontSize = 15.sp, modifier = Modifier.padding(start = 8.dp))
+                            }
+                        }
+                    }
+                }
+
+                else -> {
+                    SettingsSectionHeader("CUSTOMIZATION")
+                    SettingsGroup {
+                        SettingsNavRow("Desktop Grid", "Configure Columns & Rows (4x5, 5x5, 5x6)") { currentSubPage = "grid" }
+                        SettingsDivider()
+                        SettingsNavRow("App icons", "Themes, Lens Light, Shape & Size") { currentSubPage = "icons" }
+                        SettingsDivider()
+                        SettingsNavRow("App Open Animation", "Duration & Bezier Curves") { currentSubPage = "animation" }
+                        SettingsDivider()
+                        SettingsNavRow("Dock", "Padding, Gap and Corner Radius") { currentSubPage = "dock_sheet" }
+                        SettingsDivider()
+                        SettingsNavRow("Liquid Glass", "Adjust transparency, blur and lens refraction") { currentSubPage = "liquid_glass" }
+                        SettingsDivider()
+                        SettingsNavRow("Search Bar Position", "Adjust the vertical offset of the search pill") { currentSubPage = "search_sheet" }
+                    }
+                    SettingsSectionHeader("ACTIONS")
+                    SettingsGroup {
+                        SettingsNavRow("Swipe actions", "Customize gesture swipe behaviors") { currentSubPage = "swipe" }
+                    }
+                }
+            }
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "ACTIONS",
-            color = Color.White.copy(alpha = 0.45f),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 0.5.sp,
-            modifier = Modifier.padding(start = 6.dp, bottom = 8.dp)
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(cardShape)
-                .background(cardBg)
-                .padding(vertical = 4.dp)
-        ) {
-            SettingsNavigationRow(
-                title = "Swipe actions",
-                subtitle = "Customize gesture swipe behaviors",
-                onClick = onOpenSwipeActions
-            )
-        }
-
-        Spacer(modifier = Modifier.height(30.dp))
-    }
-}
-
-@Composable
-fun SettingsNavigationRow(
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 13.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 15.5.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                color = Color.White.copy(alpha = 0.50f),
-                fontSize = 12.sp
-            )
-        }
-
-        Text(
-            text = "›",
-            color = Color.White.copy(alpha = 0.35f),
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Light,
-            modifier = Modifier.padding(start = 8.dp)
-        )
     }
 }
