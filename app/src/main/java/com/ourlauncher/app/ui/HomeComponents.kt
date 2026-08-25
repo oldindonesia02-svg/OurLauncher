@@ -153,7 +153,6 @@ fun LiquidSearchAiCapsule(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Distinct Search Button Pill
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -179,7 +178,6 @@ fun LiquidSearchAiCapsule(
 
             Spacer(modifier = Modifier.width(6.dp))
 
-            // Distinct AI Sparkle Icon Pill
             Box(
                 modifier = Modifier
                     .size(28.dp)
@@ -220,7 +218,6 @@ fun LiquidSearchAiCapsule(
                 val spacing = if (totalPages > 1) totalWidth / (totalPages - 1) else 0f
                 val dotRadius = 2.5.dp.toPx()
 
-                // Static Background Dots
                 for (i in 0 until totalPages) {
                     drawCircle(
                         color = Color.White.copy(alpha = 0.32f),
@@ -229,7 +226,6 @@ fun LiquidSearchAiCapsule(
                     )
                 }
 
-                // Liquid Stretch Tracking Finger Position
                 val page = pagerState.currentPage
                 val fraction = pagerState.currentPageOffsetFraction
 
@@ -255,7 +251,6 @@ fun LiquidSearchAiCapsule(
         }
     }
 }
-
 @Composable
 fun TopLiquidSearchBarPositionCard(
     currentOffset: Float,
@@ -518,30 +513,30 @@ fun HomeQuickSettingsSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                        Text("Show App Labels", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                        Text(if (showLabels) "On" else "Off", color = if (showLabels) Color(0xFF0A84FF) else Color.Gray, fontSize = 14.sp)
-                    }
+                Text("Show App Labels", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                Text(if (showLabels) "On" else "Off", color = if (showLabels) Color(0xFF0A84FF) else Color.Gray, fontSize = 14.sp)
+            }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                onDismiss()
-                                onOpenFullSettings()
-                            }
-                            .padding(vertical = 12.dp, horizontal = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("More Settings", color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                        Text("›", color = Color(0xFF0A84FF), fontSize = 20.sp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable {
+                        onDismiss()
+                        onOpenFullSettings()
                     }
-                }
+                    .padding(vertical = 12.dp, horizontal = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("More Settings", color = Color(0xFF0A84FF), fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                Text("›", color = Color(0xFF0A84FF), fontSize = 20.sp)
             }
         }
+    }
+}
 
 @Composable
 fun IconCustomizeSheet(
