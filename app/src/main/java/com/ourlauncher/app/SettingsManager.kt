@@ -39,6 +39,14 @@ class SettingsManager(context: Context) {
         set(value) = prefs.edit().putString("right_pull_down_action", value).apply()
 
     // Liquid Glass Settings
+    var glassMode: String
+        get() = prefs.getString("glass_mode", "Liquid") ?: "Liquid"
+        set(value) = prefs.edit().putString("glass_mode", value).apply()
+
+    var glassTransparency: Float
+        get() = prefs.getFloat("glass_transparency", 0.35f)
+        set(value) = prefs.edit().putFloat("glass_transparency", value).apply()
+
     var glassBlurRadius: Float
         get() = prefs.getFloat("glass_blur_radius", 20f)
         set(value) = prefs.edit().putFloat("glass_blur_radius", value).apply()
