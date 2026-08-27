@@ -112,13 +112,12 @@ Row(
         color = Color.White,
         fontSize = 15.sp
     )
-    LiquidGlassToggle(
-        checked = liquidFolder,
+        LiquidGlassToggle(
+        checked = settingsManager.liquidFolder,
         onCheckedChange = { 
-            liquidFolder = it
             settingsManager.liquidFolder = it 
         }
-    )
+    )    
 }
 
             Spacer(modifier = Modifier.height(14.dp))
