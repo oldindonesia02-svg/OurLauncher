@@ -603,11 +603,13 @@ fun HomeScreen(
             }
         }
 
-        val floatingApp = if (draggedIndex != null && draggedIndex!! < gridItems.size) {
+        val floatingApp = if (draggedIndex != null) {
             val item = gridItems[draggedIndex!!]
             if (item is GridItem.SingleApp) item.app else null
-        } else draggedExternalApp
-
+        } else {
+            draggedExternalApp
+        }
+               
         if (floatingApp != null) {
             val targetDrawable = getCustomDrawable(floatingApp.packageName) ?: floatingApp.icon
             val cacheKey = "${floatingApp.packageName}_${targetDrawable?.hashCode() ?: 0}"
