@@ -543,13 +543,19 @@ fun HomeScreen(
                     settingsManager = settingsManager,
                     onOpenTransitionEffects = {
                         showHomeSettingsSheet = false
-                        showIconCustomizeSheet = true
+                        coroutineScope.launch {
+                            delay(150)
+                            showIconCustomizeSheet = true
+                        }
                     },
                     onSetDefaultScreen = {
                         showHomeSettingsSheet = false
                         liveSearchOffset = settingsManager.searchOffset
                         liveHideCapsule = settingsManager.hideSearchCapsule
-                        showSearchBarPositionSheet = true
+                        coroutineScope.launch {
+                            delay(150)
+                            showSearchBarPositionSheet = true
+                        }
                     },
                     onRegenerateIcons = {
                         showHomeSettingsSheet = false
@@ -563,7 +569,7 @@ fun HomeScreen(
                 )
             }
         }
-
+        
         if (showSearchBarPositionSheet) {
             TopLiquidSearchBarPositionCard(
                 currentOffset = liveSearchOffset,
