@@ -167,3 +167,70 @@ fun LiquidGlassContainer(
         content()
     }
 }
+import androidx.compose.ui.window.Dialog
+
+// --- 5. Liquid Glass Dialog / Popup ---
+@Composable
+fun LiquidGlassDialog(
+    title: String,
+    message: String,
+    confirmText: String = "OK",
+    dismissText: String = "Cancel",
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        LiquidGlassContainer(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Text(
+                    text = message,
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp
+                )
+                
+                Spacer(modifier = Modifier.height(28.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = dismissText,
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onDismiss() }
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    LiquidGlassButton(
+                        text = confirmText,
+                        onClick = onConfirm,
+                        // Button take ektu choto korar jonno custom modifier
+                        modifier = Modifier.height(42.dp) 
+                    )
+                }
+            }
+        }
+    }
+}
