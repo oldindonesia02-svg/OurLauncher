@@ -99,25 +99,27 @@ fun HomeScreenSettingsSheet(
             }
 
             // 4. Liquid Folder Switch
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Liquid folder", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                Switch(
-                    checked = liquidFolder,
-                    onCheckedChange = { liquidFolder = it },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = Color(0xFF0A84FF),
-                        uncheckedThumbColor = Color.White,
-                        uncheckedTrackColor = Color.White.copy(alpha = 0.25f)
-                    )
-                )
-            }
+            // 4. Liquid Folder Switch
+Row(
+    modifier = Modifier
+        .fillMaxWidth()
+        .padding(vertical = 8.dp),
+    horizontalArrangement = Arrangement.SpaceBetween,
+    verticalAlignment = Alignment.CenterVertically
+) {
+    Text(
+        text = "Liquid folder",
+        color = Color.White,
+        fontSize = 15.sp
+    )
+    LiquidGlassToggle(
+        checked = liquidFolder,
+        onCheckedChange = { 
+            liquidFolder = it
+            settingsManager.liquidFolder = it 
+        }
+    )
+}
 
             Spacer(modifier = Modifier.height(14.dp))
 
