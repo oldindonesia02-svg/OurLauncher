@@ -73,7 +73,7 @@ fun HomeScreenSettingsSheet(
             Spacer(modifier = Modifier.height(16.dp))
 
             // 1. Transition Effects
-            SheetNavRow(title = "Transition effects", onClick = onOpenTransitionEffects)
+            SheetNavRow(title = "Customize Icons", onClick = onOpenTransitionEffects)
 
             // 2. Set default screen
             SheetNavRow(title = "Set default screen", onClick = onSetDefaultScreen)
