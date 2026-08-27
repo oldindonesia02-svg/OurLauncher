@@ -16,8 +16,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 
 // --- 1. Liquid Glass Button ---
 @Composable
@@ -32,8 +34,8 @@ fun LiquidGlassButton(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.25f), // Top light reflection
-                        Color.White.copy(alpha = 0.05f)  // Bottom fade
+                        Color.White.copy(alpha = 0.25f),
+                        Color.White.copy(alpha = 0.05f)
                     )
                 )
             )
@@ -49,7 +51,8 @@ fun LiquidGlassButton(
         Text(
             text = text,
             color = Color.White,
-            fontSize = 16.sp
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }
@@ -106,7 +109,6 @@ fun LiquidGlassSlider(
             },
         contentAlignment = Alignment.CenterStart
     ) {
-        // Track Background
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -118,7 +120,6 @@ fun LiquidGlassSlider(
         
         val fraction = ((value - valueRange.start) / (valueRange.endInclusive - valueRange.start)).coerceIn(0f, 1f)
         
-        // Active Track (Blue Glow)
         Box(
             modifier = Modifier
                 .fillMaxWidth(fraction)
@@ -127,7 +128,6 @@ fun LiquidGlassSlider(
                 .background(Color(0xFF0A84FF).copy(alpha = 0.8f))
         )
         
-        // Thumb (White Circle)
         Box(
             modifier = Modifier
                 .offset(x = (maxWidth * fraction) - 12.dp)
@@ -154,7 +154,7 @@ fun LiquidGlassContainer(
                     radius = 800f
                 )
             )
-            .background(Color.Black.copy(alpha = 0.2f)) // Deep depth effect
+            .background(Color.Black.copy(alpha = 0.2f))
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
@@ -167,7 +167,6 @@ fun LiquidGlassContainer(
         content()
     }
 }
-import androidx.compose.ui.window.Dialog
 
 // --- 5. Liquid Glass Dialog / Popup ---
 @Composable
@@ -226,8 +225,7 @@ fun LiquidGlassDialog(
                     LiquidGlassButton(
                         text = confirmText,
                         onClick = onConfirm,
-                        // Button take ektu choto korar jonno custom modifier
-                        modifier = Modifier.height(42.dp) 
+                        modifier = Modifier.height(42.dp)
                     )
                 }
             }
