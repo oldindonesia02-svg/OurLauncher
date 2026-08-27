@@ -121,24 +121,25 @@ fun AppDrawer(
                         change.consume()
                         totalDragY += dragAmount.y
                         coroutineScope.launch {
-                            drawerOffsetY.snapTo(totalDragY * 0.75f) // Follows finger smoothly
+                            drawerOffsetY.snapTo(totalDragY * 0.75f)
                         }
                     },
-                    onDragEnd = {
-                        // SWIPE UP (< -150) OR SWIPE DOWN (> 150) TO CLOSE
+
+                          onDragEnd = {
                         if (totalDragY > 150f || totalDragY < -150f) {
                             focusManager.clearFocus()
                             keyboardController?.hide()
-                            onCloseDrawer()
+                            coroutineScope.launch {
+                                drawerOffsetY.animateTo(if (totalDragY > 0) 1200f else -1200f, tween(200))
+                                onCloseDrawer()
+                            }
                         } else {
                             coroutineScope.launch {
                                 drawerOffsetY.animateTo(0f, tween(200))
                             }
                         }
-                    }
-                )
-            }
-    ) {
+                        
+    ) 
         Column(
             modifier = Modifier
                 .fillMaxSize()
