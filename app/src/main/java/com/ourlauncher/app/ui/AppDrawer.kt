@@ -79,9 +79,8 @@ fun AppDrawer(
         }
     }
 
-    // Samsung Style Grid Logic
     val columns = settingsManager.gridColumns
-    val rows = settingsManager.gridRows + 1 // Drawer usually has more rows
+    val rows = settingsManager.gridRows + 1 
     val appsPerPage = columns * rows
     val totalPages = maxOf(1, ceil(filteredApps.size.toFloat() / appsPerPage).toInt())
     val pagerState = rememberPagerState(pageCount = { totalPages })
@@ -89,25 +88,45 @@ fun AppDrawer(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0C0C0E).copy(alpha = 0.85f))
+            // 1. Liquid Glass Base Background
+            .background(Color.Black.copy(alpha = 0.55f)) // Base tint to let wallpaper peek
+            // 2. Liquid Glass Radial Sheen
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.12f),
+                        Color.Transparent
+                    ),
+                    radius = 1200f
+                )
+            )
+            // 3. Liquid Glass Vertical Depth
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.08f),
+                        Color.Black.copy(alpha = 0.35f)
+                    )
+                )
+            )
             .graphicsLayer {
                 translationY = drawerOffsetY.value
-                alpha = (1f - (drawerOffsetY.value / 1200f)).coerceIn(0.2f, 1f)
+                alpha = (1f - (Math.abs(drawerOffsetY.value) / 1000f)).coerceIn(0.2f, 1f)
             }
             .pointerInput(Unit) {
                 var totalDragY = 0f
                 detectDragGestures(
                     onDragStart = { totalDragY = 0f },
-                    onDrag = { _, dragAmount ->
+                    onDrag = { change, dragAmount ->
+                        change.consume()
                         totalDragY += dragAmount.y
-                        if (totalDragY > 0) {
-                            coroutineScope.launch {
-                                drawerOffsetY.snapTo(totalDragY * 0.75f)
-                            }
+                        coroutineScope.launch {
+                            drawerOffsetY.snapTo(totalDragY * 0.75f) // Follows finger smoothly
                         }
                     },
                     onDragEnd = {
-                        if (drawerOffsetY.value > 220f) {
+                        // SWIPE UP (< -150) OR SWIPE DOWN (> 150) TO CLOSE
+                        if (totalDragY > 150f || totalDragY < -150f) {
                             focusManager.clearFocus()
                             keyboardController?.hide()
                             onCloseDrawer()
