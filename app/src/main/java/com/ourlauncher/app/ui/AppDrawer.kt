@@ -127,14 +127,16 @@ fun AppDrawer(
                             focusManager.clearFocus()
                             keyboardController?.hide()
                             coroutineScope.launch {
-                                drawerOffsetY.animateTo(if (totalDragY > 0) 1200f else -1200f, tween(200))
+                                drawerOffsetY.animateTo(if (totalDragY > 0) 1200f else -1200f, tween(100))
                                 onCloseDrawer()
                             }
                         } else {
                             coroutineScope.launch {
-                                drawerOffsetY.animateTo(0f, tween(200))
+                                drawerOffsetY.animateTo(0f, tween(100))
                             }
                         }
+                    }
+                    
                     }
                 )
             }
