@@ -12,6 +12,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -616,35 +617,31 @@ fun HomeScreen(
                 Box(
                     modifier = Modifier
                         .offset {
-                            // BUG FIXED: Extra -30.dp offset remove kora hoyeche
                             IntOffset(
                                 (dragOffset.x - (settingsManager.iconSize.dp.toPx() / 2)).roundToInt(),
                                 (dragOffset.y - (settingsManager.iconSize.dp.toPx() / 2)).roundToInt()
                             )
                         }
                         .scale(1.15f)
-                        // BUG FIXED: Notun touch listener add kora hoyeche app ta drop korar jonno
                         .pointerInput(Unit) {
                             detectDragGestures(
-                                onDrag = { change, dragAmount ->
+                                onDrag = { change: PointerInputChange, dragAmount: Offset ->
                                     change.consume()
                                     dragOffset += dragAmount
-                                    val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
+                                    val hovered = itemBoundsMap.entries.firstOrNull { (_, rect: Rect) ->
                                         rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
                                     }
                                     targetHoverIndex = hovered?.key
                                 },
                                 onDragEnd = {
-                                    if (targetHoverIndex != null) {
-                                        val to = targetHoverIndex!!
-                                        val updated = gridItems.toMutableList()
-                                        updated.add(to, GridItem.SingleApp(floatingApp))
-                                        sanitizeAndSaveFolders(updated)
+                                    val toIdx = targetHoverIndex
+                                    val updated = gridItems.toMutableList()
+                                    if (toIdx != null && toIdx >= 0 && toIdx < updated.size) {
+                                        updated.add(toIdx, GridItem.SingleApp(floatingApp))
                                     } else {
-                                        val updated = gridItems.toMutableList()
                                         updated.add(GridItem.SingleApp(floatingApp))
-                                        sanitizeAndSaveFolders(updated)
                                     }
+                                    sanitizeAndSaveFolders(updated)
                                     draggedExternalApp = null
                                     targetHoverIndex = null
                                     draggedIndex = null
@@ -665,4 +662,17 @@ fun HomeScreen(
                 }
             }
         }
-        
+
+        if (activeApp != null && activeBounds != null && p > 0.005f) {
+            AppLaunchOverlay(
+                activeApp = activeApp!!,
+                activeBounds = activeBounds!!,
+                progress = p,
+                screenWidthPx = screenWidthPx,
+                screenHeightPx = screenHeightPx,
+                settingsManager = settingsManager,
+                getCustomDrawable = getCustomDrawable
+            )
+        }
+    }
+}
