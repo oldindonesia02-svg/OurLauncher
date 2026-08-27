@@ -127,6 +127,7 @@ fun AppDrawer(
                             focusManager.clearFocus()
                             keyboardController?.hide()
                             coroutineScope.launch {
+                                // 100ms super fast close animation
                                 drawerOffsetY.animateTo(if (totalDragY > 0) 1200f else -1200f, tween(100))
                                 onCloseDrawer()
                             }
@@ -135,8 +136,6 @@ fun AppDrawer(
                                 drawerOffsetY.animateTo(0f, tween(100))
                             }
                         }
-                    }
-                    
                     }
                 )
             }
