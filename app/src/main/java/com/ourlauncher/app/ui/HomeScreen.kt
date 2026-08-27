@@ -616,12 +616,41 @@ fun HomeScreen(
                 Box(
                     modifier = Modifier
                         .offset {
+                            // BUG FIXED: Extra -30.dp offset remove kora hoyeche
                             IntOffset(
                                 (dragOffset.x - (settingsManager.iconSize.dp.toPx() / 2)).roundToInt(),
-                                (dragOffset.y - (settingsManager.iconSize.dp.toPx() / 2) - 30.dp.toPx()).roundToInt()
+                                (dragOffset.y - (settingsManager.iconSize.dp.toPx() / 2)).roundToInt()
                             )
                         }
-                        .scale(1.15f),
+                        .scale(1.15f)
+                        // BUG FIXED: Notun touch listener add kora hoyeche app ta drop korar jonno
+                        .pointerInput(Unit) {
+                            detectDragGestures(
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    dragOffset += dragAmount
+                                    val hovered = itemBoundsMap.entries.firstOrNull { (_, rect) ->
+                                        rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt())
+                                    }
+                                    targetHoverIndex = hovered?.key
+                                },
+                                onDragEnd = {
+                                    if (targetHoverIndex != null) {
+                                        val to = targetHoverIndex!!
+                                        val updated = gridItems.toMutableList()
+                                        updated.add(to, GridItem.SingleApp(floatingApp))
+                                        sanitizeAndSaveFolders(updated)
+                                    } else {
+                                        val updated = gridItems.toMutableList()
+                                        updated.add(GridItem.SingleApp(floatingApp))
+                                        sanitizeAndSaveFolders(updated)
+                                    }
+                                    draggedExternalApp = null
+                                    targetHoverIndex = null
+                                    draggedIndex = null
+                                }
+                            )
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     if (bitmap != null) {
@@ -636,17 +665,4 @@ fun HomeScreen(
                 }
             }
         }
-
-        if (activeApp != null && activeBounds != null && p > 0.005f) {
-            AppLaunchOverlay(
-                activeApp = activeApp!!,
-                activeBounds = activeBounds!!,
-                progress = p,
-                screenWidthPx = screenWidthPx,
-                screenHeightPx = screenHeightPx,
-                settingsManager = settingsManager,
-                getCustomDrawable = getCustomDrawable
-            )
-        }
-    }
-}
+        
