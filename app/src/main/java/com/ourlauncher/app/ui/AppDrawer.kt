@@ -43,6 +43,7 @@ import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
+import kotlin.math.abs
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -88,9 +89,7 @@ fun AppDrawer(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // 1. Liquid Glass Base Background
-            .background(Color.Black.copy(alpha = 0.55f)) // Base tint to let wallpaper peek
-            // 2. Liquid Glass Radial Sheen
+            .background(Color.Black.copy(alpha = 0.55f))
             .background(
                 Brush.radialGradient(
                     colors = listOf(
@@ -100,7 +99,6 @@ fun AppDrawer(
                     radius = 1200f
                 )
             )
-            // 3. Liquid Glass Vertical Depth
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -111,7 +109,7 @@ fun AppDrawer(
             )
             .graphicsLayer {
                 translationY = drawerOffsetY.value
-                alpha = (1f - (Math.abs(drawerOffsetY.value) / 1000f)).coerceIn(0.2f, 1f)
+                alpha = (1f - (abs(drawerOffsetY.value) / 1000f)).coerceIn(0.2f, 1f)
             }
             .pointerInput(Unit) {
                 var totalDragY = 0f
@@ -124,8 +122,7 @@ fun AppDrawer(
                             drawerOffsetY.snapTo(totalDragY * 0.75f)
                         }
                     },
-
-                          onDragEnd = {
+                    onDragEnd = {
                         if (totalDragY > 150f || totalDragY < -150f) {
                             focusManager.clearFocus()
                             keyboardController?.hide()
@@ -138,14 +135,15 @@ fun AppDrawer(
                                 drawerOffsetY.animateTo(0f, tween(200))
                             }
                         }
-                        
-    ) 
+                    }
+                )
+            }
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 44.dp)
         ) {
-            // Search Bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -210,7 +208,6 @@ fun AppDrawer(
                 }
             }
 
-            // HORIZONTAL PAGER (SAMSUNG STYLE)
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
@@ -250,7 +247,6 @@ fun AppDrawer(
                 }
             }
             
-            // Pager Indicator Dots
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
