@@ -461,57 +461,79 @@ fun IconCustomizeSheet(
     var iconSize by remember { mutableStateOf(settingsManager.iconSize) }
     var cornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
 
-    Box(
+    // Liquid Glass Background
+    LiquidGlassContainer(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-            .background(Color(0xFF1C1C1E).copy(alpha = 0.98f))
-            .padding(20.dp)
+            .padding(16.dp)
+            .padding(bottom = 24.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Text("Customize Icons", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Text("Icon Size: ${iconSize.toInt()} dp", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
-            Slider(
-                value = iconSize,
-                onValueChange = {
-                    iconSize = it
-                    settingsManager.iconSize = it
-                },
-                valueRange = 40f..80f,
-                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text("Corner Radius: ${cornerRadius.toInt()} %", color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
-            Slider(
-                value = cornerRadius,
-                onValueChange = {
-                    cornerRadius = it
-                    settingsManager.iconCornerRadius = it
-                },
-                valueRange = 0f..50f,
-                colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xFF0A84FF))
-                    .clickable {
-                        onApply()
-                        onDismiss()
-                    },
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Apply", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(
+                    text = "Customize Icons",
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "✕",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 18.sp,
+                    modifier = Modifier.clickable { onDismiss() }
+                )
             }
+            
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // --- 1. Icon Size Liquid Slider ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Icon Size", color = Color.White, fontSize = 14.sp)
+                Text("${iconSize.toInt()} dp", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            LiquidGlassSlider(
+                value = iconSize,
+                onValueChange = { iconSize = it },
+                valueRange = 40f..100f
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- 2. Corner Radius Liquid Slider ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Corner Radius", color = Color.White, fontSize = 14.sp)
+                Text("${cornerRadius.toInt()} %", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            LiquidGlassSlider(
+                value = cornerRadius,
+                onValueChange = { cornerRadius = it },
+                valueRange = 0f..50f
+            )
+
+            Spacer(modifier = Modifier.height(36.dp))
+
+            // --- 3. Apply Liquid Button ---
+            LiquidGlassButton(
+                text = "Apply Settings",
+                onClick = {
+                    settingsManager.iconSize = iconSize
+                    settingsManager.iconCornerRadius = cornerRadius
+                    onApply()
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
