@@ -485,13 +485,24 @@ fun HomeScreen(
                     }
                 }
 
-                Dock(
-                    pinnedApps = dockApps,
-                    settingsManager = settingsManager,
-                    getCustomDrawable = getCustomDrawable,
-                    onAppClick = { app: AppInfo -> handleAppOpen(app, null) },
-                    onAppClickWithBounds = { app: AppInfo, bounds: Rect -> handleAppOpen(app, bounds) }
-                )
+                LiquidGlassDock(
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    dockApps.forEach { app ->
+                        AppIcon(
+                            app = app,
+                            onClick = { handleAppOpen(app, null) },
+                            showLabel = false,
+                            fontFamilyName = settingsManager.fontFamily,
+                            iconSizeDp = settingsManager.iconSize,
+                            cornerRadiusPercent = settingsManager.iconCornerRadius,
+                            iconOpacity = settingsManager.iconOpacity,
+                            customDrawable = getCustomDrawable(app.packageName),
+                            onClickWithBounds = { bounds: Rect -> handleAppOpen(app, bounds) },
+                            modifier = Modifier.width(64.dp)
+                        )
+                    }
+                }
             }
         }
 
@@ -527,21 +538,25 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.BottomCenter
             ) {
-                HomeQuickSettingsSheet(
+                HomeScreenSettingsSheet(
                     settingsManager = settingsManager,
-                    onOpenFullSettings = {
-                        showHomeSettingsSheet = false
-                        onOpenSettings()
-                    },
-                    onOpenIconCustomize = {
+                    onOpenTransitionEffects = {
                         showHomeSettingsSheet = false
                         showIconCustomizeSheet = true
                     },
-                    onOpenSearchBarPosition = {
+                    onSetDefaultScreen = {
                         showHomeSettingsSheet = false
                         liveSearchOffset = settingsManager.searchOffset
                         liveHideCapsule = settingsManager.hideSearchCapsule
                         showSearchBarPositionSheet = true
+                    },
+                    onRegenerateIcons = {
+                        showHomeSettingsSheet = false
+                        clearIconCache()
+                    },
+                    onOpenMoreSettings = {
+                        showHomeSettingsSheet = false
+                        onOpenSettings()
                     },
                     onDismiss = { showHomeSettingsSheet = false }
                 )
@@ -622,7 +637,7 @@ fun HomeScreen(
             }
         }
 
-        if (activeApp != null && activeBounds !=Inull && p > 0.005f) {
+        if (activeApp != null && activeBounds != null && p > 0.005f) {
             AppLaunchOverlay(
                 activeApp = activeApp!!,
                 activeBounds = activeBounds!!,
@@ -634,4 +649,4 @@ fun HomeScreen(
             )
         }
     }
-}                                                            
+}
