@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
@@ -30,7 +31,7 @@ fun LiquidGlassDock(
     var roll by remember { mutableFloatStateOf(0f) }
     var pitch by remember { mutableFloatStateOf(0f) }
 
-    // জাইরোস্কোপ ও রোটেশন সেন্সর লিসেনার (১২০ FPS অপটিমাইজড)
+    // Optimized Sensor Listener (SENSOR_DELAY_UI to fix lag)
     DisposableEffect(Unit) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
         val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
@@ -42,19 +43,19 @@ fun LiquidGlassDock(
                     val orientation = FloatArray(3)
                     SensorManager.getOrientation(rotationMatrix, orientation)
                     
-                    // মসৃণ টিল্ট রেঞ্জ ম্যাপিং
                     roll = (orientation[2] * 35f).coerceIn(-40f, 40f)
                     pitch = (orientation[1] * 20f).coerceIn(-25f, 25f)
                 }
             }
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
         }
-        sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
+        // Changed to SENSOR_DELAY_UI to stop UI thread overload
+        sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
         onDispose { sensorManager.unregisterListener(listener) }
     }
 
-    val animatedRoll by animateFloatAsState(targetValue = roll, animationSpec = tween(80), label = "roll")
-    val animatedPitch by animateFloatAsState(targetValue = pitch, animationSpec = tween(80), label = "pitch")
+    val animatedRoll by animateFloatAsState(targetValue = roll, animationSpec = tween(150), label = "roll")
+    val animatedPitch by animateFloatAsState(targetValue = pitch, animationSpec = tween(150), label = "pitch")
 
     Box(
         modifier = modifier
@@ -68,9 +69,7 @@ fun LiquidGlassDock(
                 spotColor = Color.Black.copy(alpha = 0.35f)
             )
             .clip(RoundedCornerShape(38.dp))
-            // ব্যাকড্রপ বেস ফ্রস্টেড গ্লাস
             .background(Color.White.copy(alpha = 0.12f))
-            // কাঁচের চারপাশের স্পেকুলার ক্রিস্টাল বর্ডার
             .border(
                 width = 1.5.dp,
                 brush = Brush.linearGradient(
@@ -83,11 +82,14 @@ fun LiquidGlassDock(
                 shape = RoundedCornerShape(38.dp)
             )
     ) {
-        // সেন্সরের সাথে নড়াচড়া করা লাইভ রিফ্লেকশন লেয়ার
+        // GPU accelerated live reflection (graphicsLayer fixes the lag!)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .offset(x = animatedRoll.dp, y = animatedPitch.dp)
+                .graphicsLayer {
+                    translationX = animatedRoll.dp.toPx()
+                    translationY = animatedPitch.dp.toPx()
+                }
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
@@ -99,7 +101,6 @@ fun LiquidGlassDock(
                 )
         )
 
-        // ডক আইকন কন্টেইনার
         Row(
             modifier = Modifier
                 .fillMaxSize()
