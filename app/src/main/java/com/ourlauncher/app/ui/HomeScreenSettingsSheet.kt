@@ -1,14 +1,20 @@
 package com.ourlauncher.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -26,26 +32,50 @@ fun HomeScreenSettingsSheet(
 ) {
     var showLabel by remember { mutableStateOf(settingsManager.showLabels) }
     var isLiquidFolderEnabled by remember { mutableStateOf(true) }
+    
+    // Naye State Variables for missing settings (inhe future mein SettingsManager se link kar lena)
+    var iconSize by remember { mutableStateOf(1f) }
+    var gridRows by remember { mutableStateOf(5f) }
+
+    // Liquid Glass Gradient Variables
+    val glassBackground = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFF1E2029).copy(alpha = 0.85f), 
+            Color(0xFF0F1015).copy(alpha = 0.95f)
+        )
+    )
+    val glassBorder = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFFFFFFFF).copy(alpha = 0.2f),
+            Color.Transparent
+        )
+    )
+    val liquidCyan = Color(0xFF00E5FF)
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-            .background(Color(0xFF18181B).copy(alpha = 0.98f))
-            .padding(20.dp)
+            .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+            .background(glassBackground) // Frosted Glass Background
+            .border(
+                width = 1.dp,
+                brush = glassBorder,
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+            ) // Reflective Border Highlight
+            .padding(24.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Drag Indicator
+            // Glowing Drag Indicator
             Box(
                 modifier = Modifier
-                    .width(36.dp)
+                    .width(40.dp)
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.3f))
+                    .background(Color.White.copy(alpha = 0.4f))
                     .align(Alignment.CenterHorizontally)
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Header
             Row(
@@ -56,27 +86,56 @@ fun HomeScreenSettingsSheet(
                 Text(
                     text = "✕",
                     color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 18.sp,
+                    fontSize = 20.sp,
                     modifier = Modifier.clickable { onDismiss() }
                 )
                 Text(
-                    text = "Home screen settings",
+                    text = "Home screen",
                     color = Color.White,
-                    fontSize = 17.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.width(18.dp))
+                Spacer(modifier = Modifier.width(20.dp))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // 1. Transition Effects
+            // 1. Grid & Layout (NEW)
+            Text("Desktop Grid", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+            Slider(
+                value = gridRows,
+                onValueChange = { gridRows = it },
+                valueRange = 4f..7f,
+                steps = 2,
+                colors = SliderDefaults.colors(
+                    thumbColor = liquidCyan,
+                    activeTrackColor = liquidCyan.copy(alpha = 0.8f),
+                    inactiveTrackColor = Color.White.copy(alpha = 0.1f)
+                )
+            )
+
+            // 2. Icon Size (NEW)
+            Text("Icon Size", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+            Slider(
+                value = iconSize,
+                onValueChange = { iconSize = it },
+                valueRange = 0.8f..1.2f,
+                colors = SliderDefaults.colors(
+                    thumbColor = liquidCyan,
+                    activeTrackColor = liquidCyan.copy(alpha = 0.8f),
+                    inactiveTrackColor = Color.White.copy(alpha = 0.1f)
+                )
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 3. Set default screen
+            SheetNavRow(title = "Set default screen", onClick = onSetDefaultScreen)
+            
+            // 4. Transition Effects
             SheetNavRow(title = "Customize Icons", onClick = onOpenTransitionEffects)
 
-            // 2. Set default screen
-            SheetNavRow(title = "Set default screen", onClick = onSetDefaultScreen)
-
-            // 3. Show Label Dropdown/Toggle
+            // 5. Show Label Toggle (Upgraded style)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -85,60 +144,69 @@ fun HomeScreenSettingsSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Show label", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                Text(
-                    text = if (showLabel) "On ⬍" else "Off ⬍",
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 14.sp,
-                    modifier = Modifier.clickable {
-                        showLabel = !showLabel
-                        settingsManager.showLabels = showLabel
-                    }
+                Switch(
+                    checked = showLabel,
+                    onCheckedChange = { 
+                        showLabel = it
+                        settingsManager.showLabels = it
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = liquidCyan,
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = Color.White.copy(alpha = 0.1f)
+                    )
                 )
             }
 
-            // 4. Liquid Folder Switch
+            // 6. Liquid Folder Switch
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Liquid folder",
                     color = Color.White,
-                    fontSize = 15.sp
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium
                 )
-                LiquidGlassToggle(
+                Switch(
                     checked = isLiquidFolderEnabled,
-                    onCheckedChange = { 
-                        isLiquidFolderEnabled = it 
-                    }
-                )    
+                    onCheckedChange = { isLiquidFolderEnabled = it },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = liquidCyan,
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = Color.White.copy(alpha = 0.1f)
+                    )
+                )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // 5. Regenerate All Icons (Blue Action)
+            // 7. Regenerate All Icons (Glowing Action)
             Text(
                 text = "Regenerate all icons   ›",
-                color = Color(0xFF0A84FF),
+                color = liquidCyan,
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .clickable { onRegenerateIcons() }
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = 10.dp)
             )
 
-            // 6. More Settings
+            // 8. More Settings
             Text(
                 text = "More settings   ›",
-                color = Color(0xFF0A84FF),
+                color = liquidCyan,
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .clickable { onOpenMoreSettings() }
-                    .padding(vertical = 8.dp)
+                    .padding(vertical = 10.dp)
             )
         }
     }
@@ -150,11 +218,11 @@ fun SheetNavRow(title: String, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(vertical = 13.dp),
+            .padding(vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-        Text(text = "›", color = Color.White.copy(alpha = 0.45f), fontSize = 18.sp)
+        Text(text = "›", color = Color.White.copy(alpha = 0.45f), fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
