@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.SettingsManager
+import com.ourlauncher.app.ui.components.LiquidGlassToggle
 
 @Composable
 fun HomeScreenSettingsSheet(
@@ -27,7 +28,6 @@ fun HomeScreenSettingsSheet(
     onDismiss: () -> Unit
 ) {
     var showLabel by remember { mutableStateOf(settingsManager.showLabels) }
-    var liquidFolder by remember { mutableStateOf(true) }
 
     Box(
         modifier = Modifier
@@ -99,26 +99,25 @@ fun HomeScreenSettingsSheet(
             }
 
             // 4. Liquid Folder Switch
-            // 4. Liquid Folder Switch
-Row(
-    modifier = Modifier
-        .fillMaxWidth()
-        .padding(vertical = 8.dp),
-    horizontalArrangement = Arrangement.SpaceBetween,
-    verticalAlignment = Alignment.CenterVertically
-) {
-    Text(
-        text = "Liquid folder",
-        color = Color.White,
-        fontSize = 15.sp
-    )
-        LiquidGlassToggle(
-        checked = settingsManager.liquidFolder,
-        onCheckedChange = { 
-            settingsManager.liquidFolder = it 
-        }
-    )    
-}
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Liquid folder",
+                    color = Color.White,
+                    fontSize = 15.sp
+                )
+                LiquidGlassToggle(
+                    checked = settingsManager.liquidFolder,
+                    onCheckedChange = { 
+                        settingsManager.liquidFolder = it 
+                    }
+                )    
+            }
 
             Spacer(modifier = Modifier.height(14.dp))
 
