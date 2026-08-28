@@ -4,8 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,7 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.SettingsManager
-import com.ourlauncher.app.ui.components.LiquidGlassToggle
 
 @Composable
 fun HomeScreenSettingsSheet(
@@ -28,6 +25,7 @@ fun HomeScreenSettingsSheet(
     onDismiss: () -> Unit
 ) {
     var showLabel by remember { mutableStateOf(settingsManager.showLabels) }
+    var isLiquidFolderEnabled by remember { mutableStateOf(true) }
 
     Box(
         modifier = Modifier
@@ -112,9 +110,9 @@ fun HomeScreenSettingsSheet(
                     fontSize = 15.sp
                 )
                 LiquidGlassToggle(
-                    checked = settingsManager.liquidFolder,
+                    checked = isLiquidFolderEnabled,
                     onCheckedChange = { 
-                        settingsManager.liquidFolder = it 
+                        isLiquidFolderEnabled = it 
                     }
                 )    
             }
