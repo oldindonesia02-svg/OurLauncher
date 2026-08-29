@@ -1,11 +1,9 @@
 package com.ourlauncher.app.ui
 
-import android.graphics.RenderEffect
-import android.graphics.Shader
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,8 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -41,28 +37,30 @@ fun HomeScreenSettingsSheet(
     var iconSize by remember { mutableStateOf(1f) }
     var gridRows by remember { mutableStateOf(5f) }
 
-    // Liquid Glass Shaders & Colors
     val cardShape = RoundedCornerShape(32.dp)
     val liquidCyan = Color(0xFF00E5FF)
+    
+    // Multi-layer frosted glass background
     val glassTint = Brush.verticalGradient(
         colors = listOf(
-            Color.White.copy(alpha = 0.18f),
-            Color(0xFF0F172A).copy(alpha = 0.75f)
+            Color(0xFF1E293B).copy(alpha = 0.92f),
+            Color(0xFF0F172A).copy(alpha = 0.96f)
         )
     )
-    val glassBorder = Brush.linearGradient(
+    val glassBorder = Brush.verticalGradient(
         colors = listOf(
             Color.White.copy(alpha = 0.45f),
-            Color.White.copy(alpha = 0.08f),
-            liquidCyan.copy(alpha = 0.25f)
+            Color.White.copy(alpha = 0.08f)
         )
     )
 
-    // Full-screen backdrop dismiss area
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clickable { onDismiss() }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onDismiss() }
             .padding(horizontal = 20.dp, vertical = 32.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -71,26 +69,22 @@ fun HomeScreenSettingsSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(cardShape)
-                .graphicsLayer {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        renderEffect = RenderEffect
-                            .createBlurEffect(35f, 35f, Shader.TileMode.CLAMP)
-                            .asComposeRenderEffect()
-                    }
-                }
                 .background(glassTint)
                 .border(width = 1.5.dp, brush = glassBorder, shape = cardShape)
-                .clickable(enabled = false) {}
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {}
                 .padding(24.dp)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // Glass Pill Drag Indicator
+                // Glass Drag Indicator
                 Box(
                     modifier = Modifier
                         .width(44.dp)
                         .height(5.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.5f))
+                        .background(Color.White.copy(alpha = 0.4f))
                         .align(Alignment.CenterHorizontally)
                 )
 
@@ -112,7 +106,7 @@ fun HomeScreenSettingsSheet(
                         text = "Home Screen",
                         color = Color.White,
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.width(20.dp))
                 }
@@ -126,14 +120,14 @@ fun HomeScreenSettingsSheet(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp)
                         .clip(RoundedCornerShape(22.dp))
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(22.dp))
+                        .background(Color.Black.copy(alpha = 0.4f))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(22.dp))
                         .padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -159,14 +153,14 @@ fun HomeScreenSettingsSheet(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp)
                         .clip(RoundedCornerShape(22.dp))
-                        .background(Color.Black.copy(alpha = 0.35f))
-                        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(22.dp))
+                        .background(Color.Black.copy(alpha = 0.4f))
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(22.dp))
                         .padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -192,7 +186,7 @@ fun HomeScreenSettingsSheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -216,7 +210,7 @@ fun HomeScreenSettingsSheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -233,7 +227,7 @@ fun HomeScreenSettingsSheet(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // 6. Action Buttons
                 Row(
@@ -280,7 +274,7 @@ fun LiquidActionButton(
     isPrimary: Boolean,
     onClick: () -> Unit
 ) {
-    val bg = if (isPrimary) Color(0xFF00A2FF).copy(alpha = 0.85f) else Color.White.copy(alpha = 0.12f)
+    val bg = if (isPrimary) Color(0xFF00A2FF).copy(alpha = 0.9f) else Color.White.copy(alpha = 0.12f)
     val border = if (isPrimary) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.2f)
 
     Box(
