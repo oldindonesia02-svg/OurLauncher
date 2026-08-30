@@ -5,7 +5,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -53,20 +55,21 @@ fun LiquidGlassSlider(
     valueRange: ClosedFloatingPointRange<Float> = 0f..100f,
     modifier: Modifier = Modifier,
     steps: Int = 0,
-    height: Dp = 38.dp
+    height: Dp = 36.dp
 ) {
     val currentOnValueChange by rememberUpdatedState(onValueChange)
     val density = LocalDensity.current
-    var isDragging by remember { mutableStateOf(false) }
+    var widthPx by remember { mutableFloatStateOf(0f) }
+    var isInteracting by remember { mutableStateOf(false) }
 
     val min = valueRange.start
     val max = valueRange.endInclusive
     val fraction = if (max > min) ((value - min) / (max - min)).coerceIn(0f, 1f) else 0f
 
-    // Morph: 0f = Normal White Pill, 1f = Expanded Liquid Glass Bubble
+    // 0f = Normal White Pill Button, 1f = Expanded Liquid Glass Capsule Bubble
     val morphProgress by animateFloatAsState(
-        targetValue = if (isDragging) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 500f),
+        targetValue = if (isInteracting) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
         label = "glassMorph"
     )
 
@@ -79,44 +82,44 @@ fun LiquidGlassSlider(
     val currentThumbHeight = lerp(restThumbHeight, activeThumbHeight, morphProgress)
     val horizontalPaddingDp = 4.dp
 
+    fun updatePosition(touchXPx: Float) {
+        if (widthPx <= 0f) return
+        val padPx = with(density) { horizontalPaddingDp.toPx() }
+        val thumbWPx = with(density) { restThumbWidth.toPx() }
+        val usableWidthPx = (widthPx - (padPx * 2) - thumbWPx).coerceAtLeast(1f)
+        val relativeX = (touchXPx - padPx - (thumbWPx / 2f)).coerceIn(0f, usableWidthPx)
+        val newFraction = relativeX / usableWidthPx
+        val rawVal = min + newFraction * (max - min)
+        val finalVal = if (steps > 0) {
+            val stepSize = (max - min) / (steps + 1)
+            ((rawVal - min) / stepSize).roundToInt() * stepSize + min
+        } else rawVal
+        currentOnValueChange(finalVal.coerceIn(min, max))
+    }
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
+            .onSizeChanged { widthPx = it.width.toFloat() }
+            // Crash-Free Unified Pointer Loop
             .pointerInput(valueRange, steps) {
-                val padPx = with(density) { horizontalPaddingDp.toPx() }
-                val thumbWPx = with(density) { restThumbWidth.toPx() }
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    isInteracting = true
+                    updatePosition(down.position.x)
 
-                detectHorizontalDragGestures(
-                    onDragStart = { offset ->
-                        isDragging = true
-                        val totalW = size.width.toFloat()
-                        val usableW = (totalW - (padPx * 2) - thumbWPx).coerceAtLeast(1f)
-                        val relX = (offset.x - padPx - (thumbWPx / 2f)).coerceIn(0f, usableW)
-                        val newFraction = relX / usableW
-                        val rawVal = min + newFraction * (max - min)
-                        val finalVal = if (steps > 0) {
-                            val stepSize = (max - min) / (steps + 1)
-                            ((rawVal - min) / stepSize).roundToInt() * stepSize + min
-                        } else rawVal
-                        currentOnValueChange(finalVal.coerceIn(min, max))
-                    },
-                    onDragEnd = { isDragging = false },
-                    onDragCancel = { isDragging = false },
-                    onHorizontalDrag = { change, _ ->
-                        change.consume()
-                        val totalW = size.width.toFloat()
-                        val usableW = (totalW - (padPx * 2) - thumbWPx).coerceAtLeast(1f)
-                        val relX = (change.position.x - padPx - (thumbWPx / 2f)).coerceIn(0f, usableW)
-                        val newFraction = relX / usableW
-                        val rawVal = min + newFraction * (max - min)
-                        val finalVal = if (steps > 0) {
-                            val stepSize = (max - min) / (steps + 1)
-                            ((rawVal - min) / stepSize).roundToInt() * stepSize + min
-                        } else rawVal
-                        currentOnValueChange(finalVal.coerceIn(min, max))
-                    }
-                )
+                    do {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if (change.pressed) {
+                            change.consume()
+                            updatePosition(change.position.x)
+                        }
+                    } while (event.changes.any { it.pressed })
+
+                    isInteracting = false
+                }
             },
         contentAlignment = Alignment.CenterStart
     ) {
@@ -124,7 +127,7 @@ fun LiquidGlassSlider(
         val thumbOffsetDp = horizontalPaddingDp + (usableWidthDp.value * fraction).dp
         val activeTrackWidthDp = (thumbOffsetDp + (currentThumbWidth.value / 2f).dp - horizontalPaddingDp).coerceAtLeast(0.dp)
 
-        // 1. Inactive Floating Track Line
+        // 1. Inactive Track Line
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -134,7 +137,7 @@ fun LiquidGlassSlider(
                 .background(Color.White.copy(alpha = 0.22f))
         )
 
-        // 2. Active Vivid Blue Line
+        // 2. Active Vivid Cyan-Blue Line
         if (activeTrackWidthDp > 0.dp) {
             Box(
                 modifier = Modifier
@@ -150,13 +153,13 @@ fun LiquidGlassSlider(
             )
         }
 
-        // 3. Morphing Thumb (Rest: White Pill | Dragging: Liquid Glass Bubble)
+        // 3. Morphing Thumb (Rest: Solid White Pill | Sliding: Liquid Glass Capsule)
         Box(
             modifier = Modifier
                 .offset(x = thumbOffsetDp)
                 .size(width = currentThumbWidth, height = currentThumbHeight)
                 .shadow(
-                    elevation = if (morphProgress > 0.3f) 8.dp else 3.dp,
+                    elevation = if (morphProgress > 0.3f) 8.dp else 2.dp,
                     shape = RoundedCornerShape(12.dp),
                     ambientColor = Color.Black.copy(alpha = 0.35f)
                 )
@@ -165,8 +168,8 @@ fun LiquidGlassSlider(
                     if (morphProgress > 0.05f) {
                         Brush.verticalGradient(
                             listOf(
-                                Color.White.copy(alpha = 0.25f * morphProgress),
-                                Color(0xFF101B2B).copy(alpha = 0.55f * morphProgress)
+                                Color.White.copy(alpha = 0.20f * morphProgress),
+                                Color(0xFF101B2B).copy(alpha = 0.50f * morphProgress)
                             )
                         )
                     } else {
@@ -178,7 +181,7 @@ fun LiquidGlassSlider(
                     brush = Brush.verticalGradient(
                         listOf(
                             Color.White.copy(alpha = 0.85f * morphProgress),
-                            Color(0xFF00C6FF).copy(alpha = 0.6f * morphProgress),
+                            Color(0xFF00C6FF).copy(alpha = 0.60f * morphProgress),
                             Color.White.copy(alpha = 0.25f * morphProgress)
                         )
                     ),
@@ -186,16 +189,17 @@ fun LiquidGlassSlider(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // Liquid Core and Glare inside the Glass Bubble
+            // Inner Liquid Blue Droplet Core & Specular Reflection Glare
             if (morphProgress > 0.1f) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val cx = size.width / 2f
                     val cy = size.height / 2f
 
+                    // Liquid Core Glow
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                Color(0xFF00C6FF).copy(alpha = 0.65f * morphProgress),
+                                Color(0xFF00C6FF).copy(alpha = 0.70f * morphProgress),
                                 Color.Transparent
                             ),
                             center = Offset(cx, cy),
@@ -205,8 +209,9 @@ fun LiquidGlassSlider(
                         center = Offset(cx, cy)
                     )
 
+                    // Glass Specular Glare
                     drawCircle(
-                        color = Color.White.copy(alpha = 0.7f * morphProgress),
+                        color = Color.White.copy(alpha = 0.75f * morphProgress),
                         radius = 1.8.dp.toPx(),
                         center = Offset(cx - 5.dp.toPx(), cy - 3.5.dp.toPx())
                     )
