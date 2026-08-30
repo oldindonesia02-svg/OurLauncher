@@ -1,12 +1,11 @@
 package com.ourlauncher.app.ui
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -18,13 +17,12 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
@@ -60,16 +58,28 @@ fun LiquidGlassSlider(
 ) {
     val currentOnValueChange by rememberUpdatedState(onValueChange)
     var widthPx by remember { mutableFloatStateOf(0f) }
+    var isInteracting by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    val touchGlow = remember { Animatable(0f) }
-    val stretchAnim = remember { Animatable(0f) }
 
     val min = valueRange.start
     val max = valueRange.endInclusive
     val fraction = if (max > min) ((value - min) / (max - min)).coerceIn(0f, 1f) else 0f
 
-    val thumbWidthDp = 34.dp
-    val thumbHeightDp = 14.dp
+    // Morph Progress: 0f = Normal White Button, 1f = Expanded Liquid Glass Capsule Bubble
+    val morphProgress by animateFloatAsState(
+        targetValue = if (isInteracting) 1f else 0f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 500f),
+        label = "glassMorph"
+    )
+
+    // Dynamic Thumb Size Interpolation
+    val restThumbWidth = 32.dp
+    val activeThumbWidth = 46.dp
+    val restThumbHeight = 14.dp
+    val activeThumbHeight = 24.dp
+
+    val currentThumbWidth = lerp(restThumbWidth, activeThumbWidth, morphProgress)
+    val currentThumbHeight = lerp(restThumbHeight, activeThumbHeight, morphProgress)
     val horizontalPaddingDp = 14.dp
 
     BoxWithConstraints(
@@ -79,7 +89,7 @@ fun LiquidGlassSlider(
             .onSizeChanged { widthPx = it.width.toFloat() }
             .shadow(elevation = 6.dp, shape = CircleShape, ambientColor = Color.Black.copy(alpha = 0.25f))
             .clip(CircleShape)
-            // Liquid Frosted Glass Capsule (Translucent)
+            // Frosted Translucent Glass Capsule Background
             .background(
                 Brush.verticalGradient(
                     listOf(
@@ -101,11 +111,9 @@ fun LiquidGlassSlider(
             .pointerInput(valueRange, steps) {
                 detectTapGestures(
                     onPress = { offset ->
-                        coroutineScope.launch {
-                            touchGlow.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium))
-                        }
+                        isInteracting = true
                         val padPx = horizontalPaddingDp.toPx()
-                        val thumbWPx = thumbWidthDp.toPx()
+                        val thumbWPx = restThumbWidth.toPx()
                         val usableWidth = (widthPx - (padPx * 2) - thumbWPx).coerceAtLeast(1f)
                         val relX = (offset.x - padPx - (thumbWPx / 2f)).coerceIn(0f, usableWidth)
                         val newFraction = relX / usableWidth
@@ -117,35 +125,19 @@ fun LiquidGlassSlider(
                         currentOnValueChange(finalVal.coerceIn(min, max))
 
                         tryAwaitRelease()
-                        coroutineScope.launch {
-                            touchGlow.animateTo(0f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow))
-                        }
+                        isInteracting = false
                     }
                 )
             }
             .pointerInput(valueRange, steps) {
-                detectDragGestures(
-                    onDragStart = {
-                        coroutineScope.launch {
-                            touchGlow.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium))
-                        }
-                    },
-                    onDragEnd = {
-                        coroutineScope.launch {
-                            touchGlow.animateTo(0f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow))
-                            stretchAnim.animateTo(0f, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium))
-                        }
-                    },
-                    onDragCancel = {
-                        coroutineScope.launch {
-                            touchGlow.animateTo(0f, spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessLow))
-                            stretchAnim.animateTo(0f, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium))
-                        }
-                    },
-                    onDrag = { change, dragAmount ->
+                detectHorizontalDragGestures(
+                    onDragStart = { isInteracting = true },
+                    onDragEnd = { isInteracting = false },
+                    onDragCancel = { isInteracting = false },
+                    onHorizontalDrag = { change, _ ->
                         change.consume()
                         val padPx = horizontalPaddingDp.toPx()
-                        val thumbWPx = thumbWidthDp.toPx()
+                        val thumbWPx = restThumbWidth.toPx()
                         val usableWidth = (widthPx - (padPx * 2) - thumbWPx).coerceAtLeast(1f)
                         val relX = (change.position.x - padPx - (thumbWPx / 2f)).coerceIn(0f, usableWidth)
                         val newFraction = relX / usableWidth
@@ -155,22 +147,16 @@ fun LiquidGlassSlider(
                             ((rawVal - min) / stepSize).roundToInt() * stepSize + min
                         } else rawVal
                         currentOnValueChange(finalVal.coerceIn(min, max))
-
-                        coroutineScope.launch {
-                            val target = (dragAmount.x * 0.5f).coerceIn(-20f, 20f)
-                            stretchAnim.snapTo(target)
-                            stretchAnim.animateTo(0f, spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessMedium))
-                        }
                     }
                 )
             },
         contentAlignment = Alignment.CenterStart
     ) {
-        val usableWidthDp = (maxWidth - (horizontalPaddingDp * 2) - thumbWidthDp).coerceAtLeast(0.dp)
-        val thumbOffsetDp = horizontalPaddingDp + (usableWidthDp.value * fraction).dp + stretchAnim.value.dp
-        val activeTrackWidthDp = (thumbOffsetDp + (thumbWidthDp / 2f) - horizontalPaddingDp).coerceAtLeast(0.dp)
+        val usableWidthDp = (maxWidth - (horizontalPaddingDp * 2) - currentThumbWidth).coerceAtLeast(0.dp)
+        val thumbOffsetDp = horizontalPaddingDp + (usableWidthDp.value * fraction).dp
+        val activeTrackWidthDp = (thumbOffsetDp + (currentThumbWidth / 2f) - horizontalPaddingDp).coerceAtLeast(0.dp)
 
-        // 1. Inactive Frosted Track
+        // 1. Inactive Line Track
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -180,7 +166,7 @@ fun LiquidGlassSlider(
                 .background(Color.White.copy(alpha = 0.18f))
         )
 
-        // 2. Active Neon Cyan Glow Track
+        // 2. Active Glowing Neon Cyan Track
         if (activeTrackWidthDp > 0.dp) {
             Box(
                 modifier = Modifier
@@ -196,55 +182,7 @@ fun LiquidGlassSlider(
             )
         }
 
-        // 3. Fluid Droplet Stretch & Touch Refraction Canvas
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = horizontalPaddingDp)
-        ) {
-            val centerY = size.height / 2f
-            val thumbCenterXPx = (thumbOffsetDp - horizontalPaddingDp + (thumbWidthDp / 2f)).toPx()
-            val stretch = stretchAnim.value * 2.6f
-
-            // Liquid Droplet Teardrop Tail on drag
-            if (abs(stretch) > 0.3f) {
-                val blobPath = Path().apply {
-                    val headX = thumbCenterXPx + stretch
-                    val tailX = thumbCenterXPx - stretch * 0.7f
-                    val radiusY = 8.dp.toPx()
-
-                    moveTo(tailX, centerY - radiusY)
-                    quadraticBezierTo(thumbCenterXPx, centerY - radiusY - (abs(stretch) * 0.35f), headX, centerY)
-                    quadraticBezierTo(thumbCenterXPx, centerY + radiusY + (abs(stretch) * 0.35f), tailX, centerY + radiusY)
-                    close()
-                }
-                drawPath(
-                    path = blobPath,
-                    brush = Brush.horizontalGradient(
-                        listOf(Color(0xFF00E5FF).copy(alpha = 0.7f), Color(0xFF007AFF).copy(alpha = 0.85f))
-                    )
-                )
-            }
-
-            // Glass Lens Halo & Reflection when Touched
-            if (touchGlow.value > 0.01f) {
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color(0xFF00E5FF).copy(alpha = 0.55f * touchGlow.value),
-                            Color.White.copy(alpha = 0.28f * touchGlow.value),
-                            Color.Transparent
-                        ),
-                        center = Offset(thumbCenterXPx, centerY),
-                        radius = 32.dp.toPx()
-                    ),
-                    radius = 32.dp.toPx(),
-                    center = Offset(thumbCenterXPx, centerY)
-                )
-            }
-        }
-
-        // 4. Specular Reflection
+        // 3. Top Specular Glass Reflection Glare
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -258,16 +196,69 @@ fun LiquidGlassSlider(
                 )
         )
 
-        // 5. Floating White Pill Thumb
-        val dynamicWidth = (thumbWidthDp.value + abs(stretchAnim.value) * 0.4f).dp
+        // 4. Morphing Liquid Glass Thumb / Normal White Button
         Box(
             modifier = Modifier
-                .offset(x = thumbOffsetDp - (abs(stretchAnim.value) * 0.2f).dp)
-                .size(width = dynamicWidth, height = thumbHeightDp)
-                .shadow(elevation = 8.dp, shape = CircleShape)
+                .offset(x = thumbOffsetDp)
+                .size(width = currentThumbWidth, height = currentThumbHeight)
+                .shadow(
+                    elevation = if (morphProgress > 0.5f) 10.dp else 4.dp,
+                    shape = CircleShape,
+                    ambientColor = Color.Black.copy(alpha = 0.35f)
+                )
                 .clip(CircleShape)
-                .background(Color.White)
-                .border(1.2.dp, Color(0xFF00E5FF).copy(alpha = 0.8f), CircleShape)
-        )
+                // Background Layer: White in rest, Translucent Glass when sliding
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 1f - (0.75f * morphProgress)),
+                            Color.White.copy(alpha = 1f - (0.90f * morphProgress))
+                        )
+                    )
+                )
+                // Refractive Glass Border on Morph
+                .border(
+                    width = if (morphProgress > 0.1f) 1.2.dp else 0.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.85f * morphProgress),
+                            Color(0xFF00E5FF).copy(alpha = 0.6f * morphProgress),
+                            Color.White.copy(alpha = 0.25f * morphProgress)
+                        )
+                    ),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Internal Liquid Core visible inside the glass bubble during slide
+            if (morphProgress > 0.05f) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val cx = size.width / 2f
+                    val cy = size.height / 2f
+
+                    // Inner Liquid Droplet Glow
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color(0xFF00E5FF).copy(alpha = 0.75f * morphProgress),
+                                Color(0xFF007AFF).copy(alpha = 0.35f * morphProgress),
+                                Color.Transparent
+                            ),
+                            center = Offset(cx, cy),
+                            radius = 12.dp.toPx()
+                        ),
+                        radius = 12.dp.toPx(),
+                        center = Offset(cx, cy)
+                    )
+
+                    // Top Specular Bubble Glare
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.65f * morphProgress),
+                        radius = 2.dp.toPx(),
+                        center = Offset(cx - 6.dp.toPx(), cy - 4.dp.toPx())
+                    )
+                }
+            }
+        }
     }
 }
