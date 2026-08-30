@@ -17,11 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+// 1. Liquid Glass Button (Reference 3 Pill Style)
 @Composable
 fun LiquidGlassButton(
     text: String,
@@ -30,20 +30,20 @@ fun LiquidGlassButton(
     isPrimary: Boolean = true
 ) {
     val bg = if (isPrimary) {
-        Brush.horizontalGradient(listOf(Color(0xFF00A2FF), Color(0xFF007AFF)))
+        Brush.horizontalGradient(listOf(Color(0xFF00A2FF), Color(0xFF0072FF)))
     } else {
         Brush.verticalGradient(
             listOf(
-                Color.White.copy(alpha = 0.22f),
-                Color.White.copy(alpha = 0.08f)
+                Color.White.copy(alpha = 0.16f),
+                Color.White.copy(alpha = 0.05f)
             )
         )
     }
 
     val borderBrush = if (isPrimary) {
-        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.5f), Color.White.copy(alpha = 0.1f)))
+        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.10f)))
     } else {
-        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.12f)))
+        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.30f), Color.White.copy(alpha = 0.08f)))
     }
 
     Box(
@@ -53,7 +53,7 @@ fun LiquidGlassButton(
             .background(bg)
             .border(1.dp, borderBrush, CircleShape)
             .clickable { onClick() }
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = 22.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -65,6 +65,7 @@ fun LiquidGlassButton(
     }
 }
 
+// 2. Liquid Glass Toggle
 @Composable
 fun LiquidGlassToggle(
     checked: Boolean,
@@ -94,6 +95,7 @@ fun LiquidGlassToggle(
     }
 }
 
+// 3. True Liquid Glass Floating Container (Exact Reference 3 Look)
 @Composable
 fun LiquidGlassContainer(
     modifier: Modifier = Modifier,
@@ -102,11 +104,12 @@ fun LiquidGlassContainer(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(32.dp))
+            // Refractive Translucent Aqua-Slate Glass
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF223244).copy(alpha = 0.58f),
-                        Color(0xFF0F1824).copy(alpha = 0.72f)
+                        Color(0xFF1E3844).copy(alpha = 0.70f),
+                        Color(0xFF0D1E28).copy(alpha = 0.82f)
                     )
                 )
             )
@@ -114,21 +117,22 @@ fun LiquidGlassContainer(
                 width = 1.3.dp,
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.55f),
+                        Color.White.copy(alpha = 0.60f),
                         Color.White.copy(alpha = 0.12f),
-                        Color.White.copy(alpha = 0.35f)
+                        Color.White.copy(alpha = 0.40f)
                     )
                 ),
                 shape = RoundedCornerShape(32.dp)
             )
     ) {
+        // Top Specular Reflection Highlight
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.5.dp)
                 .background(
                     Brush.horizontalGradient(
-                        listOf(Color.Transparent, Color.White.copy(alpha = 0.6f), Color.Transparent)
+                        listOf(Color.Transparent, Color.White.copy(alpha = 0.70f), Color.Transparent)
                     )
                 )
         )
@@ -143,6 +147,7 @@ fun LiquidGlassContainer(
     }
 }
 
+// 4. Centered Liquid Glass Dialog
 @Composable
 fun LiquidGlassDialog(
     title: String,
@@ -159,12 +164,12 @@ fun LiquidGlassDialog(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.35f))
+            .background(Color.Black.copy(alpha = 0.28f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onDismiss() }
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 22.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
@@ -214,7 +219,7 @@ fun LiquidGlassDialog(
                         text = confirmText,
                         onClick = onConfirm,
                         isPrimary = true,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1.2f)
                     )
                 }
             }
