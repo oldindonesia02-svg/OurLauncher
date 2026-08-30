@@ -538,41 +538,35 @@ fun HomeScreen(
             )
         }
 
-        if (showHomeSettingsSheet) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                HomeScreenSettingsSheet(
-                    settingsManager = settingsManager,
-                    onOpenTransitionEffects = {
-                        showHomeSettingsSheet = false
-                        coroutineScope.launch {
-                            delay(150)
-                            showIconCustomizeSheet = true
-                        }
-                    },
-                    onSetDefaultScreen = {
-                        showHomeSettingsSheet = false
-                        liveSearchOffset = settingsManager.searchOffset
-                        liveHideCapsule = settingsManager.hideSearchCapsule
-                        coroutineScope.launch {
-                            delay(150)
-                            showSearchBarPositionSheet = true
-                        }
-                    },
-                    onRegenerateIcons = {
-                        showHomeSettingsSheet = false
-                        clearIconCache()
-                    },
-                    onOpenMoreSettings = {
-                        showHomeSettingsSheet = false
-                        onOpenSettings()
-                    },
-                    onDismiss = { showHomeSettingsSheet = false }
-                )
-            }
-        }
+        HomeScreenSettingsSheet(
+            settingsManager = settingsManager,
+            visible = showHomeSettingsSheet,
+            onOpenTransitionEffects = {
+                showHomeSettingsSheet = false
+                coroutineScope.launch {
+                    delay(150)
+                    showIconCustomizeSheet = true
+                }
+            },
+            onSetDefaultScreen = {
+                showHomeSettingsSheet = false
+                liveSearchOffset = settingsManager.searchOffset
+                liveHideCapsule = settingsManager.hideSearchCapsule
+                coroutineScope.launch {
+                    delay(150)
+                    showSearchBarPositionSheet = true
+                }
+            },
+            onRegenerateIcons = {
+                showHomeSettingsSheet = false
+                clearIconCache()
+            },
+            onOpenMoreSettings = {
+                showHomeSettingsSheet = false
+                onOpenSettings()
+            },
+            onDismiss = { showHomeSettingsSheet = false }
+        )
         
         if (showSearchBarPositionSheet) {
             TopLiquidSearchBarPositionCard(
@@ -688,3 +682,4 @@ fun HomeScreen(
         }
     }
 }
+                                          
