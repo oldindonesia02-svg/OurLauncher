@@ -47,7 +47,7 @@ fun HomeScreenSettingsSheet(
             onDismiss()
         }
     ) {
-        // 1. Desktop Grid Slider
+        // 1. Desktop Grid Floating Slider
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -55,20 +55,17 @@ fun HomeScreenSettingsSheet(
             Text("Desktop Grid", color = Color.White, fontSize = 14.sp)
             Text("${gridRows.roundToInt()} Rows", color = liquidCyan, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         LiquidGlassSlider(
             value = gridRows,
-            onValueChange = { 
-                gridRows = it
-                settingsManager.gridRows = it.roundToInt()
-            },
+            onValueChange = { gridRows = it },
             valueRange = 4f..7f,
             steps = 3
         )
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // 2. Icon Size Slider
+        // 2. Icon Size Floating Slider
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -76,13 +73,10 @@ fun HomeScreenSettingsSheet(
             Text("Icon Size", color = Color.White, fontSize = 14.sp)
             Text("${iconSize.toInt()} dp", color = liquidCyan, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         LiquidGlassSlider(
             value = iconSize,
-            onValueChange = { 
-                iconSize = it
-                settingsManager.iconSize = it
-            },
+            onValueChange = { iconSize = it },
             valueRange = 40f..72f
         )
 
@@ -124,10 +118,7 @@ fun HomeScreenSettingsSheet(
             Text("Show label", color = Color.White, fontSize = 14.sp)
             Switch(
                 checked = showLabel,
-                onCheckedChange = { 
-                    showLabel = it
-                    settingsManager.showLabels = it
-                },
+                onCheckedChange = { showLabel = it },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
                     checkedTrackColor = liquidCyan,
