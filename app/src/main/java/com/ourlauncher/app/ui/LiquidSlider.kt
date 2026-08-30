@@ -1,21 +1,15 @@
 package com.ourlauncher.app.ui
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -23,7 +17,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
 import kotlin.math.roundToInt
 
 @Composable
@@ -60,32 +53,19 @@ fun LiquidGlassSlider(
     val currentOnValueChange by rememberUpdatedState(onValueChange)
     val density = LocalDensity.current
     var widthPx by remember { mutableFloatStateOf(0f) }
-    var isInteracting by remember { mutableStateOf(false) }
 
     val min = valueRange.start
     val max = valueRange.endInclusive
     val fraction = if (max > min) ((value - min) / (max - min)).coerceIn(0f, 1f) else 0f
 
-    // 0f = Normal White Pill Button, 1f = Expanded Liquid Glass Capsule Bubble
-    val morphProgress by animateFloatAsState(
-        targetValue = if (isInteracting) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
-        label = "glassMorph"
-    )
-
-    val restThumbWidth = 30.dp
-    val activeThumbWidth = 46.dp
-    val restThumbHeight = 14.dp
-    val activeThumbHeight = 22.dp
-
-    val currentThumbWidth = lerp(restThumbWidth, activeThumbWidth, morphProgress)
-    val currentThumbHeight = lerp(restThumbHeight, activeThumbHeight, morphProgress)
+    val thumbWidthDp = 30.dp
+    val thumbHeightDp = 14.dp
     val horizontalPaddingDp = 4.dp
 
     fun updatePosition(touchXPx: Float) {
         if (widthPx <= 0f) return
         val padPx = with(density) { horizontalPaddingDp.toPx() }
-        val thumbWPx = with(density) { restThumbWidth.toPx() }
+        val thumbWPx = with(density) { thumbWidthDp.toPx() }
         val usableWidthPx = (widthPx - (padPx * 2) - thumbWPx).coerceAtLeast(1f)
         val relativeX = (touchXPx - padPx - (thumbWPx / 2f)).coerceIn(0f, usableWidthPx)
         val newFraction = relativeX / usableWidthPx
@@ -102,30 +82,25 @@ fun LiquidGlassSlider(
             .fillMaxWidth()
             .height(height)
             .onSizeChanged { widthPx = it.width.toFloat() }
-            // Crash-Free Unified Pointer Loop
             .pointerInput(valueRange, steps) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    isInteracting = true
-                    updatePosition(down.position.x)
-
-                    do {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (change.pressed) {
-                            change.consume()
-                            updatePosition(change.position.x)
-                        }
-                    } while (event.changes.any { it.pressed })
-
-                    isInteracting = false
+                detectTapGestures { offset ->
+                    updatePosition(offset.x)
                 }
+            }
+            .pointerInput(valueRange, steps) {
+                detectHorizontalDragGestures(
+                    onDragStart = { offset -> updatePosition(offset.x) },
+                    onHorizontalDrag = { change, _ ->
+                        change.consume()
+                        updatePosition(change.position.x)
+                    }
+                )
             },
         contentAlignment = Alignment.CenterStart
     ) {
-        val usableWidthDp = (maxWidth - (horizontalPaddingDp * 2) - currentThumbWidth).coerceAtLeast(0.dp)
+        val usableWidthDp = (maxWidth - (horizontalPaddingDp * 2) - thumbWidthDp).coerceAtLeast(0.dp)
         val thumbOffsetDp = horizontalPaddingDp + (usableWidthDp.value * fraction).dp
-        val activeTrackWidthDp = (thumbOffsetDp + (currentThumbWidth.value / 2f).dp - horizontalPaddingDp).coerceAtLeast(0.dp)
+        val activeTrackWidthDp = (thumbOffsetDp + (thumbWidthDp.value / 2f).dp - horizontalPaddingDp).coerceAtLeast(0.dp)
 
         // 1. Inactive Track Line
         Box(
@@ -137,7 +112,7 @@ fun LiquidGlassSlider(
                 .background(Color.White.copy(alpha = 0.22f))
         )
 
-        // 2. Active Vivid Cyan-Blue Line
+        // 2. Active Glowing Blue Line
         if (activeTrackWidthDp > 0.dp) {
             Box(
                 modifier = Modifier
@@ -153,70 +128,14 @@ fun LiquidGlassSlider(
             )
         }
 
-        // 3. Morphing Thumb (Rest: Solid White Pill | Sliding: Liquid Glass Capsule)
+        // 3. Normal White Pill Thumb
         Box(
             modifier = Modifier
                 .offset(x = thumbOffsetDp)
-                .size(width = currentThumbWidth, height = currentThumbHeight)
-                .shadow(
-                    elevation = if (morphProgress > 0.3f) 8.dp else 2.dp,
-                    shape = RoundedCornerShape(12.dp),
-                    ambientColor = Color.Black.copy(alpha = 0.35f)
-                )
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    if (morphProgress > 0.05f) {
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.20f * morphProgress),
-                                Color(0xFF101B2B).copy(alpha = 0.50f * morphProgress)
-                            )
-                        )
-                    } else {
-                        Brush.verticalGradient(listOf(Color.White, Color.White))
-                    }
-                )
-                .border(
-                    width = (1.2f * morphProgress).dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.85f * morphProgress),
-                            Color(0xFF00C6FF).copy(alpha = 0.60f * morphProgress),
-                            Color.White.copy(alpha = 0.25f * morphProgress)
-                        )
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            // Inner Liquid Blue Droplet Core & Specular Reflection Glare
-            if (morphProgress > 0.1f) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val cx = size.width / 2f
-                    val cy = size.height / 2f
-
-                    // Liquid Core Glow
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                Color(0xFF00C6FF).copy(alpha = 0.70f * morphProgress),
-                                Color.Transparent
-                            ),
-                            center = Offset(cx, cy),
-                            radius = 10.dp.toPx()
-                        ),
-                        radius = 10.dp.toPx(),
-                        center = Offset(cx, cy)
-                    )
-
-                    // Glass Specular Glare
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.75f * morphProgress),
-                        radius = 1.8.dp.toPx(),
-                        center = Offset(cx - 5.dp.toPx(), cy - 3.5.dp.toPx())
-                    )
-                }
-            }
-        }
+                .size(width = thumbWidthDp, height = thumbHeightDp)
+                .shadow(elevation = 3.dp, shape = CircleShape)
+                .clip(CircleShape)
+                .background(Color.White)
+        )
     }
 }
