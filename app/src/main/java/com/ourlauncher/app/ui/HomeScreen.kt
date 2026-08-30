@@ -172,6 +172,8 @@ fun HomeScreen(
     var liveSearchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
     var liveHideCapsule by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
 
+    val isAnySheetOpen = showHomeSettingsSheet || showIconCustomizeSheet || showSearchBarPositionSheet || isOverviewMode
+
     LaunchedEffect(isOverviewMode) {
         overviewAnim.animateTo(
             targetValue = if (isOverviewMode) 1f else 0f,
@@ -179,7 +181,7 @@ fun HomeScreen(
         )
     }
 
-    BackHandler(enabled = isOverviewMode || showHomeSettingsSheet || showIconCustomizeSheet || showSearchBarPositionSheet) {
+    BackHandler(enabled = isAnySheetOpen) {
         when {
             showSearchBarPositionSheet -> showSearchBarPositionSheet = false
             showIconCustomizeSheet -> showIconCustomizeSheet = false
@@ -239,7 +241,7 @@ fun HomeScreen(
     }
 
     fun handleAppOpen(app: AppInfo, bounds: Rect?) {
-        if (isOverviewMode || showHomeSettingsSheet || showIconCustomizeSheet || showSearchBarPositionSheet) return
+        if (isAnySheetOpen) return
         if (!settingsManager.animEnabled || bounds == null) {
             onAppClick(app)
             return
@@ -256,7 +258,8 @@ fun HomeScreen(
             onAppClickWithBounds(app, bounds)
         }
     }
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenWidthPx = constraints.maxWidth.toFloat()
         val screenHeightPx = constraints.maxHeight.toFloat()
         val p = animProgress.value
@@ -270,26 +273,28 @@ fun HomeScreen(
                 .fillMaxSize()
                 .scale(bgScale)
                 .alpha(bgAlpha)
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, _, zoom: Float, _ ->
-                        if (zoom < 0.88f && !isOverviewMode) {
-                            isOverviewMode = true
+                .pointerInput(isAnySheetOpen) {
+                    if (!isAnySheetOpen) {
+                        detectTransformGestures { _, _, zoom: Float, _ ->
+                            if (zoom < 0.88f && !isOverviewMode) {
+                                isOverviewMode = true
+                            }
                         }
                     }
                 }
-                .pointerInput(Unit) {
-                    var totalVertical = 0f
-                    var startX = 0f
-                    detectVerticalDragGestures(
-                        onDragStart = { offset: Offset ->
-                            startX = offset.x
-                            totalVertical = 0f
-                        },
-                        onVerticalDrag = { _: PointerInputChange, dragAmount: Float ->
-                            totalVertical += dragAmount
-                        },
-                        onDragEnd = {
-                            if (!isOverviewMode && !showHomeSettingsSheet && !showIconCustomizeSheet && !showSearchBarPositionSheet) {
+                .pointerInput(isAnySheetOpen) {
+                    if (!isAnySheetOpen) {
+                        var totalVertical = 0f
+                        var startX = 0f
+                        detectVerticalDragGestures(
+                            onDragStart = { offset: Offset ->
+                                startX = offset.x
+                                totalVertical = 0f
+                            },
+                            onVerticalDrag = { _: PointerInputChange, dragAmount: Float ->
+                                totalVertical += dragAmount
+                            },
+                            onDragEnd = {
                                 if (totalVertical < -50f) {
                                     onOpenDrawer()
                                 } else if (totalVertical > 50f) {
@@ -300,29 +305,28 @@ fun HomeScreen(
                                     }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
-                .pointerInput(Unit) {
-                    detectTapGestures(
-                        onTap = {
-                            if (isOverviewMode) isOverviewMode = false
-                            showHomeSettingsSheet = false
-                            showIconCustomizeSheet = false
-                            showSearchBarPositionSheet = false
-                        },
-                        onLongPress = {
-                            if (!isOverviewMode) {
-                                showHomeSettingsSheet = true
+                .pointerInput(isAnySheetOpen) {
+                    if (!isAnySheetOpen) {
+                        detectTapGestures(
+                            onTap = {
+                                if (isOverviewMode) isOverviewMode = false
+                            },
+                            onLongPress = {
+                                if (!isOverviewMode) {
+                                    showHomeSettingsSheet = true
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 HorizontalPager(
                     state = pagerState,
-                    userScrollEnabled = !isOverviewMode,
+                    userScrollEnabled = !isAnySheetOpen,
                     beyondBoundsPageCount = 1,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -357,8 +361,8 @@ fun HomeScreen(
                             verticalArrangement = Arrangement.SpaceAround,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .pointerInput(pageIndex) {
-                                    if (!isOverviewMode) {
+                                .pointerInput(pageIndex, isAnySheetOpen) {
+                                    if (!isAnySheetOpen) {
                                         detectDragGesturesAfterLongPress(
                                             onDragStart = { startPos: Offset ->
                                                 val found = itemBoundsMap.entries.firstOrNull { (_, rect: Rect) ->
@@ -537,7 +541,7 @@ fun HomeScreen(
         if (showHomeSettingsSheet) {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.BottomCenter
+                contentAlignment = Alignment.Center
             ) {
                 HomeScreenSettingsSheet(
                     settingsManager = settingsManager,
