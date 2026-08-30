@@ -1,9 +1,11 @@
 package com.ourlauncher.app.ui
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,7 +33,18 @@ fun LiquidGlassButton(
     val bg = if (isPrimary) {
         Brush.horizontalGradient(listOf(Color(0xFF00A2FF), Color(0xFF007AFF)))
     } else {
-        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.05f)))
+        Brush.verticalGradient(
+            listOf(
+                Color.White.copy(alpha = 0.22f),
+                Color.White.copy(alpha = 0.08f)
+            )
+        )
+    }
+
+    val borderBrush = if (isPrimary) {
+        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.5f), Color.White.copy(alpha = 0.1f)))
+    } else {
+        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.12f)))
     }
 
     Box(
@@ -39,7 +52,7 @@ fun LiquidGlassButton(
             .height(48.dp)
             .clip(CircleShape)
             .background(bg)
-            .border(0.8.dp, Color.White.copy(alpha = if (isPrimary) 0.35f else 0.18f), CircleShape)
+            .border(1.dp, borderBrush, CircleShape)
             .clickable { onClick() }
             .padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center
@@ -60,8 +73,8 @@ fun LiquidGlassToggle(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val thumbOffset by animateDpAsState(targetValue = if (checked) 24.dp else 2.dp, label = "toggle")
-    val trackColor = if (checked) Color(0xFF00E5FF).copy(alpha = 0.7f) else Color.White.copy(alpha = 0.12f)
+    val thumbOffset by animateDpAsState(targetValue = if (checked) 24.dp else 2.dp, animationSpec = spring(stiffness = 600f), label = "toggle")
+    val trackColor = if (checked) Color(0xFF00E5FF).copy(alpha = 0.8f) else Color.White.copy(alpha = 0.15f)
 
     Box(
         modifier = modifier
@@ -69,7 +82,7 @@ fun LiquidGlassToggle(
             .height(28.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(trackColor)
-            .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
             .clickable { onCheckedChange(!checked) },
         contentAlignment = Alignment.CenterStart
     ) {
@@ -83,33 +96,54 @@ fun LiquidGlassToggle(
     }
 }
 
-// 3. Liquid Frosted Glass Container Card
+// 3. Liquid Frosted Glass Container Card (Translucent Glassmorphic)
 @Composable
 fun LiquidGlassContainer(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(
+    Box(
         modifier = modifier
             .clip(RoundedCornerShape(32.dp))
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF182330).copy(alpha = 0.65f),
-                        Color(0xFF0D141E).copy(alpha = 0.82f)
+                        Color(0xFF223244).copy(alpha = 0.58f),
+                        Color(0xFF0F1824).copy(alpha = 0.72f)
                     )
                 )
             )
             .border(
-                width = 1.2.dp,
+                width = 1.4.dp,
                 brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f))
+                    listOf(
+                        Color.White.copy(alpha = 0.55f),
+                        Color.White.copy(alpha = 0.12f),
+                        Color.White.copy(alpha = 0.35f)
+                    )
                 ),
                 shape = RoundedCornerShape(32.dp)
             )
-            .padding(22.dp)
     ) {
-        content()
+        // Specular Top Ambient Highlight
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.5.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(Color.Transparent, Color.White.copy(alpha = 0.6f), Color.Transparent)
+                    )
+                )
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(22.dp)
+        ) {
+            content()
+        }
     }
 }
 
@@ -122,6 +156,7 @@ fun LiquidGlassDialog(
     cancelText: String = "Cancel",
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    onCancel: () -> Unit = onDismiss,
     content: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     Dialog(
@@ -131,15 +166,21 @@ fun LiquidGlassDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.35f))
-                .clickable { onDismiss() }
-                .padding(horizontal = 22.dp),
+                .background(Color.Black.copy(alpha = 0.28f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onDismiss() }
+                .padding(horizontal = 20.dp),
             contentAlignment = Alignment.Center
         ) {
             LiquidGlassContainer(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(enabled = false) {}
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {}
             ) {
                 Text(
                     text = title,
@@ -152,7 +193,7 @@ fun LiquidGlassDialog(
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = message,
-                        color = Color.White.copy(alpha = 0.82f),
+                        color = Color.White.copy(alpha = 0.85f),
                         fontSize = 14.sp,
                         lineHeight = 20.sp
                     )
@@ -171,7 +212,7 @@ fun LiquidGlassDialog(
                 ) {
                     LiquidGlassButton(
                         text = cancelText,
-                        onClick = onDismiss,
+                        onClick = onCancel,
                         isPrimary = false,
                         modifier = Modifier.weight(1f)
                     )
