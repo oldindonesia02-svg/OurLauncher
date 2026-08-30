@@ -28,6 +28,7 @@ fun LiquidGlassCardDialog(
     title: String,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
+    onCancel: () -> Unit = onDismiss,
     confirmText: String = "Okay",
     cancelText: String = "Cancel",
     content: @Composable ColumnScope.() -> Unit
@@ -125,7 +126,7 @@ fun LiquidGlassCardDialog(
                                     )
                                 )
                                 .border(0.8.dp, Color.White.copy(alpha = 0.18f), CircleShape)
-                                .clickable { onDismiss() },
+                                .clickable { onCancel() },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
