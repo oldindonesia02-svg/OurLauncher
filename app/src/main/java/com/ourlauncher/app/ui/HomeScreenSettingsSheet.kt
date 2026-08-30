@@ -36,6 +36,10 @@ fun HomeScreenSettingsSheet(
         confirmText = "Apply",
         cancelText = "More",
         onDismiss = onDismiss,
+        onCancel = {
+            onDismiss()
+            onOpenMoreSettings()
+        },
         onConfirm = {
             settingsManager.iconSize = iconSize
             settingsManager.gridRows = gridRows.roundToInt()
@@ -43,7 +47,7 @@ fun HomeScreenSettingsSheet(
             onDismiss()
         }
     ) {
-        // ১. গ্রিড রো স্লাইডার
+        // 1. Desktop Grid Slider (Capsule Pill Style)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -54,14 +58,17 @@ fun HomeScreenSettingsSheet(
         Spacer(modifier = Modifier.height(8.dp))
         LiquidGlassSlider(
             value = gridRows,
-            onValueChange = { gridRows = it },
+            onValueChange = { 
+                gridRows = it
+                settingsManager.gridRows = it.roundToInt()
+            },
             valueRange = 4f..7f,
             steps = 3
         )
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // ২. আইকন সাইজ স্লাইডার
+        // 2. Icon Size Slider (Capsule Pill Style)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -72,13 +79,16 @@ fun HomeScreenSettingsSheet(
         Spacer(modifier = Modifier.height(8.dp))
         LiquidGlassSlider(
             value = iconSize,
-            onValueChange = { iconSize = it },
+            onValueChange = { 
+                iconSize = it
+                settingsManager.iconSize = it
+            },
             valueRange = 40f..72f
         )
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // ৩. নেভিগেশন লিংকস
+        // 3. Navigation Links
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -103,7 +113,7 @@ fun HomeScreenSettingsSheet(
             Text("›", color = Color.White.copy(alpha = 0.5f), fontSize = 18.sp)
         }
 
-        // ৪. শো লেবেল টগল
+        // 4. Show Label Toggle
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -114,7 +124,10 @@ fun HomeScreenSettingsSheet(
             Text("Show label", color = Color.White, fontSize = 14.sp)
             Switch(
                 checked = showLabel,
-                onCheckedChange = { showLabel = it },
+                onCheckedChange = { 
+                    showLabel = it
+                    settingsManager.showLabels = it
+                },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
                     checkedTrackColor = liquidCyan,
@@ -124,7 +137,7 @@ fun HomeScreenSettingsSheet(
             )
         }
 
-        // ৫. লিকুইড ফোল্ডার টগল
+        // 5. Liquid Folder Toggle
         Row(
             modifier = Modifier
                 .fillMaxWidth()
