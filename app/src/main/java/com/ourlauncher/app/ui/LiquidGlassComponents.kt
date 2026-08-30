@@ -96,7 +96,7 @@ fun LiquidGlassToggle(
     }
 }
 
-// 3. Liquid Frosted Glass Container Card (Translucent Glassmorphic)
+// 3. Liquid Frosted Glass Container Card (True Translucent Glassmorphic)
 @Composable
 fun LiquidGlassContainer(
     modifier: Modifier = Modifier,
@@ -108,18 +108,18 @@ fun LiquidGlassContainer(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF223244).copy(alpha = 0.58f),
-                        Color(0xFF0F1824).copy(alpha = 0.72f)
+                        Color(0xFF25374C).copy(alpha = 0.52f),
+                        Color(0xFF101A26).copy(alpha = 0.68f)
                     )
                 )
             )
             .border(
-                width = 1.4.dp,
+                width = 1.3.dp,
                 brush = Brush.verticalGradient(
                     listOf(
                         Color.White.copy(alpha = 0.55f),
                         Color.White.copy(alpha = 0.12f),
-                        Color.White.copy(alpha = 0.35f)
+                        Color.White.copy(alpha = 0.38f)
                     )
                 ),
                 shape = RoundedCornerShape(32.dp)
@@ -132,7 +132,7 @@ fun LiquidGlassContainer(
                 .height(1.5.dp)
                 .background(
                     Brush.horizontalGradient(
-                        listOf(Color.Transparent, Color.White.copy(alpha = 0.6f), Color.Transparent)
+                        listOf(Color.Transparent, Color.White.copy(alpha = 0.65f), Color.Transparent)
                     )
                 )
         )
@@ -166,7 +166,7 @@ fun LiquidGlassDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.28f))
+                .background(Color.Black.copy(alpha = 0.22f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
