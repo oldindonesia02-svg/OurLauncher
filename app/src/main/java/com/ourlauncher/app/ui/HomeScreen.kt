@@ -538,36 +538,37 @@ fun HomeScreen(
             )
         }
 
-        HomeScreenSettingsSheet(
-            settingsManager = settingsManager,
-            visible = showHomeSettingsSheet,
-            onOpenTransitionEffects = {
-                showHomeSettingsSheet = false
-                coroutineScope.launch {
-                    delay(150)
-                    showIconCustomizeSheet = true
+                if (showHomeSettingsSheet) {
+            HomeScreenSettingsSheet(
+                settingsManager = settingsManager,
+                onOpenTransitionEffects = {
+                    showHomeSettingsSheet = false
+                    coroutineScope.launch {
+                        delay(150)
+                        showIconCustomizeSheet = true
+                    }
+                },
+                onSetDefaultScreen = {
+                    showHomeSettingsSheet = false
+                    liveSearchOffset = settingsManager.searchOffset
+                    liveHideCapsule = settingsManager.hideSearchCapsule
+                    coroutineScope.launch {
+                        delay(150)
+                        showSearchBarPositionSheet = true
+                    }
+                },
+                onRegenerateIcons = {
+                    showHomeSettingsSheet = false
+                    clearIconCache()
+                },
+                onOpenMoreSettings = {
+                    showHomeSettingsSheet = false
+                    onOpenSettings()
+                },
+                onDismiss = { showHomeSettingsSheet = false }
+            )
                 }
-            },
-            onSetDefaultScreen = {
-                showHomeSettingsSheet = false
-                liveSearchOffset = settingsManager.searchOffset
-                liveHideCapsule = settingsManager.hideSearchCapsule
-                coroutineScope.launch {
-                    delay(150)
-                    showSearchBarPositionSheet = true
-                }
-            },
-            onRegenerateIcons = {
-                showHomeSettingsSheet = false
-                clearIconCache()
-            },
-            onOpenMoreSettings = {
-                showHomeSettingsSheet = false
-                onOpenSettings()
-            },
-            onDismiss = { showHomeSettingsSheet = false }
-        )
-        
+                
         if (showSearchBarPositionSheet) {
             TopLiquidSearchBarPositionCard(
                 currentOffset = liveSearchOffset,
