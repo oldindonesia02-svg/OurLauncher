@@ -35,9 +35,9 @@ fun HomeScreenSettingsSheet(
     BackHandler { onDismiss() }
 
     var gridRows by remember { mutableFloatStateOf(settingsManager.gridRows.toFloat()) }
-    var iconSize by remember { mutableFloatStateOf(settingsManager.iconSize.toFloat()) }
+    var iconSize by remember { mutableFloatStateOf(settingsManager.iconSize) }
     var showLabel by remember { mutableStateOf(settingsManager.showLabels) }
-    var liquidFolder by remember { mutableStateOf(settingsManager.liquidFolderEnabled) }
+    var liquidFolder by remember { mutableStateOf(true) }
 
     Box(
         modifier = Modifier
@@ -222,9 +222,8 @@ fun HomeScreenSettingsSheet(
                             .border(1.dp, Color.White.copy(alpha = 0.6f), CircleShape)
                             .clickable {
                                 settingsManager.gridRows = gridRows.toInt()
-                                settingsManager.iconSize = iconSize.toInt()
+                                settingsManager.iconSize = iconSize
                                 settingsManager.showLabels = showLabel
-                                settingsManager.liquidFolderEnabled = liquidFolder
                                 onDismiss()
                             },
                         contentAlignment = Alignment.Center
