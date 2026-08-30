@@ -168,12 +168,13 @@ fun HomeScreen(
     var showHomeSettingsSheet by remember { mutableStateOf(false) }
     var showIconCustomizeSheet by remember { mutableStateOf(false) }
     var showSearchBarPositionSheet by remember { mutableStateOf(false) }
+    var showGlassPlayground by remember { mutableStateOf(false) }
 
     var liveSearchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
     var liveHideCapsule by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
 
-    val isAnySheetOpen = showHomeSettingsSheet || showIconCustomizeSheet || showSearchBarPositionSheet || isOverviewMode
-
+    val isAnySheetOpen = showHomeSettingsSheet || showIconCustomizeSheet || showSearchBarPositionSheet || showGlassPlayground || isOverviewMode
+    
     LaunchedEffect(isOverviewMode) {
         overviewAnim.animateTo(
             targetValue = if (isOverviewMode) 1f else 0f,
@@ -181,15 +182,16 @@ fun HomeScreen(
         )
     }
 
-    BackHandler(enabled = isAnySheetOpen) {
+        BackHandler(enabled = isAnySheetOpen) {
         when {
+            showGlassPlayground -> showGlassPlayground = false
             showSearchBarPositionSheet -> showSearchBarPositionSheet = false
             showIconCustomizeSheet -> showIconCustomizeSheet = false
             showHomeSettingsSheet -> showHomeSettingsSheet = false
             isOverviewMode -> isOverviewMode = false
         }
-    }
-
+        }
+        
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
     var draggedExternalApp by remember { mutableStateOf<AppInfo?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
@@ -568,7 +570,14 @@ fun HomeScreen(
                 onDismiss = { showHomeSettingsSheet = false }
             )
                 }
-                
+
+                        if (showGlassPlayground) {
+            GlassPlaygroundSheet(
+                settingsManager = settingsManager,
+                onDismiss = { showGlassPlayground = false }
+            )
+                        }
+                        
         if (showSearchBarPositionSheet) {
             TopLiquidSearchBarPositionCard(
                 currentOffset = liveSearchOffset,
