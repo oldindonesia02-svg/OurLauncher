@@ -1,5 +1,9 @@
 package com.ourlauncher.app.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -13,10 +17,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
@@ -27,13 +34,7 @@ fun LiquidSlider(
     modifier: Modifier = Modifier,
     steps: Int = 0
 ) {
-    LiquidGlassSlider(
-        value = value,
-        onValueChange = onValueChange,
-        valueRange = valueRange,
-        modifier = modifier,
-        steps = steps
-    )
+    LiquidGlassSlider(value, onValueChange, valueRange, modifier, steps)
 }
 
 @Composable
@@ -44,13 +45,7 @@ fun LiquidGlassPillSlider(
     modifier: Modifier = Modifier,
     steps: Int = 0
 ) {
-    LiquidGlassSlider(
-        value = value,
-        onValueChange = onValueChange,
-        valueRange = valueRange,
-        modifier = modifier,
-        steps = steps
-    )
+    LiquidGlassSlider(value, onValueChange, valueRange, modifier, steps)
 }
 
 @Composable
@@ -64,14 +59,16 @@ fun LiquidGlassSlider(
 ) {
     val currentOnValueChange by rememberUpdatedState(onValueChange)
     var widthPx by remember { mutableFloatStateOf(0f) }
+    val coroutineScope = rememberCoroutineScope()
+    val stretchAnim = remember { Animatable(0f) }
 
     val min = valueRange.start
     val max = valueRange.endInclusive
     val fraction = if (max > min) ((value - min) / (max - min)).coerceIn(0f, 1f) else 0f
 
-    val thumbWidth = 34.dp
-    val thumbHeight = 13.dp
-    val horizontalPadding = 16.dp
+    val thumbWidthDp = 36.dp
+    val thumbHeightDp = 14.dp
+    val horizontalPaddingDp = 16.dp
 
     BoxWithConstraints(
         modifier = modifier
@@ -89,77 +86,125 @@ fun LiquidGlassSlider(
                 shape = CircleShape
             )
             .pointerInput(valueRange, steps) {
-                fun updatePosition(touchX: Float) {
-                    val padPx = horizontalPadding.toPx()
-                    val thumbWPx = thumbWidth.toPx()
+                fun update(touchX: Float, dragDelta: Float = 0f) {
+                    val padPx = horizontalPaddingDp.toPx()
+                    val thumbWPx = thumbWidthDp.toPx()
                     val usableWidth = (widthPx - (padPx * 2) - thumbWPx).coerceAtLeast(1f)
-                    val relativeX = (touchX - padPx - (thumbWPx / 2f)).coerceIn(0f, usableWidth)
-                    val newFraction = relativeX / usableWidth
+                    val relX = (touchX - padPx - (thumbWPx / 2f)).coerceIn(0f, usableWidth)
+                    val newFraction = relX / usableWidth
                     val rawVal = min + newFraction * (max - min)
                     val finalVal = if (steps > 0) {
                         val stepSize = (max - min) / (steps + 1)
                         ((rawVal - min) / stepSize).roundToInt() * stepSize + min
                     } else rawVal
                     currentOnValueChange(finalVal.coerceIn(min, max))
+
+                    if (abs(dragDelta) > 0.5f) {
+                        coroutineScope.launch {
+                            val target = (dragDelta * 0.22f).coerceIn(-12f, 12f)
+                            stretchAnim.snapTo(target)
+                            stretchAnim.animateTo(
+                                0f,
+                                spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+                            )
+                        }
+                    }
                 }
 
-                detectTapGestures { offset -> updatePosition(offset.x) }
+                detectTapGestures { offset -> update(offset.x) }
             }
             .pointerInput(valueRange, steps) {
-                fun updatePosition(touchX: Float) {
-                    val padPx = horizontalPadding.toPx()
-                    val thumbWPx = thumbWidth.toPx()
+                fun update(touchX: Float, dragDelta: Float) {
+                    val padPx = horizontalPaddingDp.toPx()
+                    val thumbWPx = thumbWidthDp.toPx()
                     val usableWidth = (widthPx - (padPx * 2) - thumbWPx).coerceAtLeast(1f)
-                    val relativeX = (touchX - padPx - (thumbWPx / 2f)).coerceIn(0f, usableWidth)
-                    val newFraction = relativeX / usableWidth
+                    val relX = (touchX - padPx - (thumbWPx / 2f)).coerceIn(0f, usableWidth)
+                    val newFraction = relX / usableWidth
                     val rawVal = min + newFraction * (max - min)
                     val finalVal = if (steps > 0) {
                         val stepSize = (max - min) / (steps + 1)
                         ((rawVal - min) / stepSize).roundToInt() * stepSize + min
                     } else rawVal
                     currentOnValueChange(finalVal.coerceIn(min, max))
+
+                    coroutineScope.launch {
+                        val target = (dragDelta * 0.35f).coerceIn(-14f, 14f)
+                        stretchAnim.snapTo(target)
+                        stretchAnim.animateTo(
+                            0f,
+                            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+                        )
+                    }
                 }
 
-                detectHorizontalDragGestures { change, _ ->
-                    updatePosition(change.position.x)
+                detectHorizontalDragGestures { change, dragAmount ->
+                    change.consume()
+                    update(change.position.x, dragAmount)
                 }
             },
         contentAlignment = Alignment.CenterStart
     ) {
-        val usableWidthDp = (maxWidth - (horizontalPadding * 2) - thumbWidth).coerceAtLeast(0.dp)
-        val thumbOffsetDp = horizontalPadding + (usableWidthDp.value * fraction).dp
-        val activeTrackWidthDp = (usableWidthDp.value * fraction).dp + (thumbWidth.value / 2f).dp
+        val usableWidthDp = (maxWidth - (horizontalPaddingDp * 2) - thumbWidthDp).coerceAtLeast(0.dp)
+        val thumbOffsetDp = horizontalPaddingDp + (usableWidthDp.value * fraction).dp + stretchAnim.value.dp
+        val activeTrackWidthDp = (thumbOffsetDp + (thumbWidthDp / 2f) - horizontalPaddingDp).coerceAtLeast(0.dp)
 
-        // ১. ইনঅ্যাক্টিভ ডার্ক লাইন ট্র্যাক
+        // ১. ইনঅ্যাক্টিভ ডার্ক ট্র্যাক
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = horizontalPadding)
-                .height(3.5.dp)
+                .padding(horizontal = horizontalPaddingDp)
+                .height(3.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF2C2C2E))
+                .background(Color(0xFF242426))
         )
 
-        // ২. অ্যাক্টিভ নিয়ন সাইয়ান-ব্লু লাইন ট্র্যাক
+        // ২. নিয়ন ব্লু অ্যাক্টিভ ট্র্যাক
         if (activeTrackWidthDp > 0.dp) {
             Box(
                 modifier = Modifier
-                    .padding(start = horizontalPadding)
+                    .padding(start = horizontalPaddingDp)
                     .width(activeTrackWidthDp)
-                    .height(3.5.dp)
+                    .height(3.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.horizontalGradient(
-                            colors = listOf(
-                                Color(0xFF00E5FF),
-                                Color(0xFF0A84FF)
-                            )
+                            listOf(Color(0xFF00E5FF), Color(0xFF007AFF))
                         )
                     )
             )
         }
 
-        // ৩. গ্লাস স্পেকুলার রিফ্লেকশন
+        // ৩. ফ্লুইড ড্রপলেট স্ট্রেচ ক্যানভাস
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = horizontalPaddingDp)
+        ) {
+            val centerY = size.height / 2f
+            val thumbCenterXPx = (thumbOffsetDp - horizontalPaddingDp + (thumbWidthDp / 2f)).toPx()
+            val stretch = stretchAnim.value * 2.5f
+
+            if (abs(stretch) > 0.5f) {
+                val blobPath = Path().apply {
+                    val headX = thumbCenterXPx + stretch
+                    val tailX = thumbCenterXPx - stretch * 0.6f
+                    val radiusY = 7.dp.toPx()
+
+                    moveTo(tailX, centerY - radiusY)
+                    quadraticBezierTo(thumbCenterXPx, centerY - radiusY - (abs(stretch) * 0.25f), headX, centerY)
+                    quadraticBezierTo(thumbCenterXPx, centerY + radiusY + (abs(stretch) * 0.25f), tailX, centerY + radiusY)
+                    close()
+                }
+                drawPath(
+                    path = blobPath,
+                    brush = Brush.horizontalGradient(
+                        listOf(Color(0xFF00E5FF).copy(alpha = 0.5f), Color(0xFF007AFF).copy(alpha = 0.65f))
+                    )
+                )
+            }
+        }
+
+        // ৪. রিফ্লেকশন গ্লেয়ার
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -168,23 +213,21 @@ fun LiquidGlassSlider(
                 .padding(horizontal = 20.dp)
                 .background(
                     Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.35f),
-                            Color.Transparent
-                        )
+                        listOf(Color.Transparent, Color.White.copy(alpha = 0.35f), Color.Transparent)
                     )
                 )
         )
 
-        // ৪. ফ্লোটিং হোয়াইট পিল থাম্ব
+        // ৫. ফ্লোটিং হোয়াইট পিল থাম্ব
+        val dynamicWidth = (thumbWidthDp.value + abs(stretchAnim.value) * 0.4f).dp
         Box(
             modifier = Modifier
-                .offset(x = thumbOffsetDp)
-                .size(width = thumbWidth, height = thumbHeight)
+                .offset(x = thumbOffsetDp - (abs(stretchAnim.value) * 0.2f).dp)
+                .size(width = dynamicWidth, height = thumbHeightDp)
                 .shadow(elevation = 6.dp, shape = CircleShape)
                 .clip(CircleShape)
                 .background(Color.White)
+                .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.45f), CircleShape)
         )
     }
 }
