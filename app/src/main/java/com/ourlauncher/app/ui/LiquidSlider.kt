@@ -76,7 +76,7 @@ fun LiquidGlassSlider(
             .fillMaxWidth()
             .height(height)
             .onSizeChanged { widthPx = it.width.toFloat() }
-            .shadow(elevation = 10.dp, shape = CircleShape, ambientColor = Color.Black, spotColor = Color.Black)
+            .shadow(elevation = 8.dp, shape = CircleShape, ambientColor = Color.Black, spotColor = Color.Black)
             .clip(CircleShape)
             .background(Color(0xFF000000))
             .border(
@@ -163,7 +163,7 @@ fun LiquidGlassSlider(
         val thumbOffsetDp = horizontalPaddingDp + (usableWidthDp.value * fraction).dp + stretchAnim.value.dp
         val activeTrackWidthDp = (thumbOffsetDp + (thumbWidthDp / 2f) - horizontalPaddingDp).coerceAtLeast(0.dp)
 
-        // 1. Inactive Line Track
+        // 1. Inactive Track
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -173,7 +173,7 @@ fun LiquidGlassSlider(
                 .background(Color(0xFF222326))
         )
 
-        // 2. Active Glowing Cyan Track
+        // 2. Active Neon Cyan Track
         if (activeTrackWidthDp > 0.dp) {
             Box(
                 modifier = Modifier
@@ -189,7 +189,7 @@ fun LiquidGlassSlider(
             )
         }
 
-        // 3. Fluid Droplet Stretch on Drag
+        // 3. Fluid Droplet Stretch
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
@@ -219,7 +219,7 @@ fun LiquidGlassSlider(
             }
         }
 
-        // 4. Specular Glass Glare
+        // 4. Specular Glare
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -233,7 +233,7 @@ fun LiquidGlassSlider(
                 )
         )
 
-        // 5. Liquid Glass Halo Refraction on Touch
+        // 5. Halo Glow on Touch
         if (touchScale.value > 0.01f) {
             val haloWidth = (thumbWidthDp.value + 20f * touchScale.value).dp
             val haloHeight = (thumbHeightDp.value + 16f * touchScale.value).dp
