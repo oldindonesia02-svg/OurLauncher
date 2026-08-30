@@ -5,10 +5,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Divider
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -121,9 +119,10 @@ fun CurveSlider(
                 Text(label, color = Color.White, fontSize = 14.sp)
                 Text(subtitle, color = Color(0xFF8E8E93), fontSize = 11.sp)
             }
-            Text(String.format("%.2f", value), color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(String.format("%.2f", value), color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
-        Slider(value = value, onValueChange = onValueChange, valueRange = 0f..1.5f)
+        Spacer(modifier = Modifier.height(6.dp))
+        LiquidGlassSlider(value = value, onValueChange = onValueChange, valueRange = 0f..1.5f)
     }
 }
 
