@@ -132,7 +132,7 @@ fun LiquidGlassPillSlider(
         val currentOffsetDp = (maxOffsetDp.value * animatedFraction).dp + 4.dp
         val activeWidthDp = (maxWidth.value * animatedFraction).dp.coerceAtLeast(sliderHeightDp)
 
-        // ১. অ্যাক্টিভ লিকুইড সাইয়ান ফিল
+        // 1. Neon Cyan Gradient Active Track
         Box(
             modifier = Modifier
                 .fillMaxHeight()
@@ -148,7 +148,7 @@ fun LiquidGlassPillSlider(
                 )
         )
 
-        // ২. গ্লাস স্পেকুলার লাইট গ্লেয়ার
+        // 2. Glass Reflection Glare
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -166,7 +166,7 @@ fun LiquidGlassPillSlider(
                 )
         )
 
-        // ৩. লিকুইড ফ্লোটিং হোয়াইট পিল থাম্ব
+        // 3. Floating Capsule Thumb
         Box(
             modifier = Modifier
                 .offset(x = currentOffsetDp)
