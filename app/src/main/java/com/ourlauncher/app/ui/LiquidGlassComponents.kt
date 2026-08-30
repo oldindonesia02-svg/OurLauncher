@@ -17,11 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// 1. Liquid Glass Button
 @Composable
 fun LiquidGlassButton(
     text: String,
@@ -65,7 +65,6 @@ fun LiquidGlassButton(
     }
 }
 
-// 2. Liquid Glass Toggle (Switch)
 @Composable
 fun LiquidGlassToggle(
     checked: Boolean,
@@ -95,7 +94,6 @@ fun LiquidGlassToggle(
     }
 }
 
-// 3. Liquid Frosted Glass Container Card
 @Composable
 fun LiquidGlassContainer(
     modifier: Modifier = Modifier,
@@ -145,7 +143,6 @@ fun LiquidGlassContainer(
     }
 }
 
-// 4. In-Tree Crash-Free Liquid Glass Dialog
 @Composable
 fun LiquidGlassDialog(
     title: String,
@@ -170,7 +167,7 @@ fun LiquidGlassDialog(
             .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center
     ) {
-        LiquidGlassContainer(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(
@@ -178,46 +175,48 @@ fun LiquidGlassDialog(
                     indication = null
                 ) {}
         ) {
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            if (message.isNotBlank()) {
-                Spacer(modifier = Modifier.height(10.dp))
+            LiquidGlassContainer(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = message,
-                    color = Color.White.copy(alpha = 0.85f),
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp
+                    text = title,
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
                 )
-            }
 
-            if (content != null) {
-                Spacer(modifier = Modifier.height(14.dp))
-                content()
-            }
+                if (message.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = message,
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                if (content != null) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    content()
+                }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                LiquidGlassButton(
-                    text = cancelText,
-                    onClick = onCancel,
-                    isPrimary = false,
-                    modifier = Modifier.weight(1f)
-                )
-                LiquidGlassButton(
-                    text = confirmText,
-                    onClick = onConfirm,
-                    isPrimary = true,
-                    modifier = Modifier.weight(1f)
-                )
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    LiquidGlassButton(
+                        text = cancelText,
+                        onClick = onCancel,
+                        isPrimary = false,
+                        modifier = Modifier.weight(1f)
+                    )
+                    LiquidGlassButton(
+                        text = confirmText,
+                        onClick = onConfirm,
+                        isPrimary = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
