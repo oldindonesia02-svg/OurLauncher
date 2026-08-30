@@ -1,5 +1,6 @@
 package com.ourlauncher.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -19,8 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 
 // 1. Liquid Glass Button
 @Composable
@@ -96,7 +95,7 @@ fun LiquidGlassToggle(
     }
 }
 
-// 3. Liquid Frosted Glass Container Card (True Translucent Glassmorphic)
+// 3. Liquid Frosted Glass Container Card
 @Composable
 fun LiquidGlassContainer(
     modifier: Modifier = Modifier,
@@ -108,8 +107,8 @@ fun LiquidGlassContainer(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF25374C).copy(alpha = 0.52f),
-                        Color(0xFF101A26).copy(alpha = 0.68f)
+                        Color(0xFF223244).copy(alpha = 0.58f),
+                        Color(0xFF0F1824).copy(alpha = 0.72f)
                     )
                 )
             )
@@ -119,20 +118,19 @@ fun LiquidGlassContainer(
                     listOf(
                         Color.White.copy(alpha = 0.55f),
                         Color.White.copy(alpha = 0.12f),
-                        Color.White.copy(alpha = 0.38f)
+                        Color.White.copy(alpha = 0.35f)
                     )
                 ),
                 shape = RoundedCornerShape(32.dp)
             )
     ) {
-        // Specular Top Ambient Highlight
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.5.dp)
                 .background(
                     Brush.horizontalGradient(
-                        listOf(Color.Transparent, Color.White.copy(alpha = 0.65f), Color.Transparent)
+                        listOf(Color.Transparent, Color.White.copy(alpha = 0.6f), Color.Transparent)
                     )
                 )
         )
@@ -147,7 +145,7 @@ fun LiquidGlassContainer(
     }
 }
 
-// 4. Liquid Glass Dialog (Reference Image Style)
+// 4. In-Tree Crash-Free Liquid Glass Dialog
 @Composable
 fun LiquidGlassDialog(
     title: String,
@@ -159,70 +157,67 @@ fun LiquidGlassDialog(
     onCancel: () -> Unit = onDismiss,
     content: (@Composable ColumnScope.() -> Unit)? = null
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+    BackHandler { onDismiss() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.35f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onDismiss() }
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
+        LiquidGlassContainer(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.22f))
+                .fillMaxWidth()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
-                ) { onDismiss() }
-                .padding(horizontal = 20.dp),
-            contentAlignment = Alignment.Center
+                ) {}
         ) {
-            LiquidGlassContainer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {}
-            ) {
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            if (message.isNotBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = title,
-                    color = Color.White,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
+                    text = message,
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
                 )
+            }
 
-                if (message.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = message,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp
-                    )
-                }
+            if (content != null) {
+                Spacer(modifier = Modifier.height(14.dp))
+                content()
+            }
 
-                if (content != null) {
-                    Spacer(modifier = Modifier.height(14.dp))
-                    content()
-                }
+            Spacer(modifier = Modifier.height(24.dp))
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    LiquidGlassButton(
-                        text = cancelText,
-                        onClick = onCancel,
-                        isPrimary = false,
-                        modifier = Modifier.weight(1f)
-                    )
-                    LiquidGlassButton(
-                        text = confirmText,
-                        onClick = onConfirm,
-                        isPrimary = true,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                LiquidGlassButton(
+                    text = cancelText,
+                    onClick = onCancel,
+                    isPrimary = false,
+                    modifier = Modifier.weight(1f)
+                )
+                LiquidGlassButton(
+                    text = confirmText,
+                    onClick = onConfirm,
+                    isPrimary = true,
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }
