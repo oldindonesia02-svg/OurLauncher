@@ -6,8 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -28,12 +26,11 @@ fun IconStudioSheet(
     onApply: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedTab by remember { mutableStateOf(0) } // 0: General, 1: Themes
-    var iconStyle by remember { mutableStateOf("Standard") } // Standard, Dark, Transparent, Tinted
+    var selectedTab by remember { mutableStateOf(0) }
+    var iconStyle by remember { mutableStateOf("Standard") }
     var cornerRadius by remember { mutableStateOf(settingsManager.iconCornerRadius) }
 
-    // Themes & Lighting Tweak States
-    var themePreset by remember { mutableStateOf("Highlight") } // Empty, Highlight, Shadow border
+    var themePreset by remember { mutableStateOf("Highlight") }
     var blurEnabled by remember { mutableStateOf(true) }
     var blurValue by remember { mutableStateOf(0.5f) }
     var falloff by remember { mutableStateOf(1.5f) }
@@ -56,7 +53,6 @@ fun IconStudioSheet(
             .padding(20.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Drag handle & Title
             Box(
                 modifier = Modifier
                     .width(36.dp)
@@ -68,7 +64,6 @@ fun IconStudioSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Floating Top Badge "Icon pack"
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
@@ -91,7 +86,6 @@ fun IconStudioSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Tab Selector: General | Themes
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -129,7 +123,6 @@ fun IconStudioSheet(
             Spacer(modifier = Modifier.height(18.dp))
 
             if (selectedTab == 0) {
-                // ==================== GENERAL TAB ====================
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -164,18 +157,20 @@ fun IconStudioSheet(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                Text("Corner Radius: ${cornerRadius.toInt()}%", color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp)
-                Slider(
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Corner Radius", color = Color.White, fontSize = 13.sp)
+                    Text("${cornerRadius.toInt()}%", color = Color(0xFF00E5FF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                LiquidGlassSlider(
                     value = cornerRadius,
                     onValueChange = {
                         cornerRadius = it
                         settingsManager.iconCornerRadius = it
                     },
-                    valueRange = 0f..50f,
-                    colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
+                    valueRange = 0f..50f
                 )
             } else {
-                // ==================== THEMES & LIGHTING TAB ====================
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -209,7 +204,6 @@ fun IconStudioSheet(
                 Spacer(modifier = Modifier.height(14.dp))
                 Text("Tweak Settings", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
 
-                // Blur Row + Switch
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -223,46 +217,41 @@ fun IconStudioSheet(
                     )
                 }
 
-                // Falloff
-                Text("Falloff: ${String.format("%.1f", falloff)}", color = Color.White.copy(alpha = 0.8f), fontSize = 12.5.sp)
-                Slider(
-                    value = falloff,
-                    onValueChange = { falloff = it },
-                    valueRange = 0.5f..5f,
-                    colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Falloff", color = Color.White, fontSize = 12.5.sp)
+                    Text(String.format("%.1f", falloff), color = Color(0xFF00E5FF), fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                LiquidGlassSlider(value = falloff, onValueChange = { falloff = it }, valueRange = 0.5f..5f)
 
-                // Width
-                Text("Width: ${String.format("%.1f", strokeWidth)} dp", color = Color.White.copy(alpha = 0.8f), fontSize = 12.5.sp)
-                Slider(
-                    value = strokeWidth,
-                    onValueChange = { strokeWidth = it },
-                    valueRange = 0.5f..5f,
-                    colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Width", color = Color.White, fontSize = 12.5.sp)
+                    Text("${String.format("%.1f", strokeWidth)} dp", color = Color(0xFF00E5FF), fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                LiquidGlassSlider(value = strokeWidth, onValueChange = { strokeWidth = it }, valueRange = 0.5f..5f)
 
-                // Intensity
-                Text("Intensity: ${intensity.toInt()}%", color = Color.White.copy(alpha = 0.8f), fontSize = 12.5.sp)
-                Slider(
-                    value = intensity,
-                    onValueChange = { intensity = it },
-                    valueRange = 10f..100f,
-                    colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Intensity", color = Color.White, fontSize = 12.5.sp)
+                    Text("${intensity.toInt()}%", color = Color(0xFF00E5FF), fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                LiquidGlassSlider(value = intensity, onValueChange = { intensity = it }, valueRange = 10f..100f)
 
-                // Light Angle
-                Text("Angle: ${lightAngle.toInt()}°", color = Color.White.copy(alpha = 0.8f), fontSize = 12.5.sp)
-                Slider(
-                    value = lightAngle,
-                    onValueChange = { lightAngle = it },
-                    valueRange = 0f..360f,
-                    colors = SliderDefaults.colors(thumbColor = Color(0xFF0A84FF), activeTrackColor = Color(0xFF0A84FF))
-                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Angle", color = Color.White, fontSize = 12.5.sp)
+                    Text("${lightAngle.toInt()}°", color = Color(0xFF00E5FF), fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                LiquidGlassSlider(value = lightAngle, onValueChange = { lightAngle = it }, valueRange = 0f..360f)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Apply Button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
