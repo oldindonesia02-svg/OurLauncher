@@ -36,6 +36,10 @@ fun HomeScreenSettingsSheet(
         confirmText = "Apply",
         cancelText = "More",
         onDismiss = onDismiss,
+        onCancel = {
+            onDismiss()
+            onOpenMoreSettings()
+        },
         onConfirm = {
             settingsManager.iconSize = iconSize
             settingsManager.gridRows = gridRows.roundToInt()
@@ -64,7 +68,7 @@ fun HomeScreenSettingsSheet(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // 2. Icon Size Slider (Identical Capsule)
+        // 2. Icon Size Slider
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
