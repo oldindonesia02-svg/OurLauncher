@@ -15,13 +15,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// 1. Liquid Glass Button (Reference 3 Pill Style)
+// 1. Liquid Glass Action Button
 @Composable
 fun LiquidGlassButton(
     text: String,
@@ -30,20 +31,35 @@ fun LiquidGlassButton(
     isPrimary: Boolean = true
 ) {
     val bg = if (isPrimary) {
-        Brush.horizontalGradient(listOf(Color(0xFF00A2FF), Color(0xFF0072FF)))
+        Brush.horizontalGradient(
+            listOf(
+                Color(0xFF00B4DB).copy(alpha = 0.85f),
+                Color(0xFF0083B0).copy(alpha = 0.90f)
+            )
+        )
     } else {
         Brush.verticalGradient(
             listOf(
-                Color.White.copy(alpha = 0.16f),
+                Color.White.copy(alpha = 0.20f),
                 Color.White.copy(alpha = 0.05f)
             )
         )
     }
 
     val borderBrush = if (isPrimary) {
-        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.10f)))
+        Brush.verticalGradient(
+            listOf(
+                Color.White.copy(alpha = 0.70f),
+                Color(0xFF00E5FF).copy(alpha = 0.40f)
+            )
+        )
     } else {
-        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.30f), Color.White.copy(alpha = 0.08f)))
+        Brush.verticalGradient(
+            listOf(
+                Color.White.copy(alpha = 0.45f),
+                Color.White.copy(alpha = 0.12f)
+            )
+        )
     }
 
     Box(
@@ -51,9 +67,9 @@ fun LiquidGlassButton(
             .height(48.dp)
             .clip(CircleShape)
             .background(bg)
-            .border(1.dp, borderBrush, CircleShape)
+            .border(1.2.dp, borderBrush, CircleShape)
             .clickable { onClick() }
-            .padding(horizontal = 22.dp),
+            .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -65,37 +81,7 @@ fun LiquidGlassButton(
     }
 }
 
-// 2. Liquid Glass Toggle
-@Composable
-fun LiquidGlassToggle(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val thumbOffset by animateDpAsState(targetValue = if (checked) 24.dp else 2.dp, animationSpec = spring(stiffness = 600f), label = "toggle")
-    val trackColor = if (checked) Color(0xFF00E5FF).copy(alpha = 0.8f) else Color.White.copy(alpha = 0.15f)
-
-    Box(
-        modifier = modifier
-            .width(52.dp)
-            .height(28.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(trackColor)
-            .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
-            .clickable { onCheckedChange(!checked) },
-        contentAlignment = Alignment.CenterStart
-    ) {
-        Box(
-            modifier = Modifier
-                .offset(x = thumbOffset)
-                .size(24.dp)
-                .clip(CircleShape)
-                .background(Color.White)
-        )
-    }
-}
-
-// 3. True Liquid Glass Floating Container (Exact Reference 3 Look)
+// 2. Pure Liquid Crystal Glass Container
 @Composable
 fun LiquidGlassContainer(
     modifier: Modifier = Modifier,
@@ -103,36 +89,48 @@ fun LiquidGlassContainer(
 ) {
     Box(
         modifier = modifier
+            .shadow(
+                elevation = 20.dp,
+                shape = RoundedCornerShape(32.dp),
+                spotColor = Color(0xFF00E5FF).copy(alpha = 0.25f),
+                ambientColor = Color.Black.copy(alpha = 0.20f)
+            )
             .clip(RoundedCornerShape(32.dp))
-            // Refractive Translucent Aqua-Slate Glass
+            // Ultra-Translucent Liquid Glass Layer
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF1E3844).copy(alpha = 0.70f),
-                        Color(0xFF0D1E28).copy(alpha = 0.82f)
+                        Color.White.copy(alpha = 0.22f),
+                        Color(0xFF00E5FF).copy(alpha = 0.08f),
+                        Color(0xFF0A1926).copy(alpha = 0.35f)
                     )
                 )
             )
             .border(
-                width = 1.3.dp,
+                width = 1.4.dp,
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.60f),
-                        Color.White.copy(alpha = 0.12f),
-                        Color.White.copy(alpha = 0.40f)
+                        Color.White.copy(alpha = 0.85f),
+                        Color(0xFF00E5FF).copy(alpha = 0.45f),
+                        Color.White.copy(alpha = 0.20f)
                     )
                 ),
                 shape = RoundedCornerShape(32.dp)
             )
     ) {
-        // Top Specular Reflection Highlight
+        // Specular Top Refraction Highlight
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.5.dp)
+                .height(1.8.dp)
                 .background(
                     Brush.horizontalGradient(
-                        listOf(Color.Transparent, Color.White.copy(alpha = 0.70f), Color.Transparent)
+                        listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.90f),
+                            Color(0xFF00E5FF).copy(alpha = 0.70f),
+                            Color.Transparent
+                        )
                     )
                 )
         )
@@ -147,7 +145,7 @@ fun LiquidGlassContainer(
     }
 }
 
-// 4. Centered Liquid Glass Dialog
+// 3. Completely Transparent Backdrop Liquid Dialog
 @Composable
 fun LiquidGlassDialog(
     title: String,
@@ -161,15 +159,15 @@ fun LiquidGlassDialog(
 ) {
     BackHandler { onDismiss() }
 
+    // Outer container has ZERO black tint (100% Transparent Pass-through)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.28f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onDismiss() }
-            .padding(horizontal = 22.dp),
+            .padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
@@ -192,7 +190,7 @@ fun LiquidGlassDialog(
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = message,
-                        color = Color.White.copy(alpha = 0.85f),
+                        color = Color.White.copy(alpha = 0.90f),
                         fontSize = 14.sp,
                         lineHeight = 20.sp
                     )
@@ -203,7 +201,7 @@ fun LiquidGlassDialog(
                     content()
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(22.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
