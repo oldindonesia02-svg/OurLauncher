@@ -1,25 +1,12 @@
 package com.ourlauncher.app.ui
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,24 +27,7 @@ fun LiquidSlider(
     modifier: Modifier = Modifier,
     steps: Int = 0
 ) {
-    LiquidGlassPillSlider(
-        value = value,
-        onValueChange = onValueChange,
-        valueRange = valueRange,
-        modifier = modifier,
-        steps = steps
-    )
-}
-
-@Composable
-fun LiquidGlassSlider(
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    valueRange: ClosedFloatingPointRange<Float> = 0f..100f,
-    modifier: Modifier = Modifier,
-    steps: Int = 0
-) {
-    LiquidGlassPillSlider(
+    LiquidGlassSlider(
         value = value,
         onValueChange = onValueChange,
         valueRange = valueRange,
@@ -74,113 +44,147 @@ fun LiquidGlassPillSlider(
     modifier: Modifier = Modifier,
     steps: Int = 0
 ) {
-    var widthPx by remember { mutableFloatStateOf(1f) }
-    val thumbWidthDp: Dp = 42.dp
-    val sliderHeightDp: Dp = 46.dp
-
-    val fraction = ((value - valueRange.start) / (valueRange.endInclusive - valueRange.start)).coerceIn(0f, 1f)
-    val animatedFraction by animateFloatAsState(
-        targetValue = fraction,
-        animationSpec = spring(stiffness = 800f, dampingRatio = 0.8f),
-        label = "pillThumb"
+    LiquidGlassSlider(
+        value = value,
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        modifier = modifier,
+        steps = steps
     )
+}
+
+@Composable
+fun LiquidGlassSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..100f,
+    modifier: Modifier = Modifier,
+    steps: Int = 0,
+    height: Dp = 50.dp
+) {
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
+    var widthPx by remember { mutableFloatStateOf(0f) }
+
+    val min = valueRange.start
+    val max = valueRange.endInclusive
+    val fraction = if (max > min) ((value - min) / (max - min)).coerceIn(0f, 1f) else 0f
+
+    val thumbWidth = 34.dp
+    val thumbHeight = 13.dp
+    val horizontalPadding = 16.dp
 
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .height(sliderHeightDp)
+            .height(height)
             .onSizeChanged { widthPx = it.width.toFloat() }
-            .clip(RoundedCornerShape(sliderHeightDp / 2))
-            .background(Color.Black.copy(alpha = 0.65f))
+            .shadow(elevation = 8.dp, shape = CircleShape, ambientColor = Color.Black, spotColor = Color.Black)
+            .clip(CircleShape)
+            .background(Color(0xFF000000))
             .border(
-                width = 1.2.dp,
+                width = 1.dp,
                 brush = Brush.verticalGradient(
-                    colors = listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))
+                    listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.04f))
                 ),
-                shape = RoundedCornerShape(sliderHeightDp / 2)
+                shape = CircleShape
             )
             .pointerInput(valueRange, steps) {
-                fun updateFromPosition(xPos: Float) {
-                    val rawFrac = (xPos / widthPx).coerceIn(0f, 1f)
-                    val rawVal = valueRange.start + rawFrac * (valueRange.endInclusive - valueRange.start)
+                fun updatePosition(touchX: Float) {
+                    val padPx = horizontalPadding.toPx()
+                    val thumbWPx = thumbWidth.toPx()
+                    val usableWidth = (widthPx - (padPx * 2) - thumbWPx).coerceAtLeast(1f)
+                    val relativeX = (touchX - padPx - (thumbWPx / 2f)).coerceIn(0f, usableWidth)
+                    val newFraction = relativeX / usableWidth
+                    val rawVal = min + newFraction * (max - min)
                     val finalVal = if (steps > 0) {
-                        val stepSize = (valueRange.endInclusive - valueRange.start) / (steps + 1)
-                        ((rawVal - valueRange.start) / stepSize).roundToInt() * stepSize + valueRange.start
+                        val stepSize = (max - min) / (steps + 1)
+                        ((rawVal - min) / stepSize).roundToInt() * stepSize + min
                     } else rawVal
-                    onValueChange(finalVal.coerceIn(valueRange.start, valueRange.endInclusive))
+                    currentOnValueChange(finalVal.coerceIn(min, max))
                 }
 
-                detectTapGestures { offset -> updateFromPosition(offset.x) }
+                detectTapGestures { offset -> updatePosition(offset.x) }
             }
             .pointerInput(valueRange, steps) {
-                fun updateFromPosition(xPos: Float) {
-                    val rawFrac = (xPos / widthPx).coerceIn(0f, 1f)
-                    val rawVal = valueRange.start + rawFrac * (valueRange.endInclusive - valueRange.start)
+                fun updatePosition(touchX: Float) {
+                    val padPx = horizontalPadding.toPx()
+                    val thumbWPx = thumbWidth.toPx()
+                    val usableWidth = (widthPx - (padPx * 2) - thumbWPx).coerceAtLeast(1f)
+                    val relativeX = (touchX - padPx - (thumbWPx / 2f)).coerceIn(0f, usableWidth)
+                    val newFraction = relativeX / usableWidth
+                    val rawVal = min + newFraction * (max - min)
                     val finalVal = if (steps > 0) {
-                        val stepSize = (valueRange.endInclusive - valueRange.start) / (steps + 1)
-                        ((rawVal - valueRange.start) / stepSize).roundToInt() * stepSize + valueRange.start
+                        val stepSize = (max - min) / (steps + 1)
+                        ((rawVal - min) / stepSize).roundToInt() * stepSize + min
                     } else rawVal
-                    onValueChange(finalVal.coerceIn(valueRange.start, valueRange.endInclusive))
+                    currentOnValueChange(finalVal.coerceIn(min, max))
                 }
 
                 detectHorizontalDragGestures { change, _ ->
-                    updateFromPosition(change.position.x)
+                    updatePosition(change.position.x)
                 }
-            }
+            },
+        contentAlignment = Alignment.CenterStart
     ) {
-        val maxOffsetDp = maxWidth - thumbWidthDp - 8.dp
-        val currentOffsetDp = (maxOffsetDp.value * animatedFraction).dp + 4.dp
-        val activeWidthDp = (maxWidth.value * animatedFraction).dp.coerceAtLeast(sliderHeightDp)
+        val usableWidthDp = (maxWidth - (horizontalPadding * 2) - thumbWidth).coerceAtLeast(0.dp)
+        val thumbOffsetDp = horizontalPadding + (usableWidthDp.value * fraction).dp
+        val activeTrackWidthDp = (usableWidthDp.value * fraction).dp + (thumbWidth.value / 2f).dp
 
-        // 1. Neon Cyan Gradient Active Track
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(activeWidthDp)
-                .clip(RoundedCornerShape(sliderHeightDp / 2))
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            Color(0xFF00A2FF).copy(alpha = 0.35f),
-                            Color(0xFF00E5FF).copy(alpha = 0.75f)
-                        )
-                    )
-                )
-        )
-
-        // 2. Glass Reflection Glare
+        // ১. ইনঅ্যাক্টিভ ডার্ক লাইন ট্র্যাক
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.5.dp)
+                .padding(horizontal = horizontalPadding)
+                .height(3.5.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF2C2C2E))
+        )
+
+        // ২. অ্যাক্টিভ নিয়ন সাইয়ান-ব্লু লাইন ট্র্যাক
+        if (activeTrackWidthDp > 0.dp) {
+            Box(
+                modifier = Modifier
+                    .padding(start = horizontalPadding)
+                    .width(activeTrackWidthDp)
+                    .height(3.5.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFF00E5FF),
+                                Color(0xFF0A84FF)
+                            )
+                        )
+                    )
+            )
+        }
+
+        // ৩. গ্লাস স্পেকুলার রিফ্লেকশন
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
                 .align(Alignment.TopCenter)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 20.dp)
                 .background(
                     Brush.horizontalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.White.copy(alpha = 0.5f),
+                            Color.White.copy(alpha = 0.35f),
                             Color.Transparent
                         )
                     )
                 )
         )
 
-        // 3. Floating Capsule Thumb
+        // ৪. ফ্লোটিং হোয়াইট পিল থাম্ব
         Box(
             modifier = Modifier
-                .offset(x = currentOffsetDp)
-                .align(Alignment.CenterStart)
-                .width(thumbWidthDp)
-                .height(34.dp)
-                .shadow(elevation = 6.dp, shape = RoundedCornerShape(17.dp))
-                .clip(RoundedCornerShape(17.dp))
+                .offset(x = thumbOffsetDp)
+                .size(width = thumbWidth, height = thumbHeight)
+                .shadow(elevation = 6.dp, shape = CircleShape)
+                .clip(CircleShape)
                 .background(Color.White)
-                .border(
-                    width = 1.dp,
-                    color = Color(0xFF00E5FF).copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(17.dp)
-                )
         )
     }
 }
