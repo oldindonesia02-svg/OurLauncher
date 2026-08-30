@@ -1,25 +1,33 @@
 package com.ourlauncher.app.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.SettingsManager
+import kotlin.math.roundToInt
 
 @Composable
 fun LiquidGlassScreen(
@@ -217,9 +225,10 @@ fun LiquidGlassScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Transparency", color = Color.White, fontSize = 14.sp)
-                            Text("${(transparency * 100).toInt()}%", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("${(transparency * 100).toInt()}%", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         }
-                        Slider(
+                        Spacer(modifier = Modifier.height(10.dp))
+                        LiquidGlassPillSlider(
                             value = transparency,
                             onValueChange = {
                                 transparency = it
@@ -234,9 +243,10 @@ fun LiquidGlassScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Blur", color = Color.White, fontSize = 14.sp)
-                            Text("${(blurRadius * 100).toInt()}%", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("${(blurRadius * 100).toInt()}%", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         }
-                        Slider(
+                        Spacer(modifier = Modifier.height(10.dp))
+                        LiquidGlassPillSlider(
                             value = blurRadius,
                             onValueChange = {
                                 blurRadius = it
@@ -249,9 +259,10 @@ fun LiquidGlassScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Transparency", color = Color.White, fontSize = 14.sp)
-                            Text("${(transparency * 100).toInt()}%", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("${(transparency * 100).toInt()}%", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         }
-                        Slider(
+                        Spacer(modifier = Modifier.height(10.dp))
+                        LiquidGlassPillSlider(
                             value = transparency,
                             onValueChange = {
                                 transparency = it
@@ -266,9 +277,10 @@ fun LiquidGlassScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Blur Radius", color = Color.White, fontSize = 14.sp)
-                            Text("${(blurRadius * 100).toInt()}%", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("${(blurRadius * 100).toInt()}%", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         }
-                        Slider(
+                        Spacer(modifier = Modifier.height(10.dp))
+                        LiquidGlassPillSlider(
                             value = blurRadius,
                             onValueChange = {
                                 blurRadius = it
@@ -283,9 +295,10 @@ fun LiquidGlassScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Refraction Height", color = Color.White, fontSize = 14.sp)
-                            Text("${refractionHeight.toInt()} dp", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("${refractionHeight.toInt()} dp", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         }
-                        Slider(
+                        Spacer(modifier = Modifier.height(10.dp))
+                        LiquidGlassPillSlider(
                             value = refractionHeight,
                             onValueChange = {
                                 refractionHeight = it
@@ -300,9 +313,10 @@ fun LiquidGlassScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("Refraction Amount", color = Color.White, fontSize = 14.sp)
-                            Text("${refractionAmount.toInt()} dp", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("${refractionAmount.toInt()} dp", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         }
-                        Slider(
+                        Spacer(modifier = Modifier.height(10.dp))
+                        LiquidGlassPillSlider(
                             value = refractionAmount,
                             onValueChange = {
                                 refractionAmount = it
@@ -326,5 +340,125 @@ fun LiquidGlassScreen(
                 )
             }
         }
+    }
+}
+
+/**
+ * True Liquid Glass Capsule Pill Slider (Video Design)
+ */
+@Composable
+fun LiquidGlassPillSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    modifier: Modifier = Modifier,
+    steps: Int = 0
+) {
+    var widthPx by remember { mutableStateOf(1f) }
+    val thumbWidthDp = 42.dp
+    val sliderHeightDp = 46.dp
+
+    val fraction = ((value - valueRange.start) / (valueRange.endInclusive - valueRange.start)).coerceIn(0f, 1f)
+    val animatedFraction by animateFloatAsState(
+        targetValue = fraction,
+        animationSpec = spring(stiffness = 800f, dampingRatio = 0.8f),
+        label = "pillThumb"
+    )
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(sliderHeightDp)
+            .onSizeChanged { widthPx = it.width.toFloat() }
+            .clip(RoundedCornerShape(sliderHeightDp / 2))
+            .background(Color.Black.copy(alpha = 0.65f))
+            .border(
+                width = 1.2.dp,
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))
+                ),
+                shape = RoundedCornerShape(sliderHeightDp / 2)
+            )
+            .pointerInput(valueRange, steps) {
+                fun updateFromPosition(xPos: Float) {
+                    val rawFrac = (xPos / widthPx).coerceIn(0f, 1f)
+                    val rawVal = valueRange.start + rawFrac * (valueRange.endInclusive - valueRange.start)
+                    val finalVal = if (steps > 0) {
+                        val stepSize = (valueRange.endInclusive - valueRange.start) / (steps + 1)
+                        ((rawVal - valueRange.start) / stepSize).roundToInt() * stepSize + valueRange.start
+                    } else rawVal
+                    onValueChange(finalVal.coerceIn(valueRange.start, valueRange.endInclusive))
+                }
+
+                detectTapGestures { offset -> updateFromPosition(offset.x) }
+            }
+            .pointerInput(valueRange, steps) {
+                fun updateFromPosition(xPos: Float) {
+                    val rawFrac = (xPos / widthPx).coerceIn(0f, 1f)
+                    val rawVal = valueRange.start + rawFrac * (valueRange.endInclusive - valueRange.start)
+                    val finalVal = if (steps > 0) {
+                        val stepSize = (valueRange.endInclusive - valueRange.start) / (steps + 1)
+                        ((rawVal - valueRange.start) / stepSize).roundToInt() * stepSize + valueRange.start
+                    } else rawVal
+                    onValueChange(finalVal.coerceIn(valueRange.start, valueRange.endInclusive))
+                }
+
+                detectHorizontalDragGestures { change, _ ->
+                    updateFromPosition(change.position.x)
+                }
+            }
+    ) {
+        val maxOffset = maxWidth - thumbWidthDp - 8.dp
+
+        // ১. অ্যাক্টিভ লিকুইড সাইয়ান ফিল
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width((maxWidth * animatedFraction).coerceAtLeast(sliderHeightDp))
+                .clip(RoundedCornerShape(sliderHeightDp / 2))
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF00A2FF).copy(alpha = 0.35f),
+                            Color(0xFF00E5FF).copy(alpha = 0.75f)
+                        )
+                    )
+                )
+        )
+
+        // ২. গ্লাস স্পেকুলার গ্লেয়ার
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.5.dp)
+                .align(Alignment.TopCenter)
+                .padding(horizontal = 16.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.5f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+
+        // ৩. লিকুইড ফ্লোটিং হোয়াইট পিল থাম্ব
+        Box(
+            modifier = Modifier
+                .offset(x = maxOffset * animatedFraction + 4.dp)
+                .align(Alignment.CenterStart)
+                .width(thumbWidthDp)
+                .height(34.dp)
+                .shadow(elevation = 6.dp, shape = RoundedCornerShape(17.dp))
+                .clip(RoundedCornerShape(17.dp))
+                .background(Color.White)
+                .border(
+                    width = 1.dp,
+                    color = Color(0xFF00E5FF).copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(17.dp)
+                )
+        )
     }
 }
