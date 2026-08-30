@@ -1,16 +1,13 @@
 package com.ourlauncher.app.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -55,21 +52,6 @@ fun SettingsScreen(
     var posY1 by remember { mutableStateOf(settingsManager.posCurveY1) }
     var posX2 by remember { mutableStateOf(settingsManager.posCurveX2) }
     var posY2 by remember { mutableStateOf(settingsManager.posCurveY2) }
-
-    var widthX1 by remember { mutableStateOf(settingsManager.widthCurveX1) }
-    var widthY1 by remember { mutableStateOf(settingsManager.widthCurveY1) }
-    var widthX2 by remember { mutableStateOf(settingsManager.widthCurveX2) }
-    var widthY2 by remember { mutableStateOf(settingsManager.widthCurveY2) }
-
-    var heightX1 by remember { mutableStateOf(settingsManager.heightCurveX1) }
-    var heightY1 by remember { mutableStateOf(settingsManager.heightCurveY1) }
-    var heightX2 by remember { mutableStateOf(settingsManager.heightCurveX2) }
-    var heightY2 by remember { mutableStateOf(settingsManager.heightCurveY2) }
-
-    var cornerX1 by remember { mutableStateOf(settingsManager.cornerCurveX1) }
-    var cornerY1 by remember { mutableStateOf(settingsManager.cornerCurveY1) }
-    var cornerX2 by remember { mutableStateOf(settingsManager.cornerCurveX2) }
-    var cornerY2 by remember { mutableStateOf(settingsManager.cornerCurveY2) }
 
     if (currentSubPage == "liquid_glass") {
         LiquidGlassScreen(onBack = { currentSubPage = "main" }, settingsManager = settingsManager)
@@ -203,9 +185,14 @@ fun SettingsScreen(
                         Column(modifier = Modifier.padding(16.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Animation Duration", color = Color.White, fontSize = 14.sp)
-                                Text("${animDuration.toInt()} ms", color = Color(0xFF0A84FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text("${animDuration.toInt()} ms", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             }
-                            Slider(value = animDuration, onValueChange = { animDuration = it; settingsManager.animDuration = it }, valueRange = 100f..800f)
+                            Spacer(modifier = Modifier.height(10.dp))
+                            LiquidGlassSlider(
+                                value = animDuration,
+                                onValueChange = { animDuration = it; settingsManager.animDuration = it },
+                                valueRange = 100f..800f
+                            )
                         }
                     }
 
@@ -266,16 +253,28 @@ fun SettingsScreen(
                         if (lensLightEnabled) {
                             SettingsDivider()
                             Column(modifier = Modifier.padding(14.dp)) {
-                                Text("Light Angle: ${lensAngle.toInt()}°", color = Color.White, fontSize = 13.sp)
-                                Slider(value = lensAngle, onValueChange = { lensAngle = it; settingsManager.lensAngle = it }, valueRange = 0f..360f)
-
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Light Angle", color = Color.White, fontSize = 13.sp)
+                                    Text("${lensAngle.toInt()}°", color = Color(0xFF00E5FF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("Light Intensity: ${(lensIntensity * 100).toInt()}%", color = Color.White, fontSize = 13.sp)
-                                Slider(value = lensIntensity, onValueChange = { lensIntensity = it; settingsManager.lensIntensity = it }, valueRange = 0.1f..1.0f)
+                                LiquidGlassSlider(value = lensAngle, onValueChange = { lensAngle = it; settingsManager.lensAngle = it }, valueRange = 0f..360f)
 
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Light Intensity", color = Color.White, fontSize = 13.sp)
+                                    Text("${(lensIntensity * 100).toInt()}%", color = Color(0xFF00E5FF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("Stroke Width: ${String.format("%.1f", lensStroke)} dp", color = Color.White, fontSize = 13.sp)
-                                Slider(value = lensStroke, onValueChange = { lensStroke = it; settingsManager.lensStrokeWidth = it }, valueRange = 0.5f..3.0f)
+                                LiquidGlassSlider(value = lensIntensity, onValueChange = { lensIntensity = it; settingsManager.lensIntensity = it }, valueRange = 0.1f..1.0f)
+
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Stroke Width", color = Color.White, fontSize = 13.sp)
+                                    Text("${String.format("%.1f", lensStroke)} dp", color = Color(0xFF00E5FF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                LiquidGlassSlider(value = lensStroke, onValueChange = { lensStroke = it; settingsManager.lensStrokeWidth = it }, valueRange = 0.5f..3.0f)
                             }
                         }
                     }
@@ -283,16 +282,28 @@ fun SettingsScreen(
                     SettingsSectionHeader("ICON SIZE & SHAPE")
                     SettingsGroup {
                         Column(modifier = Modifier.padding(14.dp)) {
-                            Text("Size: ${iconSize.toInt()} dp", color = Color.White, fontSize = 13.sp)
-                            Slider(value = iconSize, onValueChange = { iconSize = it; settingsManager.iconSize = it }, valueRange = 40f..72f)
-
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Size", color = Color.White, fontSize = 13.sp)
+                                Text("${iconSize.toInt()} dp", color = Color(0xFF00E5FF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Corner Radius: ${iconCornerRadius.toInt()}%", color = Color.White, fontSize = 13.sp)
-                            Slider(value = iconCornerRadius, onValueChange = { iconCornerRadius = it; settingsManager.iconCornerRadius = it }, valueRange = 0f..50f)
+                            LiquidGlassSlider(value = iconSize, onValueChange = { iconSize = it; settingsManager.iconSize = it }, valueRange = 40f..72f)
 
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Corner Radius", color = Color.White, fontSize = 13.sp)
+                                Text("${iconCornerRadius.toInt()}%", color = Color(0xFF00E5FF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Opacity: ${(iconOpacity * 100).toInt()}%", color = Color.White, fontSize = 13.sp)
-                            Slider(value = iconOpacity, onValueChange = { iconOpacity = it; settingsManager.iconOpacity = it }, valueRange = 0.2f..1.0f)
+                            LiquidGlassSlider(value = iconCornerRadius, onValueChange = { iconCornerRadius = it; settingsManager.iconCornerRadius = it }, valueRange = 0f..50f)
+
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Opacity", color = Color.White, fontSize = 13.sp)
+                                Text("${(iconOpacity * 100).toInt()}%", color = Color(0xFF00E5FF), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LiquidGlassSlider(value = iconOpacity, onValueChange = { iconOpacity = it; settingsManager.iconOpacity = it }, valueRange = 0.2f..1.0f)
                         }
                     }
 
@@ -338,15 +349,4 @@ fun SettingsScreen(
                         SettingsNavRow("Dock", "Padding, Gap and Corner Radius") { currentSubPage = "dock_sheet" }
                         SettingsDivider()
                         SettingsNavRow("Liquid Glass", "Adjust transparency, blur and lens refraction") { currentSubPage = "liquid_glass" }
-                        SettingsDivider()
-                        SettingsNavRow("Search Bar Position", "Adjust the vertical offset of the search pill") { currentSubPage = "search_sheet" }
-                    }
-                    SettingsSectionHeader("ACTIONS")
-                    SettingsGroup {
-                        SettingsNavRow("Swipe actions", "Customize gesture swipe behaviors") { currentSubPage = "swipe" }
-                    }
-                }
-            }
-        }
-    }
-}
+                        SettingsNavRow("Search Bar Position", "Adjust the vertical offset
