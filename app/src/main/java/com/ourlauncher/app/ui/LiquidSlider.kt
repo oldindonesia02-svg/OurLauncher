@@ -55,38 +55,39 @@ fun LiquidGlassSlider(
     valueRange: ClosedFloatingPointRange<Float> = 0f..100f,
     modifier: Modifier = Modifier,
     steps: Int = 0,
-    height: Dp = 50.dp
+    height: Dp = 48.dp
 ) {
     val currentOnValueChange by rememberUpdatedState(onValueChange)
     var widthPx by remember { mutableFloatStateOf(0f) }
     val coroutineScope = rememberCoroutineScope()
+    val touchScale = remember { Animatable(0f) }
     val stretchAnim = remember { Animatable(0f) }
 
     val min = valueRange.start
     val max = valueRange.endInclusive
     val fraction = if (max > min) ((value - min) / (max - min)).coerceIn(0f, 1f) else 0f
 
-    val thumbWidthDp = 36.dp
+    val thumbWidthDp = 34.dp
     val thumbHeightDp = 14.dp
-    val horizontalPaddingDp = 16.dp
+    val horizontalPaddingDp = 14.dp
 
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
             .onSizeChanged { widthPx = it.width.toFloat() }
-            .shadow(elevation = 8.dp, shape = CircleShape, ambientColor = Color.Black, spotColor = Color.Black)
+            .shadow(elevation = 10.dp, shape = CircleShape, ambientColor = Color.Black, spotColor = Color.Black)
             .clip(CircleShape)
             .background(Color(0xFF000000))
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.04f))
+                    listOf(Color.White.copy(alpha = 0.25f), Color.White.copy(alpha = 0.05f))
                 ),
                 shape = CircleShape
             )
             .pointerInput(valueRange, steps) {
-                fun update(touchX: Float, dragDelta: Float = 0f) {
+                fun update(touchX: Float) {
                     val padPx = horizontalPaddingDp.toPx()
                     val thumbWPx = thumbWidthDp.toPx()
                     val usableWidth = (widthPx - (padPx * 2) - thumbWPx).coerceAtLeast(1f)
@@ -98,20 +99,20 @@ fun LiquidGlassSlider(
                         ((rawVal - min) / stepSize).roundToInt() * stepSize + min
                     } else rawVal
                     currentOnValueChange(finalVal.coerceIn(min, max))
-
-                    if (abs(dragDelta) > 0.5f) {
-                        coroutineScope.launch {
-                            val target = (dragDelta * 0.22f).coerceIn(-12f, 12f)
-                            stretchAnim.snapTo(target)
-                            stretchAnim.animateTo(
-                                0f,
-                                spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
-                            )
-                        }
-                    }
                 }
 
-                detectTapGestures { offset -> update(offset.x) }
+                detectTapGestures(
+                    onPress = {
+                        coroutineScope.launch {
+                            touchScale.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMedium))
+                        }
+                        tryAwaitRelease()
+                        coroutineScope.launch {
+                            touchScale.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow))
+                        }
+                    },
+                    onTap = { offset -> update(offset.x) }
+                )
             }
             .pointerInput(valueRange, steps) {
                 fun update(touchX: Float, dragDelta: Float) {
@@ -128,19 +129,33 @@ fun LiquidGlassSlider(
                     currentOnValueChange(finalVal.coerceIn(min, max))
 
                     coroutineScope.launch {
-                        val target = (dragDelta * 0.35f).coerceIn(-14f, 14f)
+                        val target = (dragDelta * 0.4f).coerceIn(-16f, 16f)
                         stretchAnim.snapTo(target)
-                        stretchAnim.animateTo(
-                            0f,
-                            spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-                        )
+                        stretchAnim.animateTo(0f, spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessMedium))
                     }
                 }
 
-                detectHorizontalDragGestures { change, dragAmount ->
-                    change.consume()
-                    update(change.position.x, dragAmount)
-                }
+                detectHorizontalDragGestures(
+                    onDragStart = {
+                        coroutineScope.launch {
+                            touchScale.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMedium))
+                        }
+                    },
+                    onDragEnd = {
+                        coroutineScope.launch {
+                            touchScale.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow))
+                        }
+                    },
+                    onDragCancel = {
+                        coroutineScope.launch {
+                            touchScale.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessLow))
+                        }
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        update(change.position.x, dragAmount)
+                    }
+                )
             },
         contentAlignment = Alignment.CenterStart
     ) {
@@ -148,17 +163,17 @@ fun LiquidGlassSlider(
         val thumbOffsetDp = horizontalPaddingDp + (usableWidthDp.value * fraction).dp + stretchAnim.value.dp
         val activeTrackWidthDp = (thumbOffsetDp + (thumbWidthDp / 2f) - horizontalPaddingDp).coerceAtLeast(0.dp)
 
-        // ১. ইনঅ্যাক্টিভ ডার্ক ট্র্যাক
+        // 1. Inactive Line Track
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = horizontalPaddingDp)
                 .height(3.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF242426))
+                .background(Color(0xFF222326))
         )
 
-        // ২. নিয়ন ব্লু অ্যাক্টিভ ট্র্যাক
+        // 2. Active Glowing Cyan Track
         if (activeTrackWidthDp > 0.dp) {
             Box(
                 modifier = Modifier
@@ -174,7 +189,7 @@ fun LiquidGlassSlider(
             )
         }
 
-        // ৩. ফ্লুইড ড্রপলেট স্ট্রেচ ক্যানভাস
+        // 3. Fluid Droplet Stretch on Drag
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
@@ -182,9 +197,9 @@ fun LiquidGlassSlider(
         ) {
             val centerY = size.height / 2f
             val thumbCenterXPx = (thumbOffsetDp - horizontalPaddingDp + (thumbWidthDp / 2f)).toPx()
-            val stretch = stretchAnim.value * 2.5f
+            val stretch = stretchAnim.value * 2.2f
 
-            if (abs(stretch) > 0.5f) {
+            if (abs(stretch) > 0.4f) {
                 val blobPath = Path().apply {
                     val headX = thumbCenterXPx + stretch
                     val tailX = thumbCenterXPx - stretch * 0.6f
@@ -198,13 +213,13 @@ fun LiquidGlassSlider(
                 drawPath(
                     path = blobPath,
                     brush = Brush.horizontalGradient(
-                        listOf(Color(0xFF00E5FF).copy(alpha = 0.5f), Color(0xFF007AFF).copy(alpha = 0.65f))
+                        listOf(Color(0xFF00E5FF).copy(alpha = 0.55f), Color(0xFF007AFF).copy(alpha = 0.70f))
                     )
                 )
             }
         }
 
-        // ৪. রিফ্লেকশন গ্লেয়ার
+        // 4. Specular Glass Glare
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -213,21 +228,47 @@ fun LiquidGlassSlider(
                 .padding(horizontal = 20.dp)
                 .background(
                     Brush.horizontalGradient(
-                        listOf(Color.Transparent, Color.White.copy(alpha = 0.35f), Color.Transparent)
+                        listOf(Color.Transparent, Color.White.copy(alpha = 0.4f), Color.Transparent)
                     )
                 )
         )
 
-        // ৫. ফ্লোটিং হোয়াইট পিল থাম্ব
-        val dynamicWidth = (thumbWidthDp.value + abs(stretchAnim.value) * 0.4f).dp
+        // 5. Liquid Glass Halo Refraction on Touch
+        if (touchScale.value > 0.01f) {
+            val haloWidth = (thumbWidthDp.value + 20f * touchScale.value).dp
+            val haloHeight = (thumbHeightDp.value + 16f * touchScale.value).dp
+            Box(
+                modifier = Modifier
+                    .offset(x = thumbOffsetDp - (10f * touchScale.value).dp)
+                    .size(width = haloWidth, height = haloHeight)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(
+                                Color(0xFF00E5FF).copy(alpha = 0.45f * touchScale.value),
+                                Color.White.copy(alpha = 0.20f * touchScale.value),
+                                Color.Transparent
+                            )
+                        )
+                    )
+                    .border(
+                        1.dp,
+                        Color.White.copy(alpha = 0.35f * touchScale.value),
+                        CircleShape
+                    )
+            )
+        }
+
+        // 6. Floating White Pill Thumb
+        val dynamicWidth = (thumbWidthDp.value + abs(stretchAnim.value) * 0.35f).dp
         Box(
             modifier = Modifier
-                .offset(x = thumbOffsetDp - (abs(stretchAnim.value) * 0.2f).dp)
+                .offset(x = thumbOffsetDp - (abs(stretchAnim.value) * 0.17f).dp)
                 .size(width = dynamicWidth, height = thumbHeightDp)
                 .shadow(elevation = 6.dp, shape = CircleShape)
                 .clip(CircleShape)
                 .background(Color.White)
-                .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.45f), CircleShape)
+                .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.5f), CircleShape)
         )
     }
 }
