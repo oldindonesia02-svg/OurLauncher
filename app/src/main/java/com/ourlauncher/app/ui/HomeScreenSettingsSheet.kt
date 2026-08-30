@@ -31,15 +31,11 @@ fun HomeScreenSettingsSheet(
 
     val liquidCyan = Color(0xFF00E5FF)
 
-    LiquidGlassCardDialog(
+    LiquidGlassDialog(
         title = "Home Screen",
         confirmText = "Apply",
         cancelText = "More",
         onDismiss = onDismiss,
-        onCancel = {
-            onDismiss()
-            onOpenMoreSettings()
-        },
         onConfirm = {
             settingsManager.iconSize = iconSize
             settingsManager.gridRows = gridRows.roundToInt()
@@ -47,7 +43,7 @@ fun HomeScreenSettingsSheet(
             onDismiss()
         }
     ) {
-        // 1. Desktop Grid Slider (Capsule Pill Style)
+        // 1. Desktop Grid Slider
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -68,7 +64,7 @@ fun HomeScreenSettingsSheet(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // 2. Icon Size Slider (Capsule Pill Style)
+        // 2. Icon Size Slider (Identical Capsule)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -88,7 +84,7 @@ fun HomeScreenSettingsSheet(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // 3. Navigation Links
+        // 3. Navigation Rows
         Row(
             modifier = Modifier
                 .fillMaxWidth()
