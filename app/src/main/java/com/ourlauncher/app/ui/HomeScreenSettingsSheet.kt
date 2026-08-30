@@ -18,6 +18,7 @@ import kotlin.math.roundToInt
 @Composable
 fun HomeScreenSettingsSheet(
     settingsManager: SettingsManager,
+    visible: Boolean = true,
     onOpenTransitionEffects: () -> Unit,
     onSetDefaultScreen: () -> Unit,
     onRegenerateIcons: () -> Unit,
@@ -29,9 +30,11 @@ fun HomeScreenSettingsSheet(
     var iconSize by remember { mutableStateOf(settingsManager.iconSize) }
     var gridRows by remember { mutableStateOf(settingsManager.gridRows.toFloat()) }
 
-    val liquidCyan = Color(0xFF00E5FF)
+    val accentBlue = Color(0xFF007AFF)
+    val textColor = Color(0xFF102844)
 
-    LiquidGlassDialog(
+    LiquidGlassBottomSheet(
+        visible = visible,
         title = "Home Screen",
         confirmText = "Apply",
         cancelText = "More",
@@ -52,8 +55,8 @@ fun HomeScreenSettingsSheet(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Desktop Grid", color = Color.White, fontSize = 14.sp)
-            Text("${gridRows.roundToInt()} Rows", color = liquidCyan, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text("Desktop Grid", color = textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text("${gridRows.roundToInt()} Rows", color = accentBlue, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(4.dp))
         LiquidGlassSlider(
@@ -70,8 +73,8 @@ fun HomeScreenSettingsSheet(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Icon Size", color = Color.White, fontSize = 14.sp)
-            Text("${iconSize.toInt()} dp", color = liquidCyan, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text("Icon Size", color = textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text("${iconSize.toInt()} dp", color = accentBlue, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.height(4.dp))
         LiquidGlassSlider(
@@ -82,7 +85,7 @@ fun HomeScreenSettingsSheet(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // 3. Navigation Rows
+        // 3. Navigation Links
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -91,8 +94,8 @@ fun HomeScreenSettingsSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Set default screen", color = Color.White, fontSize = 14.sp)
-            Text("›", color = Color.White.copy(alpha = 0.5f), fontSize = 18.sp)
+            Text("Set default screen", color = textColor, fontSize = 15.sp)
+            Text("›", color = textColor.copy(alpha = 0.5f), fontSize = 18.sp)
         }
 
         Row(
@@ -103,8 +106,8 @@ fun HomeScreenSettingsSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Customize Icons", color = Color.White, fontSize = 14.sp)
-            Text("›", color = Color.White.copy(alpha = 0.5f), fontSize = 18.sp)
+            Text("Customize Icons", color = textColor, fontSize = 15.sp)
+            Text("›", color = textColor.copy(alpha = 0.5f), fontSize = 18.sp)
         }
 
         // 4. Show Label Toggle
@@ -115,15 +118,15 @@ fun HomeScreenSettingsSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Show label", color = Color.White, fontSize = 14.sp)
+            Text("Show label", color = textColor, fontSize = 15.sp)
             Switch(
                 checked = showLabel,
                 onCheckedChange = { showLabel = it },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
-                    checkedTrackColor = liquidCyan,
-                    uncheckedThumbColor = Color.LightGray,
-                    uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
+                    checkedTrackColor = accentBlue,
+                    uncheckedThumbColor = Color.White,
+                    uncheckedTrackColor = Color(0xFFC0D3E5)
                 )
             )
         }
@@ -136,15 +139,15 @@ fun HomeScreenSettingsSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Liquid folder", color = Color.White, fontSize = 14.sp)
+            Text("Liquid folder", color = textColor, fontSize = 15.sp)
             Switch(
                 checked = isLiquidFolderEnabled,
                 onCheckedChange = { isLiquidFolderEnabled = it },
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
-                    checkedTrackColor = liquidCyan,
-                    uncheckedThumbColor = Color.LightGray,
-                    uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
+                    checkedTrackColor = accentBlue,
+                    uncheckedThumbColor = Color.White,
+                    uncheckedTrackColor = Color(0xFFC0D3E5)
                 )
             )
         }
