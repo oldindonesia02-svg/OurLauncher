@@ -349,4 +349,14 @@ fun SettingsScreen(
                         SettingsNavRow("Dock", "Padding, Gap and Corner Radius") { currentSubPage = "dock_sheet" }
                         SettingsDivider()
                         SettingsNavRow("Liquid Glass", "Adjust transparency, blur and lens refraction") { currentSubPage = "liquid_glass" }
-                        SettingsNavRow("Search Bar Position", "Adjust the vertical offset
+                        SettingsNavRow("Search Bar Position", "Adjust the vertical offset of the search pill") { currentSubPage = "search_sheet" }
+                    }
+                    SettingsSectionHeader("ACTIONS")
+                    SettingsGroup {
+                        SettingsNavRow("Swipe actions", "Customize gesture swipe behaviors") { currentSubPage = "swipe" }
+                    }
+                }
+            }
+        }
+    }
+}
