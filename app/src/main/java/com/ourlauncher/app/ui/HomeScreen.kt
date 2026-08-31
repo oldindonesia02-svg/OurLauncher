@@ -392,18 +392,10 @@ fun HomeScreen(
             )
         }
 
-        // 4. Personalize (Themes & Font Picker Sheet)
+                // 4. Personalize (Screen Layout & Grid Sheet)
         if (showIconCustomizeSheet) {
-            PersonalizeThemeSheet(
+            PersonalizeLayoutSheet(
                 settingsManager = settingsManager,
-                onApplyTheme = { theme ->
-                    settingsManager.iconCornerRadius = theme.iconShapeRadius
-                    settingsManager.iconSize = theme.iconSizeDp
-                    settingsManager.fontFamily = theme.fontFamily
-                },
-                onApplyFont = { font ->
-                    settingsManager.fontFamily = font
-                },
                 onDismiss = { showIconCustomizeSheet = false }
             )
         }
