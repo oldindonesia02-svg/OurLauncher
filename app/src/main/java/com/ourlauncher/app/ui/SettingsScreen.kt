@@ -1,9 +1,6 @@
 package com.ourlauncher.app.ui
 
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.content.pm.ResolveInfo
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,29 +38,32 @@ import kotlin.math.roundToInt
 @Composable
 fun SettingsScreen(
     settingsManager: SettingsManager,
-    onDismiss: () -> Unit
+    onBack: () -> Unit = {},
+    onDismiss: () -> Unit = onBack,
+    installedIconPacks: List<IconPackInfo> = emptyList(),
+    selectedIconPack: String = "system_default",
+    onIconPackSelect: (String) -> Unit = {}
 ) {
     BackHandler { onDismiss() }
 
     val context = LocalContext.current
-    var currentSubPage by remember { mutableStateOf("main") } // "main", "icons", "grid", "dock", "glass"
+    var currentSubPage by remember { mutableStateOf("main") }
 
-    // Icon States
-    val installedIconPacks = remember { getInstalledIconPacks(context) }
+    val iconPacks = remember(installedIconPacks) {
+        if (installedIconPacks.isNotEmpty()) installedIconPacks else getInstalledIconPacks(context)
+    }
+
     var liveSize by remember { mutableFloatStateOf(settingsManager.iconSize) }
     var liveRadius by remember { mutableFloatStateOf(settingsManager.iconCornerRadius) }
     var liveOpacity by remember { mutableFloatStateOf(settingsManager.iconOpacity) }
     var liveShowLabel by remember { mutableStateOf(settingsManager.showLabels) }
-    var selectedIconPack by remember { mutableStateOf("system_default") }
+    var activePack by remember { mutableStateOf(selectedIconPack) }
     var isMonochrome by remember { mutableStateOf(settingsManager.fontFamily.equals("Monospace", ignoreCase = true)) }
 
-    // Grid States
     var liveCols by remember { mutableIntStateOf(settingsManager.gridColumns) }
     var liveRows by remember { mutableIntStateOf(settingsManager.gridRows) }
 
-    // Dock States
     var dockIconCount by remember { mutableIntStateOf(4) }
-    var isDockEnabled by remember { mutableStateOf(true) }
 
     val shapePresets = remember {
         listOf(
@@ -169,9 +169,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // -------------------------------------------------------------
-                // 1. MAIN SETTINGS LIST
-                // -------------------------------------------------------------
+                // 1. MAIN MENU
                 if (currentSubPage == "main") {
                     Text(
                         text = "CUSTOMIZATION",
@@ -194,11 +192,8 @@ fun SettingsScreen(
                     }
                 }
 
-                // -------------------------------------------------------------
-                // 2. SUB-PAGE: ICONS (Full Settings)
-                // -------------------------------------------------------------
+                // 2. ICONS MENU
                 if (currentSubPage == "icons") {
-                    // Icon Packs
                     Text("ICON PACK", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Box(
                         modifier = Modifier
@@ -208,14 +203,17 @@ fun SettingsScreen(
                             .padding(12.dp)
                     ) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(installedIconPacks) { pack ->
-                                val isSelected = selectedIconPack == pack.packageName
+                            items(iconPacks) { pack ->
+                                val isSelected = activePack == pack.packageName
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(if (isSelected) Color(0xFF007BFF).copy(alpha = 0.35f) else Color.White.copy(alpha = 0.06f))
                                         .border(1.dp, if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                                        .clickable { selectedIconPack = pack.packageName }
+                                        .clickable {
+                                            activePack = pack.packageName
+                                            onIconPackSelect(pack.packageName)
+                                        }
                                         .padding(horizontal = 14.dp, vertical = 10.dp)
                                 ) {
                                     Text(pack.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 13.sp)
@@ -224,7 +222,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Sliders & Shape Presets
                     Text("ICON SIZE & SHAPE", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Box(
                         modifier = Modifier
@@ -283,7 +280,6 @@ fun SettingsScreen(
                         }
                     }
 
-                    // Glass Sheen, Monochrome & Labels
                     Text("GLASS & LABELS", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Box(
                         modifier = Modifier
@@ -334,9 +330,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // -------------------------------------------------------------
-                // 3. SUB-PAGE: GRID
-                // -------------------------------------------------------------
+                // 3. GRID MENU
                 if (currentSubPage == "grid") {
                     Text("GRID SIZE", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -363,9 +357,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // -------------------------------------------------------------
-                // 4. SUB-PAGE: DOCK
-                // -------------------------------------------------------------
+                // 4. DOCK MENU
                 if (currentSubPage == "dock") {
                     Text("DOCK CAPACITY", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
