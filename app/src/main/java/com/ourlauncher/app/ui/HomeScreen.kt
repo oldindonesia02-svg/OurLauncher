@@ -7,7 +7,6 @@ import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -15,6 +14,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -34,9 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -46,6 +45,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -54,6 +54,7 @@ import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -136,9 +137,8 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    // বটম বার ওপেন হলে ব্যাকগ্রাউন্ডের হোমস্ক্রিন হালকা পিছিয়ে যাবে
-                    scaleX = if (showLiquidBottomBar) 0.96f else 1f
-                    scaleY = if (showLiquidBottomBar) 0.96f else 1f
+                    scaleX = if (showLiquidBottomBar) 0.95f else 1f
+                    scaleY = if (showLiquidBottomBar) 0.95f else 1f
                 }
         ) {
             HorizontalPager(
@@ -209,7 +209,7 @@ fun HomeScreen(
                 }
             }
 
-            // Search Capsule (বটম বার খুললে ফেড-আউট হয়ে যাবে)
+            // Search Capsule
             AnimatedVisibility(
                 visible = !liveHideCapsule && !isOverviewMode && !showLiquidBottomBar,
                 enter = fadeIn() + expandVertically(),
@@ -231,7 +231,7 @@ fun HomeScreen(
                 }
             }
 
-            // Bottom Dock (বটম বার খুললে ফেড-আউট হয়ে যাবে)
+            // Bottom Dock
             AnimatedVisibility(
                 visible = !showLiquidBottomBar,
                 enter = fadeIn() + slideInVertically { it / 2 },
@@ -258,7 +258,7 @@ fun HomeScreen(
             }
         }
 
-                // 4-Tab Liquid Glass Bottom Bar (Motorola Style with Scrim Overlay)
+                // 4-Tab Liquid Glass Bottom Bar (Motorola Style + Live Finger Drag Interaction)
         AnimatedVisibility(
             visible = showLiquidBottomBar,
             enter = fadeIn(tween(200)) + slideInVertically(
@@ -381,7 +381,9 @@ fun HomeScreen(
     }
 }
 
-// Embedded Ultra-Clean Liquid Glass Bar Component
+// -------------------------------------------------------------
+// Interactive Liquid Glass Bottom Bar (Finger Tracking & Physics)
+// -------------------------------------------------------------
 data class HomeActionItem(
     val title: String,
     val icon: ImageVector
@@ -407,9 +409,20 @@ fun HomeLiquidBottomBar(
         )
     }
 
-    var selectedIndex by remember { mutableIntStateOf(-1) }
+    val coroutineScope = rememberCoroutineScope()
+    val dragOffsetPx = remember { Animatable(0f) }
+    var selectedIndex by remember { mutableIntStateOf(0) }
+    var isDragging by remember { mutableStateOf(false) }
 
-    // Dark Frosted Dismiss Overlay
+    fun triggerAction(index: Int) {
+        when (index) {
+            0 -> onOpenWidgets()
+            1 -> onOpenWallpapers()
+            2 -> onOpenHomeSettings()
+            3 -> onOpenGeneralSettings()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -420,7 +433,6 @@ fun HomeLiquidBottomBar(
             ) { onDismiss() },
         contentAlignment = Alignment.BottomCenter
     ) {
-        // High-End Motorola Style Glass Capsule
         BoxWithConstraints(
             modifier = modifier
                 .padding(horizontal = 14.dp, vertical = 24.dp)
@@ -453,82 +465,140 @@ fun HomeLiquidBottomBar(
                     ),
                     shape = RoundedCornerShape(28.dp)
                 )
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {}
                 .padding(6.dp),
             contentAlignment = Alignment.CenterStart
         ) {
-            val totalWidth = maxWidth
-            val tabWidth = totalWidth / actions.size
+            val totalWidthPx = constraints.maxWidth.toFloat()
+            val tabCount = actions.size
+            val tabWidthPx = totalWidthPx / tabCount
+            val tabWidthDp = maxWidth / tabCount
 
-            if (selectedIndex >= 0) {
-                val indicatorOffset by animateDpAsState(
-                    targetValue = tabWidth * selectedIndex,
-                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 420f),
-                    label = "bubblePill"
-                )
+            // Synchronize position on initial load
+            LaunchedEffect(tabWidthPx) {
+                if (!isDragging) {
+                    dragOffsetPx.snapTo(selectedIndex * tabWidthPx)
+                }
+            }
 
+            // Liquid Interactive Gesture Area
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(tabWidthPx) {
+                        detectHorizontalDragGestures(
+                            onDragStart = {
+                                isDragging = true
+                            },
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
+                                val newOffset = (dragOffsetPx.value + dragAmount)
+                                    .coerceIn(0f, (tabCount - 1) * tabWidthPx)
+                                coroutineScope.launch {
+                                    dragOffsetPx.snapTo(newOffset)
+                                }
+                            },
+                            onDragEnd = {
+                                isDragging = false
+                                val targetIndex = (dragOffsetPx.value / tabWidthPx).roundToInt()
+                                    .coerceIn(0, tabCount - 1)
+                                selectedIndex = targetIndex
+                                coroutineScope.launch {
+                                    dragOffsetPx.animateTo(
+                                        targetValue = targetIndex * tabWidthPx,
+                                        animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f)
+                                    )
+                                    delay(100)
+                                    triggerAction(targetIndex)
+                                }
+                            },
+                            onDragCancel = {
+                                isDragging = false
+                                coroutineScope.launch {
+                                    dragOffsetPx.animateTo(
+                                        targetValue = selectedIndex * tabWidthPx,
+                                        animationSpec = spring(dampingRatio = 0.72f, stiffness = 400f)
+                                    )
+                                }
+                            }
+                        )
+                    }
+            ) {
+                val density = LocalDensity.current
+                val currentOffsetDp = with(density) { dragOffsetPx.value.toDp() }
+
+                // Live Liquid Sliding Bubble with Elastic Glass Effect
                 Box(
                     modifier = Modifier
-                        .offset(x = indicatorOffset)
-                        .width(tabWidth)
+                        .offset(x = currentOffsetDp)
+                        .width(tabWidthDp)
                         .fillMaxHeight()
+                        .graphicsLayer {
+                            // Dragging squish/stretch physics
+                            scaleX = if (isDragging) 1.08f else 1f
+                            scaleY = if (isDragging) 0.94f else 1f
+                        }
                         .clip(RoundedCornerShape(22.dp))
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    Color(0xFF00B4D8).copy(alpha = 0.35f),
-                                    Color(0xFF0077B6).copy(alpha = 0.55f)
+                                    Color(0xFF00B4D8).copy(alpha = 0.40f),
+                                    Color(0xFF0077B6).copy(alpha = 0.60f)
                                 )
                             )
                         )
                         .border(
                             1.dp,
                             Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = 0.8f), Color(0xFF00E5FF).copy(alpha = 0.3f))
+                                listOf(
+                                    Color.White.copy(alpha = 0.85f),
+                                    Color(0xFF00E5FF).copy(alpha = 0.35f)
+                                )
                             ),
                             RoundedCornerShape(22.dp)
                         )
                 )
-            }
 
-            Row(modifier = Modifier.fillMaxSize()) {
-                actions.forEachIndexed { index, item ->
-                    val isSelected = index == selectedIndex
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                selectedIndex = index
-                                when (index) {
-                                    0 -> onOpenWidgets()
-                                    1 -> onOpenWallpapers()
-                                    2 -> onOpenHomeSettings()
-                                    3 -> onOpenGeneralSettings()
-                                }
-                            },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.title,
-                            tint = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.85f),
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.height(3.dp))
-                        Text(
-                            text = item.title,
-                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.75f),
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                        )
+                // 4 Tab Items (Icons + Labels)
+                Row(modifier = Modifier.fillMaxSize()) {
+                    actions.forEachIndexed { index, item ->
+                        val isCurrentTab = (dragOffsetPx.value / tabWidthPx).roundToInt() == index
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    selectedIndex = index
+                                    coroutineScope.launch {
+                                        dragOffsetPx.animateTo(
+                                            targetValue = index * tabWidthPx,
+                                            animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f)
+                                        )
+                                        delay(100)
+                                        triggerAction(index)
+                                    }
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.title,
+                                tint = if (isCurrentTab) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.75f),
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .scale(if (isCurrentTab) 1.1f else 1f)
+                            )
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Text(
+                                text = item.title,
+                                color = if (isCurrentTab) Color.White else Color.White.copy(alpha = 0.75f),
+                                fontSize = 11.sp,
+                                fontWeight = if (isCurrentTab) FontWeight.Bold else FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }
