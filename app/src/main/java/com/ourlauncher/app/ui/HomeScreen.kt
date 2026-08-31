@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -54,21 +55,30 @@ import kotlin.math.min
 @Composable
 fun HomeScreen(
     apps: List<AppInfo>,
-    dockApps: List<AppInfo>,
-    gridItemsState: List<GridItem>,
     settingsManager: SettingsManager,
-    saveGridStructure: (List<GridItem>, SettingsManager) -> Unit,
-    handleAppOpen: (AppInfo, Rect?) -> Unit,
-    getCustomDrawable: (String) -> Drawable?,
     onOpenDrawer: () -> Unit,
-    onOpenSettings: () -> Unit,
-    clearIconCache: () -> Unit,
+    dockApps: List<AppInfo> = emptyList(),
+    gridItemsState: List<GridItem> = emptyList(),
+    saveGridStructure: (List<GridItem>, SettingsManager) -> Unit = { _, _ -> },
+    handleAppOpen: (AppInfo, Rect?) -> Unit = { app, _ -> },
+    getCustomDrawable: (String) -> Drawable? = { null },
+    onOpenSettings: () -> Unit = {},
+    clearIconCache: () -> Unit = {},
     resumeTrigger: Long = 0L
 ) {
     val context = LocalContext.current
-    var gridItems by remember(gridItemsState) { mutableStateOf(gridItemsState) }
+    val effectiveDockApps = remember(dockApps, apps) {
+        if (dockApps.isNotEmpty()) dockApps else apps.take(4)
+    }
 
-    val pageSize = settingsManager.gridColumns * settingsManager.gridRows
+    var gridItems by remember(gridItemsState, apps) {
+        mutableStateOf(
+            if (gridItemsState.isNotEmpty()) gridItemsState
+            else apps.map { GridItem.SingleApp(it) }
+        )
+    }
+
+    val pageSize = (settingsManager.gridColumns * settingsManager.gridRows).coerceAtLeast(1)
     val basePages = if (gridItems.isEmpty()) 1 else (gridItems.size + pageSize - 1) / pageSize
     val extraPagesCount = settingsManager.extraPages
     val totalPages = (basePages + extraPagesCount).coerceAtLeast(1)
@@ -77,7 +87,7 @@ fun HomeScreen(
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    // Modal & Sheet States
+    // Sheet States
     var isOverviewMode by remember { mutableStateOf(false) }
     val overviewAnim = remember { Animatable(0f) }
 
@@ -90,9 +100,9 @@ fun HomeScreen(
     var liveSearchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
     var liveHideCapsule by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
 
-    val isAnySheetOpen = showHomeSettingsSheet || showIconCustomizeSheet || 
-                         showSearchBarPositionSheet || showGlassPlayground || 
-                         showLiquidBottomBar || isOverviewMode
+    val isAnySheetOpen = showHomeSettingsSheet || showIconCustomizeSheet ||
+            showSearchBarPositionSheet || showGlassPlayground ||
+            showLiquidBottomBar || isOverviewMode
 
     LaunchedEffect(isOverviewMode) {
         overviewAnim.animateTo(
@@ -101,7 +111,6 @@ fun HomeScreen(
         )
     }
 
-    // Consolidated Back Handling
     BackHandler(enabled = isAnySheetOpen) {
         when {
             showLiquidBottomBar -> showLiquidBottomBar = false
@@ -113,7 +122,7 @@ fun HomeScreen(
         }
     }
 
-    // Drag & Drop States
+    // Drag States
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
     var draggedExternalApp by remember { mutableStateOf<AppInfo?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
@@ -126,13 +135,13 @@ fun HomeScreen(
     val animProgress = remember { Animatable(0f) }
     var animJob by remember { mutableStateOf<Job?>(null) }
 
-    val posEasing = remember(settingsManager.posCurveX1, settingsManager.posCurveY1, settingsManager.posCurveX2, settingsManager.posCurveY2) {
-        CubicBezierEasing(
-            settingsManager.posCurveX1.coerceIn(0f, 1f),
-            settingsManager.posCurveY1.coerceIn(0f, 1.5f),
-            settingsManager.posCurveX2.coerceIn(0f, 1f),
-            settingsManager.posCurveY2.coerceIn(0f, 1.5f)
-        )
+    fun defaultOpenApp(app: AppInfo, bounds: Rect?) {
+        try {
+            val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
+            if (intent != null) context.startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun sanitizeAndSaveFolders(items: List<GridItem>) {
@@ -151,7 +160,8 @@ fun HomeScreen(
         gridItems = sanitized
         saveGridStructure(sanitized, settingsManager)
     }
-        val ov = overviewAnim.value
+
+    val ov = overviewAnim.value
 
     Box(
         modifier = Modifier
@@ -159,15 +169,9 @@ fun HomeScreen(
             .pointerInput(isAnySheetOpen) {
                 if (!isAnySheetOpen) {
                     var totalVertical = 0f
-                    var startX = 0f
                     detectVerticalDragGestures(
-                        onDragStart = { offset ->
-                            startX = offset.x
-                            totalVertical = 0f
-                        },
-                        onVerticalDrag = { _, dragAmount ->
-                            totalVertical += dragAmount
-                        },
+                        onDragStart = { totalVertical = 0f },
+                        onVerticalDrag = { _, dragAmount -> totalVertical += dragAmount },
                         onDragEnd = {
                             if (totalVertical < -50f) {
                                 onOpenDrawer()
@@ -226,12 +230,12 @@ fun HomeScreen(
                                                 draggedIndex = found.key
                                                 dragOffset = startPos
                                             } else {
-                                                showLiquidBottomBar = true // ফাঁকা স্ক্রিনে লং প্রেসে লিকুইড বার খুলবে
+                                                showLiquidBottomBar = true
                                             }
                                         },
-                                        onDrag = { change, amount ->
+                                        onDrag = { change: PointerInputChange, dragAmount: Offset ->
                                             change.consume()
-                                            dragOffset += amount
+                                            dragOffset += dragAmount
 
                                             val hovered = itemBoundsMap.entries.firstOrNull { (idx, rect) ->
                                                 rect.contains(dragOffset.x.toInt(), dragOffset.y.toInt()) && idx != draggedIndex
@@ -304,14 +308,26 @@ fun HomeScreen(
                                     is GridItem.SingleApp -> {
                                         AppIcon(
                                             app = item.app,
-                                            onClick = { handleAppOpen(item.app, itemBoundsMap[globalIndex]) },
+                                            onClick = {
+                                                if (handleAppOpen != { _: AppInfo, _: Rect? -> }) {
+                                                    handleAppOpen(item.app, itemBoundsMap[globalIndex])
+                                                } else {
+                                                    defaultOpenApp(item.app, itemBoundsMap[globalIndex])
+                                                }
+                                            },
                                             showLabel = settingsManager.showLabels,
                                             fontFamilyName = settingsManager.fontFamily,
                                             iconSizeDp = settingsManager.iconSize,
                                             cornerRadiusPercent = settingsManager.iconCornerRadius,
                                             iconOpacity = settingsManager.iconOpacity,
                                             customDrawable = getCustomDrawable(item.app.packageName),
-                                            onClickWithBounds = { bounds -> handleAppOpen(item.app, bounds) },
+                                            onClickWithBounds = { bounds ->
+                                                if (handleAppOpen != { _: AppInfo, _: Rect? -> }) {
+                                                    handleAppOpen(item.app, bounds)
+                                                } else {
+                                                    defaultOpenApp(item.app, bounds)
+                                                }
+                                            },
                                             modifier = Modifier.width(82.dp)
                                         )
                                     }
@@ -330,7 +346,8 @@ fun HomeScreen(
                     }
                 }
             }
-                        // Liquid Search & AI Capsule
+
+            // Search Capsule
             if (!liveHideCapsule && !isOverviewMode) {
                 Box(
                     modifier = Modifier
@@ -348,28 +365,28 @@ fun HomeScreen(
                 }
             }
 
-            // Bottom Liquid Dock
+            // Dock
             LiquidGlassDock(
                 modifier = Modifier.padding(bottom = 16.dp)
             ) {
-                dockApps.forEach { app ->
+                effectiveDockApps.forEach { app ->
                     AppIcon(
                         app = app,
-                        onClick = { handleAppOpen(app, null) },
+                        onClick = { defaultOpenApp(app, null) },
                         showLabel = false,
                         fontFamilyName = settingsManager.fontFamily,
                         iconSizeDp = settingsManager.iconSize,
                         cornerRadiusPercent = settingsManager.iconCornerRadius,
                         iconOpacity = settingsManager.iconOpacity,
                         customDrawable = getCustomDrawable(app.packageName),
-                        onClickWithBounds = { bounds -> handleAppOpen(app, bounds) },
+                        onClickWithBounds = { bounds -> defaultOpenApp(app, bounds) },
                         modifier = Modifier.width(64.dp)
                     )
                 }
             }
         }
 
-        // Floating Drag Overlay
+        // Drag Overlay
         val floatingApp = if (draggedIndex != null) {
             val item = gridItems.getOrNull(draggedIndex!!)
             if (item is GridItem.SingleApp) item.app else null
@@ -400,14 +417,15 @@ fun HomeScreen(
                 }
             }
         }
-                // 1. Folder Popup Dialog
+
+        // Folder Popup
         if (activeFolder != null) {
             FolderPopup(
                 folder = activeFolder!!,
                 settingsManager = settingsManager,
                 getCustomDrawable = getCustomDrawable,
-                onAppClick = { app -> handleAppOpen(app, null) },
-                onAppClickWithBounds = { app, bounds -> handleAppOpen(app, bounds) },
+                onAppClick = { app -> defaultOpenApp(app, null) },
+                onAppClickWithBounds = { app, bounds -> defaultOpenApp(app, bounds) },
                 onRenameFolder = { newName ->
                     activeFolder?.name = newName
                     saveGridStructure(gridItems, settingsManager)
@@ -428,7 +446,7 @@ fun HomeScreen(
             )
         }
 
-        // 2. Liquid Glass 4-Tab Bottom Bar (Motorola Style)
+        // 4-Tab Liquid Glass Bottom Bar
         if (showLiquidBottomBar) {
             HomeLiquidBottomBar(
                 onOpenWidgets = {
@@ -461,7 +479,7 @@ fun HomeScreen(
             )
         }
 
-        // 3. Home Screen Settings Sheet
+        // Home Settings Sheet
         if (showHomeSettingsSheet) {
             HomeScreenSettingsSheet(
                 settingsManager = settingsManager,
@@ -496,7 +514,7 @@ fun HomeScreen(
             )
         }
 
-        // 4. Live Glass Playground
+        // Glass Playground
         if (showGlassPlayground) {
             GlassPlaygroundSheet(
                 settingsManager = settingsManager,
@@ -504,17 +522,13 @@ fun HomeScreen(
             )
         }
 
-        // 5. Search Bar Position Sheet
+        // Search Bar Position Sheet
         if (showSearchBarPositionSheet) {
             TopLiquidSearchBarPositionCard(
                 currentOffset = liveSearchOffset,
                 isCapsuleHidden = liveHideCapsule,
-                onOffsetChange = { newOffset: Float ->
-                    liveSearchOffset = newOffset
-                },
-                onHideCapsuleChange = { newHidden: Boolean ->
-                    liveHideCapsule = newHidden
-                },
+                onOffsetChange = { newOffset: Float -> liveSearchOffset = newOffset },
+                onHideCapsuleChange = { newHidden: Boolean -> liveHideCapsule = newHidden },
                 onOpenDockPosition = {
                     showSearchBarPositionSheet = false
                     onOpenSettings()
@@ -531,7 +545,7 @@ fun HomeScreen(
             )
         }
 
-        // 6. Icon Customize Sheet
+        // Icon Customize Sheet
         if (showIconCustomizeSheet) {
             Box(
                 modifier = Modifier.fillMaxSize(),
