@@ -19,8 +19,6 @@ import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Chat
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -55,35 +53,34 @@ fun PersonalizeThemeSheet(
 ) {
     BackHandler { onDismiss() }
 
-    var selectedTab by remember { mutableIntStateOf(0) } // 0 -> Themes, 1 -> Font
+    var selectedTab by remember { mutableIntStateOf(0) }
 
-    // Real OS Themes requested
     val themePresets = remember {
         listOf(
             ThemePreset(
                 id = "ios_dark_liquid",
                 name = "iOS Dark Liquid",
-                bgGradients = listOf(Color(0xFF1C1C1E), Color(0xFF000000), Color(0xFF2C2C2E)),
+                bgGradients = listOf(Color(0xFF2C2C2E), Color(0xFF1C1C1E), Color(0xFF000000)),
                 accentColor = Color(0xFF0A84FF),
-                iconShapeRadius = 42f, // iOS Squircle Curve
+                iconShapeRadius = 40f,
                 fontFamily = "SF Pro",
-                iconSizeDp = 60f
+                iconSizeDp = 62f
             ),
             ThemePreset(
                 id = "ios_original_liquid",
                 name = "iOS Original Glass",
-                bgGradients = listOf(Color(0xFF64B5F6), Color(0xFF1976D2), Color(0xFF0D47A1)),
+                bgGradients = listOf(Color(0xFF64B5F6), Color(0xFF1E88E5), Color(0xFF0D47A1)),
                 accentColor = Color(0xFF007AFF),
-                iconShapeRadius = 42f,
+                iconShapeRadius = 40f,
                 fontFamily = "SF Pro",
-                iconSizeDp = 60f
+                iconSizeDp = 62f
             ),
             ThemePreset(
                 id = "hyper_os",
                 name = "HyperOS Theme",
-                bgGradients = listOf(Color(0xFFFF7043), Color(0xFFF4511E), Color(0xFF212121)),
+                bgGradients = listOf(Color(0xFFFF7043), Color(0xFFE64A19), Color(0xFF212121)),
                 accentColor = Color(0xFFFF6D00),
-                iconShapeRadius = 32f, // Xiaomi HyperOS Smooth Rounded
+                iconShapeRadius = 30f,
                 fontFamily = "Inter",
                 iconSizeDp = 58f
             ),
@@ -92,25 +89,25 @@ fun PersonalizeThemeSheet(
                 name = "iQOO Monster",
                 bgGradients = listOf(Color(0xFFFFD600), Color(0xFF212121), Color(0xFF000000)),
                 accentColor = Color(0xFFFFD600),
-                iconShapeRadius = 26f, // iQOO Sporty Radius
+                iconShapeRadius = 24f,
                 fontFamily = "Roboto",
-                iconSizeDp = 62f
+                iconSizeDp = 60f
             ),
             ThemePreset(
                 id = "moto_liquid",
                 name = "Moto Liquid Glass",
                 bgGradients = listOf(Color(0xFF00E5FF), Color(0xFF0072FF), Color(0xFF09141D)),
                 accentColor = Color(0xFF00E5FF),
-                iconShapeRadius = 50f, // Moto Circle
+                iconShapeRadius = 50f,
                 fontFamily = "Outfit",
                 iconSizeDp = 60f
             ),
             ThemePreset(
                 id = "nothing_os",
                 name = "Nothing OS Glass",
-                bgGradients = listOf(Color(0xFF2B2B2B), Color(0xFF121212), Color(0xFF000000)),
+                bgGradients = listOf(Color(0xFF333333), Color(0xFF1A1A1A), Color(0xFF0A0A0A)),
                 accentColor = Color(0xFFFF3B30),
-                iconShapeRadius = 50f, // Nothing OS Dot/Circle
+                iconShapeRadius = 50f,
                 fontFamily = "Monospace",
                 iconSizeDp = 56f
             )
@@ -134,7 +131,6 @@ fun PersonalizeThemeSheet(
             ) { onDismiss() },
         contentAlignment = Alignment.Center
     ) {
-        // Center Glass Modal Card
         Box(
             modifier = Modifier
                 .padding(horizontal = 20.dp, vertical = 36.dp)
@@ -150,7 +146,7 @@ fun PersonalizeThemeSheet(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFF182A3A).copy(alpha = 0.95f),
+                            Color(0xFF182A3A).copy(alpha = 0.96f),
                             Color(0xFF0E1A24).copy(alpha = 0.98f)
                         )
                     )
@@ -176,14 +172,13 @@ fun PersonalizeThemeSheet(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top Tab Switcher (Themes | Font)
+                // Tab Selector
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    // Themes Tab
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
@@ -211,7 +206,6 @@ fun PersonalizeThemeSheet(
                         }
                     }
 
-                    // Font Tab
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
@@ -242,7 +236,6 @@ fun PersonalizeThemeSheet(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Tab Content
                 if (selectedTab == 0) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
@@ -261,7 +254,6 @@ fun PersonalizeThemeSheet(
                                         onApplyTheme(preset)
                                     }
                             ) {
-                                // Miniature Card with Live Theme Shape Preview
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -281,12 +273,12 @@ fun PersonalizeThemeSheet(
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            MiniThemeIcon(Icons.Rounded.Call, preset.accentColor, preset.iconShapeRadius)
-                                            MiniThemeIcon(Icons.Rounded.Image, Color(0xFF34C759), preset.iconShapeRadius)
+                                            MiniThemeIcon(Icons.Rounded.Call, preset.accentColor, preset.iconShapeRadius, preset.id == "nothing_os")
+                                            MiniThemeIcon(Icons.Rounded.Image, Color(0xFF34C759), preset.iconShapeRadius, preset.id == "nothing_os")
                                         }
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            MiniThemeIcon(Icons.Rounded.CameraAlt, Color(0xFFFF9500), preset.iconShapeRadius)
-                                            MiniThemeIcon(Icons.Rounded.Chat, Color(0xFF5856D6), preset.iconShapeRadius)
+                                            MiniThemeIcon(Icons.Rounded.CameraAlt, Color(0xFFFF9500), preset.iconShapeRadius, preset.id == "nothing_os")
+                                            MiniThemeIcon(Icons.Rounded.Chat, Color(0xFF5856D6), preset.iconShapeRadius, preset.id == "nothing_os")
                                         }
                                     }
                                 }
@@ -343,7 +335,6 @@ fun PersonalizeThemeSheet(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Done Button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -370,13 +361,14 @@ fun PersonalizeThemeSheet(
 }
 
 @Composable
-fun MiniThemeIcon(icon: ImageVector, bgColor: Color, radiusPercent: Float) {
+fun MiniThemeIcon(icon: ImageVector, bgColor: Color, radiusPercent: Float, isMonochrome: Boolean) {
+    val shape = RoundedCornerShape(percent = radiusPercent.toInt().coerceIn(0, 50))
     Box(
         modifier = Modifier
             .size(24.dp)
-            .clip(RoundedCornerShape(percent = radiusPercent.toInt()))
-            .background(bgColor.copy(alpha = 0.85f))
-            .border(0.8.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(percent = radiusPercent.toInt())),
+            .clip(shape)
+            .background(if (isMonochrome) Color.White.copy(alpha = 0.15f) else bgColor.copy(alpha = 0.85f))
+            .border(0.8.dp, Color.White.copy(alpha = 0.5f), shape),
         contentAlignment = Alignment.Center
     ) {
         Icon(
