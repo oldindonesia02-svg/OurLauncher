@@ -8,7 +8,6 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -20,11 +19,9 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -92,13 +89,12 @@ fun HomeScreen(
     var showHomeSettingsSheet by remember { mutableStateOf(false) }
     var showTransitionEffectsSheet by remember { mutableStateOf(false) }
     var showLiquidBottomBar by remember { mutableStateOf(false) }
+    var showIconCustomizeSheet by remember { mutableStateOf(false) }
 
-    var liveSearchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
-    var liveHideCapsule by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
     var selectedTransitionEffect by remember { mutableStateOf("Standard") }
 
     val isAnySheetOpen = showHomeSettingsSheet || showTransitionEffectsSheet || 
-            showLiquidBottomBar || isOverviewMode
+            showLiquidBottomBar || showIconCustomizeSheet || isOverviewMode
 
     LaunchedEffect(isOverviewMode) {
         overviewAnim.animateTo(
@@ -109,6 +105,7 @@ fun HomeScreen(
 
     BackHandler(enabled = isAnySheetOpen) {
         when {
+            showIconCustomizeSheet -> showIconCustomizeSheet = false
             showTransitionEffectsSheet -> showTransitionEffectsSheet = false
             showHomeSettingsSheet -> showHomeSettingsSheet = false
             showLiquidBottomBar -> showLiquidBottomBar = false
@@ -144,6 +141,7 @@ fun HomeScreen(
                     scaleY = if (isAnySheetOpen && !isOverviewMode) 0.95f else 1f
                 }
         ) {
+            // Main App Grid Pager
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = !isAnySheetOpen,
@@ -159,7 +157,6 @@ fun HomeScreen(
                 val pageStart = pageIndex * pageSize
                 val pageEnd = minOf(pageStart + pageSize, apps.size)
                 val currentGridItems = if (pageStart < apps.size) apps.subList(pageStart, pageEnd) else emptyList()
-
                 val pageOffset = ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction).absoluteValue
 
                 Box(
@@ -205,7 +202,7 @@ fun HomeScreen(
                 ) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(settingsManager.gridColumns),
-                        contentPadding = PaddingValues(top = 40.dp, bottom = 12.dp, start = 8.dp, end = 8.dp),
+                        contentPadding = PaddingValues(top = 44.dp, bottom = 12.dp, start = 8.dp, end = 8.dp),
                         userScrollEnabled = false,
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier
@@ -241,18 +238,20 @@ fun HomeScreen(
                 }
             }
 
-            // Search Capsule
-            AnimatedVisibility(
-                visible = !liveHideCapsule && !isOverviewMode && !isAnySheetOpen,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
+            // Fixed Bottom Control Section (Search Capsule + Spaced Dock)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(bottom = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .offset { IntOffset(0, liveSearchOffset.toInt()) }
-                        .padding(bottom = 6.dp),
-                    contentAlignment = Alignment.Center
+                // 1. Search Capsule
+                AnimatedVisibility(
+                    visible = !settingsManager.hideSearchCapsule && !isOverviewMode && !isAnySheetOpen,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
                 ) {
                     LiquidSearchAiCapsule(
                         pagerState = pagerState,
@@ -261,36 +260,34 @@ fun HomeScreen(
                         onAiClick = {}
                     )
                 }
-            }
 
-            // Bottom Dock
-            AnimatedVisibility(
-                visible = !isAnySheetOpen,
-                enter = fadeIn() + slideInVertically { it / 2 },
-                exit = fadeOut() + slideOutVertically { it / 2 }
-            ) {
-                LiquidGlassDock(
-                    modifier = Modifier.padding(bottom = 16.dp)
+                // 2. Liquid Glass Dock
+                AnimatedVisibility(
+                    visible = !isAnySheetOpen,
+                    enter = fadeIn() + slideInVertically { it / 2 },
+                    exit = fadeOut() + slideOutVertically { it / 2 }
                 ) {
-                    dockApps.forEach { app ->
-                        AppIcon(
-                            app = app,
-                            onClick = { onAppClick(app) },
-                            showLabel = false,
-                            fontFamilyName = settingsManager.fontFamily,
-                            iconSizeDp = settingsManager.iconSize,
-                            cornerRadiusPercent = settingsManager.iconCornerRadius,
-                            iconOpacity = settingsManager.iconOpacity,
-                            customDrawable = getCustomDrawable(app.packageName),
-                            onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
-                            modifier = Modifier.width(64.dp)
-                        )
+                    LiquidGlassDock {
+                        dockApps.forEach { app ->
+                            AppIcon(
+                                app = app,
+                                onClick = { onAppClick(app) },
+                                showLabel = false,
+                                fontFamilyName = settingsManager.fontFamily,
+                                iconSizeDp = settingsManager.iconSize,
+                                cornerRadiusPercent = settingsManager.iconCornerRadius,
+                                iconOpacity = settingsManager.iconOpacity,
+                                customDrawable = getCustomDrawable(app.packageName),
+                                onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
+                                modifier = Modifier.width(64.dp)
+                            )
+                        }
                     }
                 }
             }
         }
 
-                // 1. 3-Tab Liquid Glass Bottom Bar (Widgets | Wallpapers | Home Settings)
+        // 1. 3-Tab Liquid Glass Bottom Bar (Widgets | Wallpapers | Home Settings)
         AnimatedVisibility(
             visible = showLiquidBottomBar,
             enter = fadeIn(tween(200)) + slideInVertically(
@@ -324,7 +321,7 @@ fun HomeScreen(
             )
         }
 
-        // 2. Home Screen Settings Sheet (Image 27098.png)
+        // 2. Home Screen Settings Sheet
         if (showHomeSettingsSheet) {
             HomeScreenSettingsSheet(
                 settingsManager = settingsManager,
@@ -355,7 +352,10 @@ fun HomeScreen(
                 },
                 onOpenMoreSettings = {
                     showHomeSettingsSheet = false
-                    onOpenSettings()
+                    coroutineScope.launch {
+                        delay(120)
+                        showIconCustomizeSheet = true
+                    }
                 },
                 onDismiss = { showHomeSettingsSheet = false }
             )
@@ -369,6 +369,17 @@ fun HomeScreen(
                     selectedTransitionEffect = newEffect
                 },
                 onDismiss = { showTransitionEffectsSheet = false }
+            )
+        }
+
+        // 4. Icons Full Customization Sheet (Icon Packs, Sliders, Monochrome)
+        if (showIconCustomizeSheet) {
+            IconCustomizeSheet(
+                settingsManager = settingsManager,
+                onApply = {
+                    clearIconCache()
+                },
+                onDismiss = { showIconCustomizeSheet = false }
             )
         }
     }
@@ -401,12 +412,30 @@ fun TransitionEffectsSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                .background(Color(0xFF1E2024))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFF14222E).copy(alpha = 0.96f),
+                            Color(0xFF09121A).copy(alpha = 0.99f)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.3.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.75f),
+                            Color(0xFF00E5FF).copy(alpha = 0.35f),
+                            Color.Transparent
+                        )
+                    ),
+                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+                )
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) {}
-                .padding(horizontal = 24.dp, vertical = 18.dp)
+                .padding(horizontal = 24.dp, vertical = 20.dp)
                 .navigationBarsPadding()
         ) {
             Column(
@@ -455,12 +484,17 @@ fun TransitionEffectsSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
-                            .background(if (isSelected) Color(0xFF007BFF).copy(alpha = 0.18f) else Color.Transparent)
+                            .background(if (isSelected) Color(0xFF007BFF).copy(alpha = 0.22f) else Color.White.copy(alpha = 0.04f))
+                            .border(
+                                1.dp,
+                                if (isSelected) Color(0xFF00E5FF).copy(alpha = 0.5f) else Color.Transparent,
+                                RoundedCornerShape(14.dp)
+                            )
                             .clickable {
                                 onSelectEffect(effect)
                                 onDismiss()
                             }
-                            .padding(horizontal = 14.dp, vertical = 14.dp),
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -483,7 +517,7 @@ fun TransitionEffectsSheet(
 }
 
 // -------------------------------------------------------------
-// 3-Tab Interactive Liquid Glass Bottom Bar (Finger Tracking & Physics)
+// 3-Tab Interactive Liquid Glass Bottom Bar
 // -------------------------------------------------------------
 data class HomeActionItem(
     val title: String,
@@ -500,7 +534,6 @@ fun HomeLiquidBottomBar(
 ) {
     BackHandler { onDismiss() }
 
-    // 3 Tabs: Widgets, Wallpapers, Home Settings
     val actions = remember {
         listOf(
             HomeActionItem("Widgets", Icons.Rounded.Widgets),
@@ -623,7 +656,6 @@ fun HomeLiquidBottomBar(
                 val densityLocal = LocalDensity.current
                 val currentOffsetDp = with(densityLocal) { dragOffsetPx.value.toDp() }
 
-                // Sliding Liquid Bubble for 3 Tabs
                 Box(
                     modifier = Modifier
                         .offset(x = currentOffsetDp)
@@ -654,7 +686,6 @@ fun HomeLiquidBottomBar(
                         )
                 )
 
-                // 3 Tab Items
                 Row(modifier = Modifier.fillMaxSize()) {
                     actions.forEachIndexed { index, item ->
                         val isCurrentTab = (dragOffsetPx.value / tabWidthPx).roundToInt() == index
