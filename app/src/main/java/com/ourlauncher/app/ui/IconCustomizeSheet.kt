@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
@@ -49,7 +50,7 @@ data class ShapePreset(
     val radiusPercent: Float
 )
 
-// Scanner for Play Store 3rd-Party Icon Packs
+// Scan for Play Store Icon Packs
 fun getInstalledIconPacks(context: Context): List<IconPackInfo> {
     val pm = context.packageManager
     val iconPacks = mutableListOf<IconPackInfo>()
@@ -81,6 +82,7 @@ fun getInstalledIconPacks(context: Context): List<IconPackInfo> {
 fun IconCustomizeSheet(
     settingsManager: SettingsManager,
     onApply: () -> Unit = {},
+    onOpenDockSettings: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     BackHandler { onDismiss() }
@@ -115,7 +117,6 @@ fun IconCustomizeSheet(
             ) { onDismiss() },
         contentAlignment = Alignment.Center
     ) {
-        // Frosted Glass Modal matching Image 27187.png
         Box(
             modifier = Modifier
                 .padding(horizontal = 20.dp, vertical = 36.dp)
@@ -151,9 +152,9 @@ fun IconCustomizeSheet(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(18.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Top Action Header
+                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -176,9 +177,9 @@ fun IconCustomizeSheet(
                     }
 
                     Text(
-                        text = "Icons",
+                        text = "Icons & Appearance",
                         color = Color.White,
-                        fontSize = 20.sp,
+                        fontSize = 19.sp,
                         fontWeight = FontWeight.Bold
                     )
 
@@ -199,7 +200,7 @@ fun IconCustomizeSheet(
                     }
                 }
 
-                // 1. THIRD-PARTY ICON PACKS
+                                // 1. Third-party Icon Packs
                 Text(
                     text = "ICON PACK",
                     color = Color.White.copy(alpha = 0.55f),
@@ -211,7 +212,7 @@ fun IconCustomizeSheet(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(18.dp))
                         .background(Color(0xFF131F2A))
                         .padding(14.dp)
                 ) {
@@ -221,7 +222,7 @@ fun IconCustomizeSheet(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("System Default (No 3rd party pack found)", color = Color.White, fontSize = 14.sp)
+                            Text("System Default", color = Color.White, fontSize = 14.sp)
                             Icon(Icons.Rounded.Check, contentDescription = null, tint = Color(0xFF00E5FF))
                         }
                     } else {
@@ -230,16 +231,14 @@ fun IconCustomizeSheet(
                                 val isSelected = selectedIconPack == pack.packageName
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(14.dp))
+                                        .clip(RoundedCornerShape(12.dp))
                                         .background(if (isSelected) Color(0xFF007BFF).copy(alpha = 0.35f) else Color.White.copy(alpha = 0.06f))
                                         .border(
                                             1.dp,
                                             if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.12f),
-                                            RoundedCornerShape(14.dp)
+                                            RoundedCornerShape(12.dp)
                                         )
-                                        .clickable {
-                                            selectedIconPack = pack.packageName
-                                        }
+                                        .clickable { selectedIconPack = pack.packageName }
                                         .padding(horizontal = 14.dp, vertical = 10.dp)
                                 ) {
                                     Text(
@@ -254,7 +253,7 @@ fun IconCustomizeSheet(
                     }
                 }
 
-                // 2. ICON SIZE & SHAPE PRESETS
+                // 2. Icon Size & Shape
                 Text(
                     text = "ICON SIZE & SHAPE",
                     color = Color.White.copy(alpha = 0.55f),
@@ -266,12 +265,11 @@ fun IconCustomizeSheet(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(18.dp))
                         .background(Color(0xFF131F2A))
                         .padding(16.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        // Size Slider
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -295,7 +293,6 @@ fun IconCustomizeSheet(
                             )
                         }
 
-                        // Corner Radius Slider
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -319,24 +316,23 @@ fun IconCustomizeSheet(
                             )
                         }
 
-                        // Shape Chips
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(shapePresets) { preset ->
                                 val isSelected = liveRadius.roundToInt() == preset.radiusPercent.roundToInt()
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(RoundedCornerShape(10.dp))
                                         .background(if (isSelected) Color(0xFF00E5FF).copy(alpha = 0.25f) else Color.White.copy(alpha = 0.06f))
                                         .border(
                                             1.dp,
                                             if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.15f),
-                                            RoundedCornerShape(12.dp)
+                                            RoundedCornerShape(10.dp)
                                         )
                                         .clickable {
                                             liveRadius = preset.radiusPercent
                                             settingsManager.iconCornerRadius = preset.radiusPercent
                                         }
-                                        .padding(horizontal = 12.dp, vertical = 7.dp)
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
                                 ) {
                                     Text(
                                         text = preset.name,
@@ -350,9 +346,32 @@ fun IconCustomizeSheet(
                     }
                 }
 
-                // 3. LIQUID GLASS & OPACITY
+                // 3. Dock Settings Shortcut
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color(0xFF131F2A))
+                        .clickable { onOpenDockSettings() }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Dock Customization", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Capacity, glass blur & corner radius", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                    }
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        tint = Color(0xFF00E5FF),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                // 4. Glass Transparency & Monochrome
                 Text(
-                    text = "LIQUID GLASS & OPACITY",
+                    text = "GLASS & LABELS",
                     color = Color.White.copy(alpha = 0.55f),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -362,7 +381,7 @@ fun IconCustomizeSheet(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(18.dp))
                         .background(Color(0xFF131F2A))
                         .padding(16.dp)
                 ) {
@@ -372,7 +391,7 @@ fun IconCustomizeSheet(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text("Glass Transparency", color = Color.White, fontSize = 15.sp)
+                                Text("Glass Specular Sheen", color = Color.White, fontSize = 15.sp)
                                 Text("${(liveOpacity * 100).roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
                             Slider(
@@ -390,13 +409,12 @@ fun IconCustomizeSheet(
                             )
                         }
 
-                        // Monochrome / Nothing OS Filter Toggle
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Monochrome / B&W Filter", color = Color.White, fontSize = 15.sp)
+                            Text("Monochrome B&W", color = Color.White, fontSize = 15.sp)
                             Switch(
                                 checked = isMonochrome,
                                 onCheckedChange = {
@@ -411,44 +429,27 @@ fun IconCustomizeSheet(
                                 )
                             )
                         }
-                    }
-                }
 
-                // 4. LABELS & TYPOGRAPHY
-                Text(
-                    text = "LABELS",
-                    color = Color.White.copy(alpha = 0.55f),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.sp
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFF131F2A))
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Show App Labels", color = Color.White, fontSize = 15.sp)
-                        Switch(
-                            checked = liveShowLabel,
-                            onCheckedChange = {
-                                liveShowLabel = it
-                                settingsManager.showLabels = it
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFF007BFF),
-                                uncheckedThumbColor = Color.White.copy(alpha = 0.8f),
-                                uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Show Labels", color = Color.White, fontSize = 15.sp)
+                            Switch(
+                                checked = liveShowLabel,
+                                onCheckedChange = {
+                                    liveShowLabel = it
+                                    settingsManager.showLabels = it
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = Color(0xFF007BFF),
+                                    uncheckedThumbColor = Color.White.copy(alpha = 0.8f),
+                                    uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
+                                )
                             )
-                        )
+                        }
                     }
                 }
 
@@ -467,7 +468,7 @@ fun IconCustomizeSheet(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Apply & Done",
+                        text = "Done",
                         color = Color.White,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
