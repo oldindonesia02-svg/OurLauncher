@@ -49,7 +49,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
@@ -82,7 +81,6 @@ fun HomeScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
-    // Sheet States
     var isOverviewMode by remember { mutableStateOf(false) }
     val overviewAnim = remember { Animatable(0f) }
 
@@ -90,11 +88,12 @@ fun HomeScreen(
     var showTransitionEffectsSheet by remember { mutableStateOf(false) }
     var showLiquidBottomBar by remember { mutableStateOf(false) }
     var showIconCustomizeSheet by remember { mutableStateOf(false) }
+    var showDockCustomizeSheet by remember { mutableStateOf(false) }
 
     var selectedTransitionEffect by remember { mutableStateOf("Standard") }
 
     val isAnySheetOpen = showHomeSettingsSheet || showTransitionEffectsSheet || 
-            showLiquidBottomBar || showIconCustomizeSheet || isOverviewMode
+            showLiquidBottomBar || showIconCustomizeSheet || showDockCustomizeSheet || isOverviewMode
 
     LaunchedEffect(isOverviewMode) {
         overviewAnim.animateTo(
@@ -105,6 +104,7 @@ fun HomeScreen(
 
     BackHandler(enabled = isAnySheetOpen) {
         when {
+            showDockCustomizeSheet -> showDockCustomizeSheet = false
             showIconCustomizeSheet -> showIconCustomizeSheet = false
             showTransitionEffectsSheet -> showTransitionEffectsSheet = false
             showHomeSettingsSheet -> showHomeSettingsSheet = false
@@ -141,7 +141,6 @@ fun HomeScreen(
                     scaleY = if (isAnySheetOpen && !isOverviewMode) 0.95f else 1f
                 }
         ) {
-            // Main App Grid Pager
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = !isAnySheetOpen,
@@ -202,20 +201,16 @@ fun HomeScreen(
                 ) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(settingsManager.gridColumns),
-                        contentPadding = PaddingValues(top = 44.dp, bottom = 12.dp, start = 8.dp, end = 8.dp),
+                        contentPadding = PaddingValues(top = 34.dp, bottom = 4.dp, start = 8.dp, end = 8.dp),
                         userScrollEnabled = false,
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
                             .fillMaxSize()
                             .pointerInput(pageIndex, isAnySheetOpen) {
                                 if (!isAnySheetOpen) {
                                     detectDragGesturesAfterLongPress(
-                                        onDragStart = {
-                                            showLiquidBottomBar = true
-                                        },
-                                        onDrag = { change: PointerInputChange, _: Offset ->
-                                            change.consume()
-                                        }
+                                        onDragStart = { showLiquidBottomBar = true },
+                                        onDrag = { change: PointerInputChange, _: Offset -> change.consume() }
                                     )
                                 }
                             }
@@ -231,23 +226,22 @@ fun HomeScreen(
                                 iconOpacity = settingsManager.iconOpacity,
                                 customDrawable = getCustomDrawable(app.packageName),
                                 onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
-                                modifier = Modifier.width(82.dp)
+                                modifier = Modifier.width(80.dp)
                             )
                         }
                     }
                 }
             }
 
-            // Fixed Bottom Control Section (Search Capsule + Spaced Dock)
+            // Fixed Bottom Section with clean spacing
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .padding(bottom = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // 1. Search Capsule
                 AnimatedVisibility(
                     visible = !settingsManager.hideSearchCapsule && !isOverviewMode && !isAnySheetOpen,
                     enter = fadeIn() + expandVertically(),
@@ -261,7 +255,6 @@ fun HomeScreen(
                     )
                 }
 
-                // 2. Liquid Glass Dock
                 AnimatedVisibility(
                     visible = !isAnySheetOpen,
                     enter = fadeIn() + slideInVertically { it / 2 },
@@ -279,7 +272,7 @@ fun HomeScreen(
                                 iconOpacity = settingsManager.iconOpacity,
                                 customDrawable = getCustomDrawable(app.packageName),
                                 onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
-                                modifier = Modifier.width(64.dp)
+                                modifier = Modifier.width(62.dp)
                             )
                         }
                     }
@@ -287,7 +280,7 @@ fun HomeScreen(
             }
         }
 
-        // 1. 3-Tab Liquid Glass Bottom Bar (Widgets | Wallpapers | Home Settings)
+       // 3-Tab Bottom Bar (Widgets | Wallpapers | Home Settings)
         AnimatedVisibility(
             visible = showLiquidBottomBar,
             enter = fadeIn(tween(200)) + slideInVertically(
@@ -298,9 +291,7 @@ fun HomeScreen(
             ) { it }
         ) {
             HomeLiquidBottomBar(
-                onOpenWidgets = {
-                    showLiquidBottomBar = false
-                },
+                onOpenWidgets = { showLiquidBottomBar = false },
                 onOpenWallpapers = {
                     showLiquidBottomBar = false
                     try {
@@ -321,7 +312,7 @@ fun HomeScreen(
             )
         }
 
-        // 2. Home Screen Settings Sheet
+        // Home Screen Settings Sheet
         if (showHomeSettingsSheet) {
             HomeScreenSettingsSheet(
                 settingsManager = settingsManager,
@@ -361,7 +352,7 @@ fun HomeScreen(
             )
         }
 
-        // 3. Transition Effects Selector Sheet
+        // Transition Effects Selector Sheet
         if (showTransitionEffectsSheet) {
             TransitionEffectsSheet(
                 currentEffect = selectedTransitionEffect,
@@ -372,14 +363,27 @@ fun HomeScreen(
             )
         }
 
-        // 4. Icons Full Customization Sheet (Icon Packs, Sliders, Monochrome)
+        // Icons Complete Customization Sheet
         if (showIconCustomizeSheet) {
             IconCustomizeSheet(
                 settingsManager = settingsManager,
-                onApply = {
-                    clearIconCache()
+                onApply = { clearIconCache() },
+                onOpenDockSettings = {
+                    showIconCustomizeSheet = false
+                    coroutineScope.launch {
+                        delay(120)
+                        showDockCustomizeSheet = true
+                    }
                 },
                 onDismiss = { showIconCustomizeSheet = false }
+            )
+        }
+
+        // Dock Customization Sheet
+        if (showDockCustomizeSheet) {
+            DockCustomizationSheet(
+                settingsManager = settingsManager,
+                onDismiss = { showDockCustomizeSheet = false }
             )
         }
     }
@@ -616,9 +620,7 @@ fun HomeLiquidBottomBar(
                     .fillMaxSize()
                     .pointerInput(tabWidthPx) {
                         detectHorizontalDragGestures(
-                            onDragStart = {
-                                isDragging = true
-                            },
+                            onDragStart = { isDragging = true },
                             onHorizontalDrag = { change, dragAmount ->
                                 change.consume()
                                 val newOffset = (dragOffsetPx.value + dragAmount)
