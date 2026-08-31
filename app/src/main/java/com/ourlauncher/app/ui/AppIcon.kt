@@ -1,5 +1,6 @@
 package com.ourlauncher.app.ui
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Rect
@@ -34,6 +35,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
 
+// Top-level Cache & Helper Functions
+private val iconBitmapCache = mutableMapOf<String, Bitmap>()
+
+fun clearIconCache() {
+    iconBitmapCache.clear()
+}
+
+fun getCachedBitmap(context: Context, packageName: String): Bitmap? {
+    return iconBitmapCache.getOrPut(packageName) {
+        try {
+            val drawable = context.packageManager.getApplicationIcon(packageName)
+            drawableToBitmap(drawable)
+        } catch (e: Exception) {
+            return null
+        }
+    }
+}
+
 fun drawableToBitmap(drawable: Drawable): Bitmap {
     if (drawable is BitmapDrawable && drawable.bitmap != null) {
         return drawable.bitmap
@@ -59,20 +78,18 @@ fun AppIcon(
     cornerRadiusPercent: Float,
     iconOpacity: Float,
     customDrawable: Drawable? = null,
-    onClickWithBounds: ((Rect?) -> Unit)? = null,
+    onClickWithBounds: ((Rect) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var itemBounds by remember { mutableStateOf<Rect?>(null) }
 
-    // Convert drawable to Bitmap safely
     val iconBitmap = remember(app.packageName, customDrawable) {
-        val targetDrawable = customDrawable ?: try {
-            context.packageManager.getApplicationIcon(app.packageName)
-        } catch (e: Exception) {
-            null
+        if (customDrawable != null) {
+            drawableToBitmap(customDrawable).asImageBitmap()
+        } else {
+            getCachedBitmap(context, app.packageName)?.asImageBitmap()
         }
-        targetDrawable?.let { drawableToBitmap(it).asImageBitmap() }
     }
 
     val shape = RoundedCornerShape(percent = cornerRadiusPercent.toInt().coerceIn(0, 50))
@@ -97,8 +114,8 @@ fun AppIcon(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) {
-                if (onClickWithBounds != null) {
-                    onClickWithBounds(itemBounds)
+                if (onClickWithBounds != null && itemBounds != null) {
+                    onClickWithBounds(itemBounds!!)
                 } else {
                     onClick()
                 }
