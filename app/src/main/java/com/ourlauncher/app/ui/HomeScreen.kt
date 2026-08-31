@@ -50,7 +50,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
@@ -139,7 +138,6 @@ fun HomeScreen(
                     scaleY = if (isAnySheetOpen && !isOverviewMode) 0.95f else 1f
                 }
         ) {
-            // Smooth Horizontal Pager (Lag-Free)
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = !isAnySheetOpen,
@@ -224,7 +222,7 @@ fun HomeScreen(
                 }
             }
 
-           // Fixed Bottom Section (Search Bar + Spaced Dock)
+            // Fixed Bottom Section (Search Bar + Spaced Dock)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -232,7 +230,6 @@ fun HomeScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 1. Search Capsule
                 if (!settingsManager.hideSearchCapsule && !isOverviewMode && !isAnySheetOpen) {
                     LiquidSearchAiCapsule(
                         pagerState = pagerState,
@@ -256,36 +253,10 @@ fun HomeScreen(
                             }
                         }
                     )
-                    Spacer(modifier = Modifier.height(14.dp)) // <-- এই স্পেসারটি একে অপরের ওপর চাপা বন্ধ করবে
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                // 2. Liquid Glass Dock
                 if (!isAnySheetOpen) {
-                    LiquidGlassDock {
-                        dockApps.forEach { app ->
-                            AppIcon(
-                                app = app,
-                                onClick = { onAppClick(app) },
-                                showLabel = false,
-                                fontFamilyName = settingsManager.fontFamily,
-                                iconSizeDp = settingsManager.iconSize,
-                                cornerRadiusPercent = settingsManager.iconCornerRadius,
-                                iconOpacity = settingsManager.iconOpacity,
-                                customDrawable = getCustomDrawable(app.packageName),
-                                onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
-                                modifier = Modifier.width(62.dp)
-                            )
-                        }
-                    }
-                }
-            }
-            
-                // 2. Liquid Glass Dock
-                AnimatedVisibility(
-                    visible = !isAnySheetOpen,
-                    enter = fadeIn() + slideInVertically { it / 2 },
-                    exit = fadeOut() + slideOutVertically { it / 2 }
-                ) {
                     LiquidGlassDock {
                         dockApps.forEach { app ->
                             AppIcon(
@@ -306,7 +277,7 @@ fun HomeScreen(
             }
         }
 
-                // 3-Tab Bottom Bar (Widgets | Wallpapers | Home Settings)
+        // 3-Tab Bottom Bar
         AnimatedVisibility(
             visible = showLiquidBottomBar,
             enter = fadeIn(tween(200)) + slideInVertically(
@@ -338,7 +309,7 @@ fun HomeScreen(
             )
         }
 
-        // Home Screen Settings Sheet (More Settings leads to Full Settings Menu)
+        // Home Screen Settings Sheet
         if (showHomeSettingsSheet) {
             HomeScreenSettingsSheet(
                 settingsManager = settingsManager,
@@ -369,7 +340,7 @@ fun HomeScreen(
                 },
                 onOpenMoreSettings = {
                     showHomeSettingsSheet = false
-                    onOpenSettings() // Opens Full Settings Panel (Desktop Grid, Icons, Dock, Gestures...)
+                    onOpenSettings()
                 },
                 onDismiss = { showHomeSettingsSheet = false }
             )
