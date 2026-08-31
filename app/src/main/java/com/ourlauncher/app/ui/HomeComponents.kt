@@ -34,7 +34,7 @@ import com.ourlauncher.app.SettingsManager
 import kotlin.math.roundToInt
 
 // -------------------------------------------------------------
-// Liquid Search Capsule with Page Indicators & AI button
+// 1. Liquid Search Capsule with Page Indicators & AI button
 // -------------------------------------------------------------
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -146,7 +146,7 @@ fun LiquidSearchAiCapsule(
 }
 
 // -------------------------------------------------------------
-// Dock Customization Sheet
+// 2. Dock Customization Sheet (Fixed Alignment & Scrolling)
 // -------------------------------------------------------------
 @Composable
 fun DockCustomizationSheet(
@@ -173,13 +173,13 @@ fun DockCustomizationSheet(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f)
+                .wrapContentHeight()
                 .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFF14222E).copy(alpha = 0.95f),
-                            Color(0xFF09121A).copy(alpha = 0.98f)
+                            Color(0xFF14222E).copy(alpha = 0.96f),
+                            Color(0xFF09121A).copy(alpha = 0.99f)
                         )
                     )
                 )
@@ -198,15 +198,25 @@ fun DockCustomizationSheet(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) {}
-                .padding(22.dp)
+                .padding(horizontal = 22.dp, vertical = 20.dp)
                 .navigationBarsPadding()
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Top Handle Pill
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .width(42.dp)
+                        .height(4.5.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.35f))
+                )
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -342,7 +352,7 @@ fun DockCustomizationSheet(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Box(
                     modifier = Modifier
