@@ -217,7 +217,7 @@ fun SettingsScreen(
                                         }
                                         .padding(horizontal = 14.dp, vertical = 10.dp)
                                 ) {
-                                    Text(pack.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 13.sp)
+                                    Text(pack.label, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 13.sp)
                                 }
                             }
                         }
