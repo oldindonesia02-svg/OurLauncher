@@ -392,20 +392,22 @@ fun HomeScreen(
             )
         }
 
-                // 4. Personalize (Themes & Font Picker Sheet)
+        // 4. Personalize (Themes & Font Picker Sheet)
         if (showIconCustomizeSheet) {
             PersonalizeThemeSheet(
                 settingsManager = settingsManager,
                 onApplyTheme = { theme ->
-                    // Theme apply action
+                    settingsManager.iconCornerRadius = theme.iconShapeRadius
+                    settingsManager.iconSize = theme.iconSizeDp
+                    settingsManager.fontFamily = theme.fontFamily
                 },
                 onApplyFont = { font ->
-                    // Font apply action
+                    settingsManager.fontFamily = font
                 },
                 onDismiss = { showIconCustomizeSheet = false }
             )
         }
-
+        
         // 5. Live Glass Playground
         if (showGlassPlayground) {
             GlassPlaygroundSheet(
