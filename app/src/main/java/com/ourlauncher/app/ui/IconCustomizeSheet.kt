@@ -238,7 +238,7 @@ fun IconCustomizeSheet(
                                         .padding(horizontal = 14.dp, vertical = 10.dp)
                                 ) {
                                     Text(
-                                        text = pack.name,
+                                        text = pack.label,
                                         color = if (isSelected) Color(0xFF00E5FF) else Color.White,
                                         fontSize = 13.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
