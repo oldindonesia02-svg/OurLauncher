@@ -1,11 +1,13 @@
 package com.ourlauncher.app.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,7 +27,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,228 +34,173 @@ import com.ourlauncher.app.SettingsManager
 import kotlin.math.roundToInt
 
 // -------------------------------------------------------------
-// 1. Home Screen Settings Sheet (Liquid Glass Fixed)
+// Liquid Search Capsule with Page Indicators & AI button
 // -------------------------------------------------------------
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreenSettingsSheet(
-    settingsManager: SettingsManager,
-    onOpenTransitionEffects: () -> Unit,
-    onSetDefaultScreen: () -> Unit,
-    onRegenerateIcons: () -> Unit,
-    onOpenMoreSettings: () -> Unit,
-    onDismiss: () -> Unit
+fun LiquidSearchAiCapsule(
+    pagerState: PagerState,
+    totalPages: Int,
+    onSearchClick: () -> Unit,
+    onAiClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    BackHandler { onDismiss() }
-
-    var showLabel by remember { mutableStateOf(settingsManager.showLabels) }
-    var liquidFolder by remember { mutableStateOf(true) }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.48f))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { onDismiss() },
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(
-                    elevation = 24.dp,
-                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-                    spotColor = Color(0xFF00E5FF).copy(alpha = 0.35f),
-                    ambientColor = Color.Black.copy(alpha = 0.6f)
-                )
-                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color(0xFF14222E).copy(alpha = 0.94f),
-                            Color(0xFF0A1218).copy(alpha = 0.98f)
-                        )
+    Row(
+        modifier = modifier
+            .padding(horizontal = 24.dp)
+            .height(52.dp)
+            .shadow(
+                elevation = 16.dp,
+                shape = CircleShape,
+                spotColor = Color(0xFF00E5FF).copy(alpha = 0.25f),
+                ambientColor = Color.Black.copy(alpha = 0.4f)
+            )
+            .clip(CircleShape)
+            .background(
+                Brush.horizontalGradient(
+                    listOf(
+                        Color(0xFF15222E).copy(alpha = 0.90f),
+                        Color(0xFF0C141C).copy(alpha = 0.95f)
                     )
                 )
-                .border(
-                    width = 1.3.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.75f),
-                            Color(0xFF00E5FF).copy(alpha = 0.40f),
-                            Color.White.copy(alpha = 0.10f)
-                        )
-                    ),
-                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-                )
+            )
+            .border(
+                width = 1.2.dp,
+                brush = Brush.horizontalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.70f),
+                        Color(0xFF00E5FF).copy(alpha = 0.35f),
+                        Color.White.copy(alpha = 0.15f)
+                    )
+                ),
+                shape = CircleShape
+            )
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Search Icon & Text
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
-                ) {}
-                .padding(horizontal = 22.dp, vertical = 18.dp)
-                .navigationBarsPadding()
+                ) { onSearchClick() },
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                // Top Handle Pill
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .width(42.dp)
-                        .height(4.5.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.35f))
-                )
+            Icon(
+                imageVector = Icons.Rounded.Search,
+                contentDescription = "Search",
+                tint = Color(0xFF00E5FF),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "Search apps & web...",
+                color = Color.White.copy(alpha = 0.60f),
+                fontSize = 14.sp
+            )
+        }
 
-                // Header
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
-                ) {
+        // Page Indicator Dots
+        if (totalPages > 1) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            ) {
+                repeat(totalPages) { idx ->
+                    val isSelected = pagerState.currentPage == idx
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(if (isSelected) 7.dp else 5.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .clickable { onDismiss() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Close,
-                            contentDescription = "Close",
-                            tint = Color.White.copy(alpha = 0.85f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Home screen settings",
-                        color = Color.White,
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Bold
+                            .background(
+                                if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.30f)
+                            )
                     )
                 }
-
-                // 1. Transition Effects
-                HomeSettingActionRow(
-                    title = "Transition effects",
-                    onClick = onOpenTransitionEffects
-                )
-
-                // 2. Set Default Screen
-                HomeSettingActionRow(
-                    title = "Set default screen",
-                    onClick = onSetDefaultScreen
-                )
-
-                // 3. Show Label Switch
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Show label", color = Color.White, fontSize = 15.sp)
-                    Switch(
-                        checked = showLabel,
-                        onCheckedChange = {
-                            showLabel = it
-                            settingsManager.showLabels = it
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF007BFF),
-                            uncheckedThumbColor = Color.White.copy(alpha = 0.8f),
-                            uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
-                        )
-                    )
-                }
-
-                // 4. Liquid Folder Switch
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Liquid folder", color = Color.White, fontSize = 15.sp)
-                    Switch(
-                        checked = liquidFolder,
-                        onCheckedChange = { liquidFolder = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF007BFF),
-                            uncheckedThumbColor = Color.White.copy(alpha = 0.8f),
-                            uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
-                        )
-                    )
-                }
-
-                // 5. Regenerate all icons
-                Text(
-                    text = "Regenerate all icons",
-                    color = Color(0xFF00B4D8),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable { onRegenerateIcons() }
-                        .padding(horizontal = 8.dp, vertical = 8.dp)
-                )
-
-                // 6. More Settings
-                Text(
-                    text = "More settings",
-                    color = Color(0xFF00B4D8),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .clickable { onOpenMoreSettings() }
-                        .padding(horizontal = 8.dp, vertical = 8.dp)
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
             }
+        }
+
+        // AI Assistant Button
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color(0xFF00E5FF).copy(alpha = 0.3f), Color(0xFF007BFF).copy(alpha = 0.5f))
+                    )
+                )
+                .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
+                .clickable { onAiClick() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.AutoAwesome,
+                contentDescription = "AI",
+                tint = Color.White,
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }
 
+// -------------------------------------------------------------
+// Liquid Glass Bottom Dock Container
+// -------------------------------------------------------------
 @Composable
-fun HomeSettingActionRow(title: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
+fun LiquidGlassDock(
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit
+) {
+    Box(
+        modifier = modifier
+            .padding(horizontal = 18.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.05f))
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .height(82.dp)
+            .shadow(
+                elevation = 20.dp,
+                shape = RoundedCornerShape(28.dp),
+                spotColor = Color(0xFF00E5FF).copy(alpha = 0.28f),
+                ambientColor = Color.Black.copy(alpha = 0.5f)
+            )
+            .clip(RoundedCornerShape(28.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF152533).copy(alpha = 0.88f),
+                        Color(0xFF0A131B).copy(alpha = 0.94f)
+                    )
+                )
+            )
+            .border(
+                width = 1.3.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.70f),
+                        Color(0xFF00E5FF).copy(alpha = 0.35f),
+                        Color.White.copy(alpha = 0.10f)
+                    )
+                ),
+                shape = RoundedCornerShape(28.dp)
+            )
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Text(text = title, color = Color.White, fontSize = 15.sp)
-        Icon(
-            imageVector = Icons.Rounded.ChevronRight,
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.5f),
-            modifier = Modifier.size(20.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+            content = content
         )
     }
 }
 
 // -------------------------------------------------------------
-// 2. Dock Customization Sheet (Image 27220 Fixed)
+// Dock Customization Sheet
 // -------------------------------------------------------------
 @Composable
 fun DockCustomizationSheet(
@@ -315,7 +261,6 @@ fun DockCustomizationSheet(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -356,7 +301,6 @@ fun DockCustomizationSheet(
                     }
                 }
 
-                // 1. Enable Dock
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -379,7 +323,6 @@ fun DockCustomizationSheet(
                     )
                 }
 
-                // 2. Dock Apps Count (4, 5, 6)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Dock App Capacity", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
                     Row(
@@ -413,7 +356,6 @@ fun DockCustomizationSheet(
                     }
                 }
 
-                // 3. Dock Corner Radius
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -434,7 +376,6 @@ fun DockCustomizationSheet(
                     )
                 }
 
-                // 4. Glass Blur & Opacity
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -457,7 +398,6 @@ fun DockCustomizationSheet(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Done Button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
