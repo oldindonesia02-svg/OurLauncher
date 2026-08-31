@@ -7,6 +7,7 @@ import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -15,7 +16,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -35,7 +35,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -258,7 +260,7 @@ fun HomeScreen(
             }
         }
 
-                // 4-Tab Liquid Glass Bottom Bar (Motorola Style + Live Finger Drag Interaction)
+                // 4-Tab Liquid Glass Bottom Bar (Motorola Style + Finger Drag Interaction)
         AnimatedVisibility(
             visible = showLiquidBottomBar,
             enter = fadeIn(tween(200)) + slideInVertically(
@@ -473,14 +475,12 @@ fun HomeLiquidBottomBar(
             val tabWidthPx = totalWidthPx / tabCount
             val tabWidthDp = maxWidth / tabCount
 
-            // Synchronize position on initial load
             LaunchedEffect(tabWidthPx) {
                 if (!isDragging) {
                     dragOffsetPx.snapTo(selectedIndex * tabWidthPx)
                 }
             }
 
-            // Liquid Interactive Gesture Area
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -533,7 +533,6 @@ fun HomeLiquidBottomBar(
                         .width(tabWidthDp)
                         .fillMaxHeight()
                         .graphicsLayer {
-                            // Dragging squish/stretch physics
                             scaleX = if (isDragging) 1.08f else 1f
                             scaleY = if (isDragging) 0.94f else 1f
                         }
@@ -589,7 +588,11 @@ fun HomeLiquidBottomBar(
                                 tint = if (isCurrentTab) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.75f),
                                 modifier = Modifier
                                     .size(24.dp)
-                                    .scale(if (isCurrentTab) 1.1f else 1f)
+                                    .graphicsLayer {
+                                        val s = if (isCurrentTab) 1.12f else 1f
+                                        scaleX = s
+                                        scaleY = s
+                                    }
                             )
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
