@@ -42,15 +42,26 @@ fun clearIconCache() {
     iconBitmapCache.clear()
 }
 
+fun getCachedBitmap(packageName: String, customDrawable: Drawable? = null): Bitmap? {
+    if (customDrawable != null) {
+        return drawableToBitmap(customDrawable)
+    }
+    return iconBitmapCache[packageName]
+}
+
 fun getCachedBitmap(context: Context, packageName: String): Bitmap? {
     return iconBitmapCache.getOrPut(packageName) {
         try {
             val drawable = context.packageManager.getApplicationIcon(packageName)
             drawableToBitmap(drawable)
         } catch (e: Exception) {
-            return null
+            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
         }
     }
+}
+
+fun getCachedBitmap(packageName: String, context: Context): Bitmap? {
+    return getCachedBitmap(context, packageName)
 }
 
 fun drawableToBitmap(drawable: Drawable): Bitmap {
@@ -88,7 +99,14 @@ fun AppIcon(
         if (customDrawable != null) {
             drawableToBitmap(customDrawable).asImageBitmap()
         } else {
-            getCachedBitmap(context, app.packageName)?.asImageBitmap()
+            iconBitmapCache.getOrPut(app.packageName) {
+                try {
+                    val drawable = context.packageManager.getApplicationIcon(app.packageName)
+                    drawableToBitmap(drawable)
+                } catch (e: Exception) {
+                    Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+                }
+            }.asImageBitmap()
         }
     }
 
@@ -167,7 +185,7 @@ fun AppIcon(
                 )
             }
 
-            // Specular Liquid Glass Sheen Overlay (কাচের আলোর প্রতিফলন)
+            // Specular Liquid Glass Sheen Overlay
             Box(
                 modifier = Modifier
                     .fillMaxSize()
