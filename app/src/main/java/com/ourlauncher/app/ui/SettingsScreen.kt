@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ourlauncher.app.IconPackInfo
 import com.ourlauncher.app.SettingsManager
 import kotlin.math.roundToInt
 
