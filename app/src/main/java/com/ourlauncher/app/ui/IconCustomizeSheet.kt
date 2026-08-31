@@ -37,13 +37,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ourlauncher.app.IconPackInfo
 import com.ourlauncher.app.SettingsManager
 import kotlin.math.roundToInt
-
-data class IconPackInfo(
-    val packageName: String,
-    val name: String
-)
 
 data class ShapePreset(
     val name: String,
@@ -200,7 +196,7 @@ fun IconCustomizeSheet(
                     }
                 }
 
-                                // 1. Third-party Icon Packs
+                // 1. Icon Pack
                 Text(
                     text = "ICON PACK",
                     color = Color.White.copy(alpha = 0.55f),
