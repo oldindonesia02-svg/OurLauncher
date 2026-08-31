@@ -3,20 +3,21 @@ package com.ourlauncher.app.ui
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Rect
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -32,142 +33,153 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.AppInfo
-import com.ourlauncher.app.SettingsManager
-import kotlin.math.cos
-import kotlin.math.sin
 
-private val bitmapCache = mutableMapOf<String, Bitmap>()
-
-fun clearIconCache() {
-    bitmapCache.clear()
-}
-
-fun getCachedBitmap(key: String, drawable: Drawable?): Bitmap? {
-    if (drawable == null) return null
-    bitmapCache[key]?.let { return it }
-    return try {
-        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 144
-        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 144
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
-        bitmapCache[key] = bitmap
-        bitmap
-    } catch (e: Exception) {
-        null
+fun drawableToBitmap(drawable: Drawable): Bitmap {
+    if (drawable is BitmapDrawable && drawable.bitmap != null) {
+        return drawable.bitmap
     }
+    val bitmap = if (drawable.intrinsicWidth <= 0 || drawable.intrinsicHeight <= 0) {
+        Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+    } else {
+        Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+    }
+    val canvas = Canvas(bitmap)
+    drawable.setBounds(0, 0, canvas.width, canvas.height)
+    drawable.draw(canvas)
+    return bitmap
 }
 
 @Composable
 fun AppIcon(
     app: AppInfo,
     onClick: () -> Unit,
-    showLabel: Boolean = true,
-    fontFamilyName: String = "sans-serif",
-    iconSizeDp: Float = 54f,
-    cornerRadiusPercent: Float = 25f,
-    iconOpacity: Float = 1.0f,
+    showLabel: Boolean,
+    fontFamilyName: String,
+    iconSizeDp: Float,
+    cornerRadiusPercent: Float,
+    iconOpacity: Float,
     customDrawable: Drawable? = null,
-    onClickWithBounds: ((Rect) -> Unit)? = null,
+    onClickWithBounds: ((Rect?) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val settingsManager = remember { SettingsManager(context) }
-    val targetDrawable = customDrawable ?: app.icon
-    val cacheKey = "${app.packageName}_${targetDrawable?.hashCode() ?: 0}"
-    val bitmap = remember(cacheKey) { getCachedBitmap(cacheKey, targetDrawable) }
+    var itemBounds by remember { mutableStateOf<Rect?>(null) }
 
-    val shape = RoundedCornerShape(cornerRadiusPercent.toInt())
-    var currentBounds by remember { mutableStateOf<Rect?>(null) }
-
-    val colorFilter = remember(settingsManager.iconTheme, settingsManager.iconTintColor) {
-        when (settingsManager.iconTheme) {
-            "dark" -> {
-                val matrix = ColorMatrix().apply { setToSaturation(0f) }
-                ColorFilter.colorMatrix(matrix)
-            }
-            "tinted" -> ColorFilter.tint(Color(settingsManager.iconTintColor))
-            else -> null
+    // Convert drawable to Bitmap safely
+    val iconBitmap = remember(app.packageName, customDrawable) {
+        val targetDrawable = customDrawable ?: try {
+            context.packageManager.getApplicationIcon(app.packageName)
+        } catch (e: Exception) {
+            null
         }
+        targetDrawable?.let { drawableToBitmap(it).asImageBitmap() }
     }
 
-    val lensBrush = remember(settingsManager.lensLightEnabled, settingsManager.lensAngle, settingsManager.lensIntensity) {
-        if (settingsManager.lensLightEnabled && settingsManager.graphicPreset != "low") {
-            val rad = Math.toRadians(settingsManager.lensAngle.toDouble())
-            val intensity = settingsManager.lensIntensity
-            Brush.linearGradient(
-                colors = listOf(
-                    Color.White.copy(alpha = (intensity * 0.85f).coerceIn(0f, 1f)),
-                    Color.White.copy(alpha = (intensity * 0.15f).coerceIn(0f, 1f)),
-                    Color.Transparent
-                ),
-                start = Offset.Zero,
-                end = Offset(cos(rad).toFloat() * 200f, sin(rad).toFloat() * 200f)
-            )
-        } else null
+    val shape = RoundedCornerShape(percent = cornerRadiusPercent.toInt().coerceIn(0, 50))
+    val isMonochromeTheme = fontFamilyName.equals("Monospace", ignoreCase = true)
+
+    val customFontFamily = remember(fontFamilyName) {
+        when (fontFamilyName.lowercase()) {
+            "sf pro", "inter" -> FontFamily.SansSerif
+            "monospace" -> FontFamily.Monospace
+            "serif" -> FontFamily.Serif
+            else -> FontFamily.Default
+        }
     }
 
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
             .onGloballyPositioned { coords ->
-                if (onClickWithBounds != null) {
-                    val b = coords.boundsInRoot()
-                    currentBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
-                }
+                val b = coords.boundsInRoot()
+                itemBounds = Rect(b.left.toInt(), b.top.toInt(), b.right.toInt(), b.bottom.toInt())
             }
-            .clickable {
-                if (onClickWithBounds != null && currentBounds != null) {
-                    onClickWithBounds(currentBounds!!)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                if (onClickWithBounds != null) {
+                    onClickWithBounds(itemBounds)
                 } else {
                     onClick()
                 }
-            }
+            },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
+        // Liquid Glass Base Container
         Box(
             modifier = Modifier
                 .size(iconSizeDp.dp)
-                .alpha(iconOpacity)
-                .clip(shape)
-                .then(
-                    if (settingsManager.iconTheme == "transparent") {
-                        Modifier.background(Color.White.copy(alpha = 0.12f))
-                    } else Modifier
+                .shadow(
+                    elevation = 10.dp,
+                    shape = shape,
+                    spotColor = Color.Black.copy(alpha = 0.45f),
+                    ambientColor = Color.Black.copy(alpha = 0.35f)
                 )
-                .then(
-                    if (lensBrush != null) {
-                        Modifier.border(settingsManager.lensStrokeWidth.dp, lensBrush, shape)
-                    } else Modifier
+                .clip(shape)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.15f * iconOpacity),
+                            Color.Black.copy(alpha = 0.35f * iconOpacity)
+                        )
+                    )
+                )
+                .border(
+                    width = 1.2.dp,
+                    brush = Brush.linearGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.75f * iconOpacity),
+                            Color(0xFF00E5FF).copy(alpha = 0.30f * iconOpacity),
+                            Color.White.copy(alpha = 0.10f * iconOpacity)
+                        )
+                    ),
+                    shape = shape
                 ),
             contentAlignment = Alignment.Center
         ) {
-            if (bitmap != null) {
+            // App Image Layer
+            if (iconBitmap != null) {
                 Image(
-                    bitmap = bitmap.asImageBitmap(),
+                    bitmap = iconBitmap,
                     contentDescription = app.label,
-                    colorFilter = colorFilter,
-                    modifier = Modifier.fillMaxSize()
+                    colorFilter = if (isMonochromeTheme) ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) else null,
+                    modifier = Modifier
+                        .fillMaxSize(0.88f)
+                        .clip(shape)
                 )
             }
+
+            // Specular Liquid Glass Sheen Overlay (কাচের আলোর প্রতিফলন)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(shape)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.35f * iconOpacity),
+                                Color.Transparent
+                            ),
+                            radius = 90f
+                        )
+                    )
+            )
         }
 
+        // App Label
         if (showLabel) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(5.dp))
             Text(
                 text = app.label,
+                color = Color.White.copy(alpha = 0.95f),
                 fontSize = 11.5.sp,
-                color = Color.White,
-                fontFamily = when (fontFamilyName) {
-                    "serif" -> FontFamily.Serif
-                    "monospace" -> FontFamily.Monospace
-                    else -> FontFamily.SansSerif
-                },
+                fontFamily = customFontFamily,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.padding(horizontal = 2.dp)
             )
         }
     }
