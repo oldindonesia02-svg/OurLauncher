@@ -31,21 +31,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -96,19 +90,15 @@ fun HomeScreen(
     val overviewAnim = remember { Animatable(0f) }
 
     var showHomeSettingsSheet by remember { mutableStateOf(false) }
-    var showIconCustomizeSheet by remember { mutableStateOf(false) }
     var showTransitionEffectsSheet by remember { mutableStateOf(false) }
-    var showSearchBarPositionSheet by remember { mutableStateOf(false) }
-    var showGlassPlayground by remember { mutableStateOf(false) }
     var showLiquidBottomBar by remember { mutableStateOf(false) }
 
     var liveSearchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
     var liveHideCapsule by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
     var selectedTransitionEffect by remember { mutableStateOf("Standard") }
 
-    val isAnySheetOpen = showHomeSettingsSheet || showIconCustomizeSheet ||
-            showTransitionEffectsSheet || showSearchBarPositionSheet || 
-            showGlassPlayground || showLiquidBottomBar || isOverviewMode
+    val isAnySheetOpen = showHomeSettingsSheet || showTransitionEffectsSheet || 
+            showLiquidBottomBar || isOverviewMode
 
     LaunchedEffect(isOverviewMode) {
         overviewAnim.animateTo(
@@ -120,11 +110,8 @@ fun HomeScreen(
     BackHandler(enabled = isAnySheetOpen) {
         when {
             showTransitionEffectsSheet -> showTransitionEffectsSheet = false
-            showIconCustomizeSheet -> showIconCustomizeSheet = false
             showHomeSettingsSheet -> showHomeSettingsSheet = false
             showLiquidBottomBar -> showLiquidBottomBar = false
-            showGlassPlayground -> showGlassPlayground = false
-            showSearchBarPositionSheet -> showSearchBarPositionSheet = false
             isOverviewMode -> isOverviewMode = false
         }
     }
@@ -303,7 +290,7 @@ fun HomeScreen(
             }
         }
 
-                // 1. 4-Tab Liquid Glass Bottom Bar (Motorola Style + Live Drag Physics)
+                // 1. 3-Tab Liquid Glass Bottom Bar (Widgets | Wallpapers | Home Settings)
         AnimatedVisibility(
             visible = showLiquidBottomBar,
             enter = fadeIn(tween(200)) + slideInVertically(
@@ -324,13 +311,6 @@ fun HomeScreen(
                         context.startActivity(Intent.createChooser(intent, "Choose Wallpaper"))
                     } catch (e: Exception) {
                         e.printStackTrace()
-                    }
-                },
-                onOpenPersonalize = {
-                    showLiquidBottomBar = false
-                    coroutineScope.launch {
-                        delay(120)
-                        showIconCustomizeSheet = true
                     }
                 },
                 onOpenHomeSettings = {
@@ -389,45 +369,6 @@ fun HomeScreen(
                     selectedTransitionEffect = newEffect
                 },
                 onDismiss = { showTransitionEffectsSheet = false }
-            )
-        }
-
-                // 4. Personalize (Screen Layout & Grid Sheet)
-        if (showIconCustomizeSheet) {
-            PersonalizeLayoutSheet(
-                settingsManager = settingsManager,
-                onDismiss = { showIconCustomizeSheet = false }
-            )
-        }
-        
-        // 5. Live Glass Playground
-        if (showGlassPlayground) {
-            GlassPlaygroundSheet(
-                settingsManager = settingsManager,
-                onDismiss = { showGlassPlayground = false }
-            )
-        }
-
-        // 6. Search Bar Position Sheet
-        if (showSearchBarPositionSheet) {
-            TopLiquidSearchBarPositionCard(
-                currentOffset = liveSearchOffset,
-                isCapsuleHidden = liveHideCapsule,
-                onOffsetChange = { newOffset: Float -> liveSearchOffset = newOffset },
-                onHideCapsuleChange = { newHidden: Boolean -> liveHideCapsule = newHidden },
-                onOpenDockPosition = {
-                    showSearchBarPositionSheet = false
-                    onOpenSettings()
-                },
-                onApply = {
-                    settingsManager.searchOffset = liveSearchOffset
-                    settingsManager.hideSearchCapsule = liveHideCapsule
-                },
-                onDismiss = {
-                    liveSearchOffset = settingsManager.searchOffset
-                    liveHideCapsule = settingsManager.hideSearchCapsule
-                    showSearchBarPositionSheet = false
-                }
             )
         }
     }
@@ -542,7 +483,7 @@ fun TransitionEffectsSheet(
 }
 
 // -------------------------------------------------------------
-// Interactive Liquid Glass Bottom Bar (Finger Tracking & Physics)
+// 3-Tab Interactive Liquid Glass Bottom Bar (Finger Tracking & Physics)
 // -------------------------------------------------------------
 data class HomeActionItem(
     val title: String,
@@ -553,18 +494,17 @@ data class HomeActionItem(
 fun HomeLiquidBottomBar(
     onOpenWidgets: () -> Unit,
     onOpenWallpapers: () -> Unit,
-    onOpenPersonalize: () -> Unit,
     onOpenHomeSettings: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     BackHandler { onDismiss() }
 
+    // 3 Tabs: Widgets, Wallpapers, Home Settings
     val actions = remember {
         listOf(
             HomeActionItem("Widgets", Icons.Rounded.Widgets),
             HomeActionItem("Wallpapers", Icons.Rounded.Image),
-            HomeActionItem("Personalize", Icons.Rounded.Palette),
             HomeActionItem("Home Settings", Icons.Rounded.Settings)
         )
     }
@@ -578,8 +518,7 @@ fun HomeLiquidBottomBar(
         when (index) {
             0 -> onOpenWidgets()
             1 -> onOpenWallpapers()
-            2 -> onOpenPersonalize()
-            3 -> onOpenHomeSettings()
+            2 -> onOpenHomeSettings()
         }
     }
 
@@ -684,7 +623,7 @@ fun HomeLiquidBottomBar(
                 val densityLocal = LocalDensity.current
                 val currentOffsetDp = with(densityLocal) { dragOffsetPx.value.toDp() }
 
-                // Sliding Liquid Bubble
+                // Sliding Liquid Bubble for 3 Tabs
                 Box(
                     modifier = Modifier
                         .offset(x = currentOffsetDp)
@@ -715,7 +654,7 @@ fun HomeLiquidBottomBar(
                         )
                 )
 
-                // 4 Tab Items
+                // 3 Tab Items
                 Row(modifier = Modifier.fillMaxSize()) {
                     actions.forEachIndexed { index, item ->
                         val isCurrentTab = (dragOffsetPx.value / tabWidthPx).roundToInt() == index
