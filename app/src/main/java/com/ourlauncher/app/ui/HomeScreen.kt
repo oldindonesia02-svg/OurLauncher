@@ -224,21 +224,16 @@ fun HomeScreen(
                 }
             }
 
-            // Fixed Bottom Section (Search Bar + Spaced Dock)
+           // Fixed Bottom Section (Search Bar + Spaced Dock)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(bottom = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 1. Search Capsule & Functional AI Button
-                AnimatedVisibility(
-                    visible = !settingsManager.hideSearchCapsule && !isOverviewMode && !isAnySheetOpen,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
+                // 1. Search Capsule
+                if (!settingsManager.hideSearchCapsule && !isOverviewMode && !isAnySheetOpen) {
                     LiquidSearchAiCapsule(
                         pagerState = pagerState,
                         totalPages = totalPages,
@@ -261,8 +256,30 @@ fun HomeScreen(
                             }
                         }
                     )
+                    Spacer(modifier = Modifier.height(14.dp)) // <-- এই স্পেসারটি একে অপরের ওপর চাপা বন্ধ করবে
                 }
 
+                // 2. Liquid Glass Dock
+                if (!isAnySheetOpen) {
+                    LiquidGlassDock {
+                        dockApps.forEach { app ->
+                            AppIcon(
+                                app = app,
+                                onClick = { onAppClick(app) },
+                                showLabel = false,
+                                fontFamilyName = settingsManager.fontFamily,
+                                iconSizeDp = settingsManager.iconSize,
+                                cornerRadiusPercent = settingsManager.iconCornerRadius,
+                                iconOpacity = settingsManager.iconOpacity,
+                                customDrawable = getCustomDrawable(app.packageName),
+                                onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
+                                modifier = Modifier.width(62.dp)
+                            )
+                        }
+                    }
+                }
+            }
+            
                 // 2. Liquid Glass Dock
                 AnimatedVisibility(
                     visible = !isAnySheetOpen,
