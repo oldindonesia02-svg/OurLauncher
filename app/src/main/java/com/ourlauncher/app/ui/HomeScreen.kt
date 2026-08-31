@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
@@ -19,19 +20,27 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -56,6 +65,7 @@ import com.ourlauncher.app.AppInfo
 import com.ourlauncher.app.SettingsManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -86,16 +96,18 @@ fun HomeScreen(
 
     var showHomeSettingsSheet by remember { mutableStateOf(false) }
     var showIconCustomizeSheet by remember { mutableStateOf(false) }
+    var showTransitionEffectsSheet by remember { mutableStateOf(false) }
     var showSearchBarPositionSheet by remember { mutableStateOf(false) }
     var showGlassPlayground by remember { mutableStateOf(false) }
     var showLiquidBottomBar by remember { mutableStateOf(false) }
 
     var liveSearchOffset by remember { mutableStateOf(settingsManager.searchOffset) }
     var liveHideCapsule by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
+    var selectedTransitionEffect by remember { mutableStateOf("Standard") }
 
     val isAnySheetOpen = showHomeSettingsSheet || showIconCustomizeSheet ||
-            showSearchBarPositionSheet || showGlassPlayground ||
-            showLiquidBottomBar || isOverviewMode
+            showTransitionEffectsSheet || showSearchBarPositionSheet || 
+            showGlassPlayground || showLiquidBottomBar || isOverviewMode
 
     LaunchedEffect(isOverviewMode) {
         overviewAnim.animateTo(
@@ -106,11 +118,12 @@ fun HomeScreen(
 
     BackHandler(enabled = isAnySheetOpen) {
         when {
+            showTransitionEffectsSheet -> showTransitionEffectsSheet = false
+            showIconCustomizeSheet -> showIconCustomizeSheet = false
+            showHomeSettingsSheet -> showHomeSettingsSheet = false
             showLiquidBottomBar -> showLiquidBottomBar = false
             showGlassPlayground -> showGlassPlayground = false
             showSearchBarPositionSheet -> showSearchBarPositionSheet = false
-            showIconCustomizeSheet -> showIconCustomizeSheet = false
-            showHomeSettingsSheet -> showHomeSettingsSheet = false
             isOverviewMode -> isOverviewMode = false
         }
     }
@@ -139,8 +152,8 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    scaleX = if (showLiquidBottomBar || showHomeSettingsSheet) 0.95f else 1f
-                    scaleY = if (showLiquidBottomBar || showHomeSettingsSheet) 0.95f else 1f
+                    scaleX = if (isAnySheetOpen && !isOverviewMode) 0.95f else 1f
+                    scaleY = if (isAnySheetOpen && !isOverviewMode) 0.95f else 1f
                 }
         ) {
             HorizontalPager(
@@ -159,9 +172,38 @@ fun HomeScreen(
                 val pageEnd = minOf(pageStart + pageSize, apps.size)
                 val currentGridItems = if (pageStart < apps.size) apps.subList(pageStart, pageEnd) else emptyList()
 
+                val pageOffset = ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction).absoluteValue
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        .graphicsLayer {
+                            when (selectedTransitionEffect) {
+                                "Cube" -> {
+                                    val rotation = ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction) * 90f
+                                    rotationY = rotation.coerceIn(-90f, 90f)
+                                    cameraDistance = 12f * density.density
+                                }
+                                "Zoom" -> {
+                                    val scale = 1f - (pageOffset * 0.25f).coerceIn(0f, 0.25f)
+                                    scaleX = scale
+                                    scaleY = scale
+                                    alpha = 1f - pageOffset.coerceIn(0f, 0.7f)
+                                }
+                                "Fade" -> {
+                                    alpha = 1f - pageOffset.coerceIn(0f, 1f)
+                                }
+                                "Depth" -> {
+                                    if (pageIndex >= pagerState.currentPage) {
+                                        val scale = 1f - (pageOffset * 0.3f).coerceIn(0f, 0.3f)
+                                        scaleX = scale
+                                        scaleY = scale
+                                        alpha = 1f - pageOffset.coerceIn(0f, 0.8f)
+                                    }
+                                }
+                                else -> {}
+                            }
+                        }
                         .then(
                             if (isOverviewMode) {
                                 Modifier
@@ -211,9 +253,9 @@ fun HomeScreen(
                 }
             }
 
-            // Search Capsule
+            // Search Capsule (Hidden when any sheet is open to prevent overlapping)
             AnimatedVisibility(
-                visible = !liveHideCapsule && !isOverviewMode && !showLiquidBottomBar && !showHomeSettingsSheet,
+                visible = !liveHideCapsule && !isOverviewMode && !isAnySheetOpen,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
@@ -233,9 +275,9 @@ fun HomeScreen(
                 }
             }
 
-            // Bottom Dock
+            // Bottom Dock (Hidden when any sheet is open)
             AnimatedVisibility(
-                visible = !showLiquidBottomBar && !showHomeSettingsSheet,
+                visible = !isAnySheetOpen,
                 enter = fadeIn() + slideInVertically { it / 2 },
                 exit = fadeOut() + slideOutVertically { it / 2 }
             ) {
@@ -260,7 +302,7 @@ fun HomeScreen(
             }
         }
 
-                // 4-Tab Liquid Glass Bottom Bar (Motorola Style + Live Drag Physics)
+                // 1. 4-Tab Liquid Glass Bottom Bar (Motorola Style + Live Drag Physics)
         AnimatedVisibility(
             visible = showLiquidBottomBar,
             enter = fadeIn(tween(200)) + slideInVertically(
@@ -301,24 +343,29 @@ fun HomeScreen(
             )
         }
 
-        // Home Screen Settings Sheet (Image 27058.png Style)
+        // 2. Home Screen Settings Sheet (Image 27098.png)
         if (showHomeSettingsSheet) {
             HomeScreenSettingsSheet(
                 settingsManager = settingsManager,
                 onOpenTransitionEffects = {
                     showHomeSettingsSheet = false
                     coroutineScope.launch {
-                        delay(150)
-                        showIconCustomizeSheet = true
+                        delay(120)
+                        showTransitionEffectsSheet = true
                     }
                 },
                 onSetDefaultScreen = {
                     showHomeSettingsSheet = false
-                    liveSearchOffset = settingsManager.searchOffset
-                    liveHideCapsule = settingsManager.hideSearchCapsule
-                    coroutineScope.launch {
-                        delay(150)
-                        showSearchBarPositionSheet = true
+                    try {
+                        val intent = Intent(Settings.ACTION_HOME_SETTINGS)
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        try {
+                            val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+                            context.startActivity(intent)
+                        } catch (e2: Exception) {
+                            e2.printStackTrace()
+                        }
                     }
                 },
                 onRegenerateIcons = {
@@ -326,7 +373,6 @@ fun HomeScreen(
                     clearIconCache()
                 },
                 onOpenMoreSettings = {
-                    // Video 27062.mp4 Main Settings Screen Open hobe
                     showHomeSettingsSheet = false
                     onOpenSettings()
                 },
@@ -334,7 +380,58 @@ fun HomeScreen(
             )
         }
 
-        // Live Glass Playground
+        // 3. Transition Effects Selector Sheet
+        if (showTransitionEffectsSheet) {
+            TransitionEffectsSheet(
+                currentEffect = selectedTransitionEffect,
+                onSelectEffect = { newEffect ->
+                    selectedTransitionEffect = newEffect
+                },
+                onDismiss = { showTransitionEffectsSheet = false }
+            )
+        }
+
+        // 4. Customize Icons / Personalize Sheet (Proper Frosted Card)
+        if (showIconCustomizeSheet) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.50f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { showIconCustomizeSheet = false },
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                        .background(Color(0xFF1B222A))
+                        .border(
+                            1.dp,
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)
+                            ),
+                            RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {}
+                        .padding(bottom = 20.dp)
+                        .navigationBarsPadding()
+                ) {
+                    IconCustomizeSheet(
+                        settingsManager = settingsManager,
+                        onApply = { showIconCustomizeSheet = false },
+                        onDismiss = { showIconCustomizeSheet = false }
+                    )
+                }
+            }
+        }
+
+        // 5. Live Glass Playground
         if (showGlassPlayground) {
             GlassPlaygroundSheet(
                 settingsManager = settingsManager,
@@ -342,7 +439,7 @@ fun HomeScreen(
             )
         }
 
-        // Search Bar Position Sheet
+        // 6. Search Bar Position Sheet
         if (showSearchBarPositionSheet) {
             TopLiquidSearchBarPositionCard(
                 currentOffset = liveSearchOffset,
@@ -364,25 +461,119 @@ fun HomeScreen(
                 }
             )
         }
+    }
+}
 
-        // Icon Customize Sheet
-        if (showIconCustomizeSheet) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.BottomCenter
+// -------------------------------------------------------------
+// Transition Effects Bottom Sheet
+// -------------------------------------------------------------
+@Composable
+fun TransitionEffectsSheet(
+    currentEffect: String,
+    onSelectEffect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    BackHandler { onDismiss() }
+
+    val effects = listOf("Standard", "Cube", "Zoom", "Depth", "Fade")
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.45f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onDismiss() },
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                .background(Color(0xFF1E2024))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {}
+                .padding(horizontal = 24.dp, vertical = 18.dp)
+                .navigationBarsPadding()
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                IconCustomizeSheet(
-                    settingsManager = settingsManager,
-                    onApply = { showIconCustomizeSheet = false },
-                    onDismiss = { showIconCustomizeSheet = false }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .width(42.dp)
+                        .height(4.5.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.35f))
                 )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Close",
+                            tint = Color.White.copy(alpha = 0.85f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Transition effects",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                effects.forEach { effect ->
+                    val isSelected = effect == currentEffect
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (isSelected) Color(0xFF007BFF).copy(alpha = 0.18f) else Color.Transparent)
+                            .clickable {
+                                onSelectEffect(effect)
+                                onDismiss()
+                            }
+                            .padding(horizontal = 14.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = effect,
+                            color = if (isSelected) Color(0xFF00E5FF) else Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                        if (isSelected) {
+                            Icon(Icons.Rounded.Check, contentDescription = null, tint = Color(0xFF00E5FF))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
             }
         }
     }
 }
 
 // -------------------------------------------------------------
-// Interactive Liquid Glass Bottom Bar (Motorola Style)
+// Interactive Liquid Glass Bottom Bar (Finger Tracking & Physics)
 // -------------------------------------------------------------
 data class HomeActionItem(
     val title: String,
@@ -524,7 +715,7 @@ fun HomeLiquidBottomBar(
                 val density = LocalDensity.current
                 val currentOffsetDp = with(density) { dragOffsetPx.value.toDp() }
 
-                // Sliding Liquid Indicator Bubble
+                // Sliding Liquid Bubble
                 Box(
                     modifier = Modifier
                         .offset(x = currentOffsetDp)
@@ -563,20 +754,20 @@ fun HomeLiquidBottomBar(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) {
-                                    selectedIndex = index
-                                    coroutineScope.launch {
-                                        dragOffsetPx.animateTo(
-                                            targetValue = index * tabWidthPx,
-                                            animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f)
-                                        )
-                                        delay(100)
-                                        triggerAction(index)
-                                    }
-                                },
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                selectedIndex = index
+                                coroutineScope.launch {
+                                    dragOffsetPx.animateTo(
+                                        targetValue = index * tabWidthPx,
+                                        animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f)
+                                    )
+                                    delay(100)
+                                    triggerAction(index)
+                                }
+                            },
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
