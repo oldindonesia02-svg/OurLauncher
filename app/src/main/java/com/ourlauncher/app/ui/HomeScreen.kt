@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.material3.Icon
@@ -37,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -139,8 +139,8 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    scaleX = if (showLiquidBottomBar) 0.95f else 1f
-                    scaleY = if (showLiquidBottomBar) 0.95f else 1f
+                    scaleX = if (showLiquidBottomBar || showHomeSettingsSheet) 0.95f else 1f
+                    scaleY = if (showLiquidBottomBar || showHomeSettingsSheet) 0.95f else 1f
                 }
         ) {
             HorizontalPager(
@@ -213,7 +213,7 @@ fun HomeScreen(
 
             // Search Capsule
             AnimatedVisibility(
-                visible = !liveHideCapsule && !isOverviewMode && !showLiquidBottomBar,
+                visible = !liveHideCapsule && !isOverviewMode && !showLiquidBottomBar && !showHomeSettingsSheet,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
@@ -235,7 +235,7 @@ fun HomeScreen(
 
             // Bottom Dock
             AnimatedVisibility(
-                visible = !showLiquidBottomBar,
+                visible = !showLiquidBottomBar && !showHomeSettingsSheet,
                 enter = fadeIn() + slideInVertically { it / 2 },
                 exit = fadeOut() + slideOutVertically { it / 2 }
             ) {
@@ -260,7 +260,7 @@ fun HomeScreen(
             }
         }
 
-                // 4-Tab Liquid Glass Bottom Bar (Motorola Style + Finger Drag Interaction)
+                // 4-Tab Liquid Glass Bottom Bar (Motorola Style + Live Drag Physics)
         AnimatedVisibility(
             visible = showLiquidBottomBar,
             enter = fadeIn(tween(200)) + slideInVertically(
@@ -283,6 +283,13 @@ fun HomeScreen(
                         e.printStackTrace()
                     }
                 },
+                onOpenPersonalize = {
+                    showLiquidBottomBar = false
+                    coroutineScope.launch {
+                        delay(120)
+                        showIconCustomizeSheet = true
+                    }
+                },
                 onOpenHomeSettings = {
                     showLiquidBottomBar = false
                     coroutineScope.launch {
@@ -290,18 +297,11 @@ fun HomeScreen(
                         showHomeSettingsSheet = true
                     }
                 },
-                onOpenGeneralSettings = {
-                    showLiquidBottomBar = false
-                    coroutineScope.launch {
-                        delay(120)
-                        showGlassPlayground = true
-                    }
-                },
                 onDismiss = { showLiquidBottomBar = false }
             )
         }
 
-        // Home Settings Sheet
+        // Home Screen Settings Sheet (Image 27058.png Style)
         if (showHomeSettingsSheet) {
             HomeScreenSettingsSheet(
                 settingsManager = settingsManager,
@@ -326,17 +326,15 @@ fun HomeScreen(
                     clearIconCache()
                 },
                 onOpenMoreSettings = {
+                    // Video 27062.mp4 Main Settings Screen Open hobe
                     showHomeSettingsSheet = false
-                    coroutineScope.launch {
-                        delay(150)
-                        showGlassPlayground = true
-                    }
+                    onOpenSettings()
                 },
                 onDismiss = { showHomeSettingsSheet = false }
             )
         }
 
-        // Glass Playground
+        // Live Glass Playground
         if (showGlassPlayground) {
             GlassPlaygroundSheet(
                 settingsManager = settingsManager,
@@ -384,7 +382,7 @@ fun HomeScreen(
 }
 
 // -------------------------------------------------------------
-// Interactive Liquid Glass Bottom Bar (Finger Tracking & Physics)
+// Interactive Liquid Glass Bottom Bar (Motorola Style)
 // -------------------------------------------------------------
 data class HomeActionItem(
     val title: String,
@@ -395,8 +393,8 @@ data class HomeActionItem(
 fun HomeLiquidBottomBar(
     onOpenWidgets: () -> Unit,
     onOpenWallpapers: () -> Unit,
+    onOpenPersonalize: () -> Unit,
     onOpenHomeSettings: () -> Unit,
-    onOpenGeneralSettings: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -406,7 +404,7 @@ fun HomeLiquidBottomBar(
         listOf(
             HomeActionItem("Widgets", Icons.Rounded.Widgets),
             HomeActionItem("Wallpapers", Icons.Rounded.Image),
-            HomeActionItem("Personalize", Icons.Rounded.Home),
+            HomeActionItem("Personalize", Icons.Rounded.Palette),
             HomeActionItem("Home Settings", Icons.Rounded.Settings)
         )
     }
@@ -420,8 +418,8 @@ fun HomeLiquidBottomBar(
         when (index) {
             0 -> onOpenWidgets()
             1 -> onOpenWallpapers()
-            2 -> onOpenHomeSettings()
-            3 -> onOpenGeneralSettings()
+            2 -> onOpenPersonalize()
+            3 -> onOpenHomeSettings()
         }
     }
 
@@ -526,7 +524,7 @@ fun HomeLiquidBottomBar(
                 val density = LocalDensity.current
                 val currentOffsetDp = with(density) { dragOffsetPx.value.toDp() }
 
-                // Live Liquid Sliding Bubble with Elastic Glass Effect
+                // Sliding Liquid Indicator Bubble
                 Box(
                     modifier = Modifier
                         .offset(x = currentOffsetDp)
@@ -557,7 +555,7 @@ fun HomeLiquidBottomBar(
                         )
                 )
 
-                // 4 Tab Items (Icons + Labels)
+                // 4 Tab Items
                 Row(modifier = Modifier.fillMaxSize()) {
                     actions.forEachIndexed { index, item ->
                         val isCurrentTab = (dragOffsetPx.value / tabWidthPx).roundToInt() == index
