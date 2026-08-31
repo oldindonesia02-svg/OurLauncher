@@ -5,9 +5,11 @@ import android.content.Intent
 import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,7 +23,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Home
@@ -33,7 +34,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -129,7 +132,15 @@ fun HomeScreen(
                 }
             }
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    // বটম বার ওপেন হলে ব্যাকগ্রাউন্ডের হোমস্ক্রিন হালকা পিছিয়ে যাবে
+                    scaleX = if (showLiquidBottomBar) 0.96f else 1f
+                    scaleY = if (showLiquidBottomBar) 0.96f else 1f
+                }
+        ) {
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = !isAnySheetOpen,
@@ -198,8 +209,12 @@ fun HomeScreen(
                 }
             }
 
-            // Search Capsule
-            if (!liveHideCapsule && !isOverviewMode) {
+            // Search Capsule (বটম বার খুললে ফেড-আউট হয়ে যাবে)
+            AnimatedVisibility(
+                visible = !liveHideCapsule && !isOverviewMode && !showLiquidBottomBar,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -216,29 +231,43 @@ fun HomeScreen(
                 }
             }
 
-            // Liquid Dock
-            LiquidGlassDock(
-                modifier = Modifier.padding(bottom = 16.dp)
+            // Bottom Dock (বটম বার খুললে ফেড-আউট হয়ে যাবে)
+            AnimatedVisibility(
+                visible = !showLiquidBottomBar,
+                enter = fadeIn() + slideInVertically { it / 2 },
+                exit = fadeOut() + slideOutVertically { it / 2 }
             ) {
-                dockApps.forEach { app ->
-                    AppIcon(
-                        app = app,
-                        onClick = { onAppClick(app) },
-                        showLabel = false,
-                        fontFamilyName = settingsManager.fontFamily,
-                        iconSizeDp = settingsManager.iconSize,
-                        cornerRadiusPercent = settingsManager.iconCornerRadius,
-                        iconOpacity = settingsManager.iconOpacity,
-                        customDrawable = getCustomDrawable(app.packageName),
-                        onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
-                        modifier = Modifier.width(64.dp)
-                    )
+                LiquidGlassDock(
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    dockApps.forEach { app ->
+                        AppIcon(
+                            app = app,
+                            onClick = { onAppClick(app) },
+                            showLabel = false,
+                            fontFamilyName = settingsManager.fontFamily,
+                            iconSizeDp = settingsManager.iconSize,
+                            cornerRadiusPercent = settingsManager.iconCornerRadius,
+                            iconOpacity = settingsManager.iconOpacity,
+                            customDrawable = getCustomDrawable(app.packageName),
+                            onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
+                            modifier = Modifier.width(64.dp)
+                        )
+                    }
                 }
             }
         }
 
-                // 4-Tab Liquid Glass Bottom Bar (Motorola Style)
-        if (showLiquidBottomBar) {
+                // 4-Tab Liquid Glass Bottom Bar (Motorola Style with Scrim Overlay)
+        AnimatedVisibility(
+            visible = showLiquidBottomBar,
+            enter = fadeIn(tween(200)) + slideInVertically(
+                animationSpec = spring(dampingRatio = 0.72f, stiffness = 320f)
+            ) { it },
+            exit = fadeOut(tween(180)) + slideOutVertically(
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
+            ) { it }
+        ) {
             HomeLiquidBottomBar(
                 onOpenWidgets = {
                     showLiquidBottomBar = false
@@ -352,7 +381,7 @@ fun HomeScreen(
     }
 }
 
-// Embedded HomeLiquidBottomBar Component
+// Embedded Ultra-Clean Liquid Glass Bar Component
 data class HomeActionItem(
     val title: String,
     val icon: ImageVector
@@ -373,53 +402,56 @@ fun HomeLiquidBottomBar(
         listOf(
             HomeActionItem("Widgets", Icons.Rounded.Widgets),
             HomeActionItem("Wallpapers", Icons.Rounded.Image),
-            HomeActionItem("Home", Icons.Rounded.Home),
-            HomeActionItem("Settings", Icons.Rounded.Settings)
+            HomeActionItem("Personalize", Icons.Rounded.Home),
+            HomeActionItem("Home Settings", Icons.Rounded.Settings)
         )
     }
 
     var selectedIndex by remember { mutableIntStateOf(-1) }
 
+    // Dark Frosted Dismiss Overlay
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.42f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onDismiss() },
         contentAlignment = Alignment.BottomCenter
     ) {
+        // High-End Motorola Style Glass Capsule
         BoxWithConstraints(
             modifier = modifier
-                .padding(horizontal = 16.dp, vertical = 20.dp)
+                .padding(horizontal = 14.dp, vertical = 24.dp)
                 .navigationBarsPadding()
                 .fillMaxWidth()
-                .height(68.dp)
+                .height(72.dp)
                 .shadow(
-                    elevation = 20.dp,
-                    shape = RoundedCornerShape(26.dp),
-                    spotColor = Color(0xFF00E5FF).copy(alpha = 0.25f),
-                    ambientColor = Color.Black.copy(alpha = 0.35f)
+                    elevation = 24.dp,
+                    shape = RoundedCornerShape(28.dp),
+                    spotColor = Color(0xFF00E5FF).copy(alpha = 0.35f),
+                    ambientColor = Color.Black.copy(alpha = 0.6f)
                 )
-                .clip(RoundedCornerShape(26.dp))
+                .clip(RoundedCornerShape(28.dp))
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFF142634).copy(alpha = 0.82f),
-                            Color(0xFF09141D).copy(alpha = 0.92f)
+                            Color(0xFF132330).copy(alpha = 0.94f),
+                            Color(0xFF09121A).copy(alpha = 0.98f)
                         )
                     )
                 )
                 .border(
-                    width = 1.3.dp,
+                    width = 1.4.dp,
                     brush = Brush.verticalGradient(
                         listOf(
-                            Color.White.copy(alpha = 0.80f),
+                            Color.White.copy(alpha = 0.75f),
                             Color(0xFF00E5FF).copy(alpha = 0.40f),
-                            Color.White.copy(alpha = 0.15f)
+                            Color.White.copy(alpha = 0.12f)
                         )
                     ),
-                    shape = RoundedCornerShape(26.dp)
+                    shape = RoundedCornerShape(28.dp)
                 )
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -434,7 +466,7 @@ fun HomeLiquidBottomBar(
             if (selectedIndex >= 0) {
                 val indicatorOffset by animateDpAsState(
                     targetValue = tabWidth * selectedIndex,
-                    animationSpec = spring(dampingRatio = 0.75f, stiffness = 420f),
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 420f),
                     label = "bubblePill"
                 )
 
@@ -443,21 +475,21 @@ fun HomeLiquidBottomBar(
                         .offset(x = indicatorOffset)
                         .width(tabWidth)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(22.dp))
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    Color(0xFF00A2FF).copy(alpha = 0.40f),
-                                    Color(0xFF0072FF).copy(alpha = 0.55f)
+                                    Color(0xFF00B4D8).copy(alpha = 0.35f),
+                                    Color(0xFF0077B6).copy(alpha = 0.55f)
                                 )
                             )
                         )
                         .border(
                             1.dp,
                             Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = 0.7f), Color(0xFF00E5FF).copy(alpha = 0.3f))
+                                listOf(Color.White.copy(alpha = 0.8f), Color(0xFF00E5FF).copy(alpha = 0.3f))
                             ),
-                            RoundedCornerShape(20.dp)
+                            RoundedCornerShape(22.dp)
                         )
                 )
             }
