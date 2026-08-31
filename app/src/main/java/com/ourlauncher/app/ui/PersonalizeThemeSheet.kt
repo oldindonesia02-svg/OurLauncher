@@ -1,9 +1,6 @@
 package com.ourlauncher.app.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,8 +14,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Chat
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Schedule
@@ -31,7 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,7 +41,9 @@ data class ThemePreset(
     val name: String,
     val bgGradients: List<Color>,
     val accentColor: Color,
-    val iconShapeRadius: Float
+    val iconShapeRadius: Float,
+    val fontFamily: String,
+    val iconSizeDp: Float = 60f
 )
 
 @Composable
@@ -56,58 +57,71 @@ fun PersonalizeThemeSheet(
 
     var selectedTab by remember { mutableIntStateOf(0) } // 0 -> Themes, 1 -> Font
 
+    // Real OS Themes requested
     val themePresets = remember {
         listOf(
             ThemePreset(
-                id = "default",
-                name = "Default",
-                bgGradients = listOf(Color(0xFFE2E6EC), Color(0xFF90A4AE), Color(0xFF37474F)),
-                accentColor = Color(0xFF00A2FF),
-                iconShapeRadius = 35f
+                id = "ios_dark_liquid",
+                name = "iOS Dark Liquid",
+                bgGradients = listOf(Color(0xFF1C1C1E), Color(0xFF000000), Color(0xFF2C2C2E)),
+                accentColor = Color(0xFF0A84FF),
+                iconShapeRadius = 42f, // iOS Squircle Curve
+                fontFamily = "SF Pro",
+                iconSizeDp = 60f
             ),
             ThemePreset(
-                id = "moto",
-                name = "Moto",
-                bgGradients = listOf(Color(0xFFFFB300), Color(0xFF0288D1), Color(0xFF1A237E)),
+                id = "ios_original_liquid",
+                name = "iOS Original Glass",
+                bgGradients = listOf(Color(0xFF64B5F6), Color(0xFF1976D2), Color(0xFF0D47A1)),
+                accentColor = Color(0xFF007AFF),
+                iconShapeRadius = 42f,
+                fontFamily = "SF Pro",
+                iconSizeDp = 60f
+            ),
+            ThemePreset(
+                id = "hyper_os",
+                name = "HyperOS Theme",
+                bgGradients = listOf(Color(0xFFFF7043), Color(0xFFF4511E), Color(0xFF212121)),
+                accentColor = Color(0xFFFF6D00),
+                iconShapeRadius = 32f, // Xiaomi HyperOS Smooth Rounded
+                fontFamily = "Inter",
+                iconSizeDp = 58f
+            ),
+            ThemePreset(
+                id = "iqoo_monster",
+                name = "iQOO Monster",
+                bgGradients = listOf(Color(0xFFFFD600), Color(0xFF212121), Color(0xFF000000)),
+                accentColor = Color(0xFFFFD600),
+                iconShapeRadius = 26f, // iQOO Sporty Radius
+                fontFamily = "Roboto",
+                iconSizeDp = 62f
+            ),
+            ThemePreset(
+                id = "moto_liquid",
+                name = "Moto Liquid Glass",
+                bgGradients = listOf(Color(0xFF00E5FF), Color(0xFF0072FF), Color(0xFF09141D)),
                 accentColor = Color(0xFF00E5FF),
-                iconShapeRadius = 45f
+                iconShapeRadius = 50f, // Moto Circle
+                fontFamily = "Outfit",
+                iconSizeDp = 60f
             ),
             ThemePreset(
-                id = "seaway",
-                name = "Seaway",
-                bgGradients = listOf(Color(0xFF00897B), Color(0xFF26A69A), Color(0xFFE65100)),
-                accentColor = Color(0xFF00E676),
-                iconShapeRadius = 25f
-            ),
-            ThemePreset(
-                id = "liquid_dark",
-                name = "Liquid Neon",
-                bgGradients = listOf(Color(0xFF142634), Color(0xFF09141D), Color(0xFF000508)),
-                accentColor = Color(0xFF00E5FF),
-                iconShapeRadius = 30f
-            ),
-            ThemePreset(
-                id = "sunset_glow",
-                name = "Cyberpunk",
-                bgGradients = listOf(Color(0xFFFF007F), Color(0xFF7B1FA2), Color(0xFF12002B)),
-                accentColor = Color(0xFFFF007F),
-                iconShapeRadius = 50f
-            ),
-            ThemePreset(
-                id = "minimal_pure",
-                name = "Minimalist",
-                bgGradients = listOf(Color(0xFF2C3440), Color(0xFF1E242B), Color(0xFF111417)),
-                accentColor = Color.White,
-                iconShapeRadius = 20f
+                id = "nothing_os",
+                name = "Nothing OS Glass",
+                bgGradients = listOf(Color(0xFF2B2B2B), Color(0xFF121212), Color(0xFF000000)),
+                accentColor = Color(0xFFFF3B30),
+                iconShapeRadius = 50f, // Nothing OS Dot/Circle
+                fontFamily = "Monospace",
+                iconSizeDp = 56f
             )
         )
     }
 
     val fontList = remember {
-        listOf("Default", "Inter", "Roboto", "Poppins", "Outfit", "SF Pro", "Monospace")
+        listOf("Default", "SF Pro", "Inter", "Roboto", "Poppins", "Outfit", "Monospace")
     }
 
-    var currentThemeId by remember { mutableStateOf("moto") }
+    var selectedThemeId by remember { mutableStateOf("moto_liquid") }
     var currentFont by remember { mutableStateOf(settingsManager.fontFamily) }
 
     Box(
@@ -120,12 +134,12 @@ fun PersonalizeThemeSheet(
             ) { onDismiss() },
         contentAlignment = Alignment.Center
     ) {
-        // Floating Central Glass Modal
+        // Center Glass Modal Card
         Box(
             modifier = Modifier
-                .padding(horizontal = 20.dp, vertical = 40.dp)
+                .padding(horizontal = 20.dp, vertical = 36.dp)
                 .fillMaxWidth()
-                .heightIn(max = 580.dp)
+                .heightIn(max = 600.dp)
                 .shadow(
                     elevation = 24.dp,
                     shape = RoundedCornerShape(32.dp),
@@ -136,8 +150,8 @@ fun PersonalizeThemeSheet(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFF182A3A).copy(alpha = 0.94f),
-                            Color(0xFF0E1A24).copy(alpha = 0.97f)
+                            Color(0xFF182A3A).copy(alpha = 0.95f),
+                            Color(0xFF0E1A24).copy(alpha = 0.98f)
                         )
                     )
                 )
@@ -166,7 +180,7 @@ fun PersonalizeThemeSheet(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 30.dp, vertical = 6.dp),
+                        .padding(horizontal = 24.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     // Themes Tab
@@ -228,32 +242,30 @@ fun PersonalizeThemeSheet(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Content View based on Tab
+                // Tab Content
                 if (selectedTab == 0) {
-                    // Themes Grid
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                         modifier = Modifier.weight(1f)
                     ) {
                         items(themePresets, key = { it.id }) { preset ->
-                            val isSelected = preset.id == currentThemeId
+                            val isSelected = preset.id == selectedThemeId
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(20.dp))
                                     .clickable {
-                                        currentThemeId = preset.id
-                                        settingsManager.iconCornerRadius = preset.iconShapeRadius
+                                        selectedThemeId = preset.id
                                         onApplyTheme(preset)
                                     }
                             ) {
-                                // Miniature Phone Mockup Card
+                                // Miniature Card with Live Theme Shape Preview
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(140.dp)
+                                        .height(130.dp)
                                         .clip(RoundedCornerShape(20.dp))
                                         .background(Brush.verticalGradient(preset.bgGradients))
                                         .border(
@@ -264,18 +276,17 @@ fun PersonalizeThemeSheet(
                                         .padding(8.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    // 2x2 Mini Icons Grid Preview
                                     Column(
                                         verticalArrangement = Arrangement.spacedBy(8.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            MiniGlassIcon(Icons.Rounded.Schedule, Color(0xFF0072FF))
-                                            MiniGlassIcon(Icons.Rounded.Image, Color(0xFF00E676))
+                                            MiniThemeIcon(Icons.Rounded.Call, preset.accentColor, preset.iconShapeRadius)
+                                            MiniThemeIcon(Icons.Rounded.Image, Color(0xFF34C759), preset.iconShapeRadius)
                                         }
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            MiniGlassIcon(Icons.Rounded.Person, Color(0xFF00B0FF))
-                                            MiniGlassIcon(Icons.Rounded.Chat, Color(0xFF2979FF))
+                                            MiniThemeIcon(Icons.Rounded.CameraAlt, Color(0xFFFF9500), preset.iconShapeRadius)
+                                            MiniThemeIcon(Icons.Rounded.Chat, Color(0xFF5856D6), preset.iconShapeRadius)
                                         }
                                     }
                                 }
@@ -284,14 +295,14 @@ fun PersonalizeThemeSheet(
                                 Text(
                                     text = preset.name,
                                     color = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.85f),
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    fontSize = 11.5.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    maxLines = 1
                                 )
                             }
                         }
                     }
                 } else {
-                    // Fonts List
                     LazyColumn(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -310,7 +321,6 @@ fun PersonalizeThemeSheet(
                                     )
                                     .clickable {
                                         currentFont = fontName
-                                        settingsManager.fontFamily = fontName
                                         onApplyFont(fontName)
                                     }
                                     .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -333,7 +343,7 @@ fun PersonalizeThemeSheet(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Apply / Done Button
+                // Done Button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -360,13 +370,13 @@ fun PersonalizeThemeSheet(
 }
 
 @Composable
-fun MiniGlassIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, bgColor: Color) {
+fun MiniThemeIcon(icon: ImageVector, bgColor: Color, radiusPercent: Float) {
     Box(
         modifier = Modifier
             .size(24.dp)
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(percent = radiusPercent.toInt()))
             .background(bgColor.copy(alpha = 0.85f))
-            .border(0.8.dp, Color.White.copy(alpha = 0.6f), CircleShape),
+            .border(0.8.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(percent = radiusPercent.toInt())),
         contentAlignment = Alignment.Center
     ) {
         Icon(
