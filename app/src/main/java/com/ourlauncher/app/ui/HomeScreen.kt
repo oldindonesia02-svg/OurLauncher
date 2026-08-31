@@ -82,6 +82,7 @@ fun HomeScreen(
     resumeTrigger: Long = 0L
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
     val dockApps = remember(apps) { apps.take(4) }
 
     val pageSize = (settingsManager.gridColumns * settingsManager.gridRows).coerceAtLeast(1)
@@ -253,7 +254,7 @@ fun HomeScreen(
                 }
             }
 
-            // Search Capsule (Hidden when any sheet is open to prevent overlapping)
+            // Search Capsule
             AnimatedVisibility(
                 visible = !liveHideCapsule && !isOverviewMode && !isAnySheetOpen,
                 enter = fadeIn() + expandVertically(),
@@ -275,7 +276,7 @@ fun HomeScreen(
                 }
             }
 
-            // Bottom Dock (Hidden when any sheet is open)
+            // Bottom Dock
             AnimatedVisibility(
                 visible = !isAnySheetOpen,
                 enter = fadeIn() + slideInVertically { it / 2 },
@@ -391,7 +392,7 @@ fun HomeScreen(
             )
         }
 
-        // 4. Customize Icons / Personalize Sheet (Proper Frosted Card)
+        // 4. Customize Icons / Personalize Sheet
         if (showIconCustomizeSheet) {
             Box(
                 modifier = Modifier
@@ -712,8 +713,8 @@ fun HomeLiquidBottomBar(
                         )
                     }
             ) {
-                val density = LocalDensity.current
-                val currentOffsetDp = with(density) { dragOffsetPx.value.toDp() }
+                val densityLocal = LocalDensity.current
+                val currentOffsetDp = with(densityLocal) { dragOffsetPx.value.toDp() }
 
                 // Sliding Liquid Bubble
                 Box(
@@ -754,20 +755,20 @@ fun HomeLiquidBottomBar(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                selectedIndex = index
-                                coroutineScope.launch {
-                                    dragOffsetPx.animateTo(
-                                        targetValue = index * tabWidthPx,
-                                        animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f)
-                                    )
-                                    delay(100)
-                                    triggerAction(index)
-                                }
-                            },
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    selectedIndex = index
+                                    coroutineScope.launch {
+                                        dragOffsetPx.animateTo(
+                                            targetValue = index * tabWidthPx,
+                                            animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f)
+                                        )
+                                        delay(100)
+                                        triggerAction(index)
+                                    }
+                                },
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
