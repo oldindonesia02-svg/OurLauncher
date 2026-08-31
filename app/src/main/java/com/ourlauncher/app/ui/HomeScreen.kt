@@ -392,44 +392,18 @@ fun HomeScreen(
             )
         }
 
-        // 4. Customize Icons / Personalize Sheet
+                // 4. Personalize (Themes & Font Picker Sheet)
         if (showIconCustomizeSheet) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.50f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { showIconCustomizeSheet = false },
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                        .background(Color(0xFF1B222A))
-                        .border(
-                            1.dp,
-                            Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = 0.35f), Color.Transparent)
-                            ),
-                            RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-                        )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {}
-                        .padding(bottom = 20.dp)
-                        .navigationBarsPadding()
-                ) {
-                    IconCustomizeSheet(
-                        settingsManager = settingsManager,
-                        onApply = { showIconCustomizeSheet = false },
-                        onDismiss = { showIconCustomizeSheet = false }
-                    )
-                }
-            }
+            PersonalizeThemeSheet(
+                settingsManager = settingsManager,
+                onApplyTheme = { theme ->
+                    // Theme apply action
+                },
+                onApplyFont = { font ->
+                    // Font apply action
+                },
+                onDismiss = { showIconCustomizeSheet = false }
+            )
         }
 
         // 5. Live Glass Playground
