@@ -3,6 +3,7 @@ package com.ourlauncher.app.ui
 import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
+import android.graphics.drawable.Drawable
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
@@ -20,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Home
@@ -56,6 +58,7 @@ fun HomeScreen(
     apps: List<AppInfo>,
     settingsManager: SettingsManager,
     onOpenDrawer: () -> Unit,
+    getCustomDrawable: (String) -> Drawable? = { null },
     onAppClick: (AppInfo) -> Unit = {},
     onAppClickWithBounds: (AppInfo, Rect?) -> Unit = { _, _ -> },
     onOpenSettings: () -> Unit = {},
@@ -186,6 +189,8 @@ fun HomeScreen(
                                 iconSizeDp = settingsManager.iconSize,
                                 cornerRadiusPercent = settingsManager.iconCornerRadius,
                                 iconOpacity = settingsManager.iconOpacity,
+                                customDrawable = getCustomDrawable(app.packageName),
+                                onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
                                 modifier = Modifier.width(82.dp)
                             )
                         }
@@ -224,6 +229,8 @@ fun HomeScreen(
                         iconSizeDp = settingsManager.iconSize,
                         cornerRadiusPercent = settingsManager.iconCornerRadius,
                         iconOpacity = settingsManager.iconOpacity,
+                        customDrawable = getCustomDrawable(app.packageName),
+                        onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
                         modifier = Modifier.width(64.dp)
                     )
                 }
