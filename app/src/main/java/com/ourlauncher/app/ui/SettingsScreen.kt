@@ -89,6 +89,7 @@ fun SettingsScreen(
         if (installedIconPacks.isNotEmpty()) installedIconPacks else scanDeviceIconPacks(context)
     }
 
+    // Icon Live States
     var liveSize by remember { mutableFloatStateOf(settingsManager.iconSize) }
     var liveRadius by remember { mutableFloatStateOf(settingsManager.iconCornerRadius) }
     var liveOpacity by remember { mutableFloatStateOf(settingsManager.iconOpacity) }
@@ -96,13 +97,20 @@ fun SettingsScreen(
     var activePack by remember { mutableStateOf(selectedIconPack) }
     var isMonochrome by remember { mutableStateOf(settingsManager.fontFamily.equals("Monospace", ignoreCase = true)) }
 
+    // Desktop Grid States
     var liveCols by remember { mutableIntStateOf(settingsManager.gridColumns) }
     var liveRows by remember { mutableIntStateOf(settingsManager.gridRows) }
     var liveSearchOffset by remember { mutableFloatStateOf(0f) }
     var hideSearch by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
 
+    // Dock Advanced States
     var dockIconCount by remember { mutableIntStateOf(4) }
     var isDockEnabled by remember { mutableStateOf(true) }
+    var dockCornerRadius by remember { mutableFloatStateOf(28f) }
+    var dockGlassOpacity by remember { mutableFloatStateOf(94f) }
+    var dockSpecularGlow by remember { mutableStateOf(true) }
+
+    // Blur & Animations States
     var blurIntensity by remember { mutableFloatStateOf(24f) }
     var animationSpeed by remember { mutableStateOf("Smooth (300ms)") }
     var doubleTapAction by remember { mutableStateOf("Lock Screen") }
@@ -225,7 +233,7 @@ fun SettingsScreen(
                         LocalItemDivider()
                         LocalSettingsItem("App icons", "Icon packs, Shape, Size & Lens Light") { currentSubPage = "icons" }
                         LocalItemDivider()
-                        LocalSettingsItem("Dock", "Capacity, Padding & Corner Radius") { currentSubPage = "dock" }
+                        LocalSettingsItem("Dock", "Capacity, Size, Radius & Glass opacity") { currentSubPage = "dock" }
                         LocalItemDivider()
                         LocalSettingsItem("Liquid Glass", "Refraction blur, Tint & Specular sheen") { currentSubPage = "glass" }
                         LocalItemDivider()
@@ -338,7 +346,7 @@ fun SettingsScreen(
                                             }
                                             .padding(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
-                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 12.sp)
+                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -387,9 +395,9 @@ fun SettingsScreen(
                             }
                         }
                     }
-                }
+               }
 
-                // 4. DOCK SUB-PAGE
+                // 4. DOCK SUB-PAGE (Capacity, Radius, Opacity & Glow)
                 if (currentSubPage == "dock") {
                     Text("DOCK TOGGLE", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Row(
@@ -406,8 +414,8 @@ fun SettingsScreen(
                     }
 
                     Text("DOCK CAPACITY", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        listOf(4, 5, 6).forEach { count ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(4, 5, 6, 7).forEach { count ->
                             val isSelected = dockIconCount == count
                             Box(
                                 modifier = Modifier
@@ -419,7 +427,47 @@ fun SettingsScreen(
                                     .clickable { dockIconCount = count },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("$count Apps", color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 14.sp)
+                                Text("$count", color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+
+                    Text("DOCK DIMENSIONS & GLASS", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Dock Corner Radius", color = Color.White, fontSize = 15.sp)
+                                Text("${dockCornerRadius.roundToInt()} dp", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = dockCornerRadius,
+                                onValueChange = { dockCornerRadius = it },
+                                valueRange = 8f..40f,
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
+                            )
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Glass Transparency", color = Color.White, fontSize = 15.sp)
+                                Text("${dockGlassOpacity.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = dockGlassOpacity,
+                                onValueChange = { dockGlassOpacity = it },
+                                valueRange = 20f..100f,
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Specular Light Glow", color = Color.White, fontSize = 15.sp)
+                                Switch(
+                                    checked = dockSpecularGlow,
+                                    onCheckedChange = { dockSpecularGlow = it },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
+                                )
                             }
                         }
                     }
@@ -526,7 +574,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Done Button
+                // Apply & Done Button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
