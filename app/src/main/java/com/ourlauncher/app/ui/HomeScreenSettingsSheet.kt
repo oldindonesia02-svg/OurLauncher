@@ -41,45 +41,44 @@ fun HomeScreenSettingsSheet(
     var showLabels by remember { mutableStateOf(settingsManager.showLabels) }
     var liquidFolder by remember { mutableStateOf(true) }
 
-    // Transparent Glass Backdrop (Dark Black overlay removed)
+    // Transparent Touch-dismiss overlay (Zero black tint)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.20f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onDismiss() },
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Floating 4-Corners Rounded Card
+        // True iOS-Grade Liquid Glass Floating Card
         Box(
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 24.dp)
                 .navigationBarsPadding()
                 .fillMaxWidth()
                 .shadow(
-                    elevation = 28.dp,
+                    elevation = 32.dp,
                     shape = RoundedCornerShape(32.dp),
-                    spotColor = Color(0xFF00E5FF).copy(alpha = 0.35f),
-                    ambientColor = Color.Black.copy(alpha = 0.5f)
+                    spotColor = Color(0xFF00E5FF).copy(alpha = 0.40f),
+                    ambientColor = Color.Black.copy(alpha = 0.35f)
                 )
                 .clip(RoundedCornerShape(32.dp))
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFF162330).copy(alpha = 0.95f),
-                            Color(0xFF0D161F).copy(alpha = 0.98f)
+                            Color.White.copy(alpha = 0.14f),
+                            Color(0xFF0A1926).copy(alpha = 0.45f)
                         )
                     )
                 )
                 .border(
-                    width = 1.3.dp,
+                    width = 1.4.dp,
                     brush = Brush.verticalGradient(
                         listOf(
-                            Color.White.copy(alpha = 0.80f),
-                            Color(0xFF00E5FF).copy(alpha = 0.40f),
-                            Color.White.copy(alpha = 0.10f)
+                            Color.White.copy(alpha = 0.85f),
+                            Color(0xFF00E5FF).copy(alpha = 0.45f),
+                            Color.White.copy(alpha = 0.15f)
                         )
                     ),
                     shape = RoundedCornerShape(32.dp)
@@ -94,14 +93,14 @@ fun HomeScreenSettingsSheet(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Top Indicator Pill
+                // Top Specular Indicator Pill
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
                         .width(42.dp)
                         .height(4.5.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.35f))
+                        .background(Color.White.copy(alpha = 0.45f))
                 )
 
                 // Header
@@ -115,14 +114,14 @@ fun HomeScreenSettingsSheet(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.10f))
+                            .background(Color.White.copy(alpha = 0.15f))
                             .clickable { onDismiss() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
                             contentDescription = "Close",
-                            tint = Color.White.copy(alpha = 0.85f),
+                            tint = Color.White,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -147,12 +146,13 @@ fun HomeScreenSettingsSheet(
                     onClick = onSetDefaultScreen
                 )
 
-                                // Show Label Toggle
+                                // Show Label Toggle (Liquid Glass Row)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF131F2A))
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -178,12 +178,13 @@ fun HomeScreenSettingsSheet(
                     )
                 }
 
-                // Liquid Folder Toggle
+                // Liquid Folder Toggle (Liquid Glass Row)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF131F2A))
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -242,8 +243,9 @@ private fun HomeSheetNavRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF131F2A))
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(18.dp))
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 15.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -258,7 +260,7 @@ private fun HomeSheetNavRow(
         Icon(
             imageVector = Icons.Rounded.ChevronRight,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.5f),
+            tint = Color.White.copy(alpha = 0.6f),
             modifier = Modifier.size(20.dp)
         )
     }
