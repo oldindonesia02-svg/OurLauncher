@@ -1,333 +1,284 @@
 package com.ourlauncher.app.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ourlauncher.app.GlassMode
 import com.ourlauncher.app.SettingsManager
+import com.ourlauncher.app.ui.components.LiquidGlassSurface
+import com.ourlauncher.app.ui.components.liquidGlassEffect
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LiquidGlassScreen(
-    onBack: () -> Unit,
-    settingsManager: SettingsManager
+    settings: SettingsManager,
+    onBack: () -> Unit
 ) {
-    var mode by remember { mutableStateOf(settingsManager.glassMode) }
-    var transparency by remember { mutableStateOf(settingsManager.glassTransparency) }
-    var blurRadius by remember { mutableStateOf(settingsManager.glassBlurRadius) }
-    var refractionHeight by remember { mutableStateOf(settingsManager.glassRefractionHeight) }
-    var refractionAmount by remember { mutableStateOf(settingsManager.glassRefractionAmount) }
-    var depthEnabled by remember { mutableStateOf(settingsManager.glassDepthEnabled) }
+    val scrollState = rememberScrollState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF0D0D0E))
-    ) {
-        // Top Bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 48.dp, start = 16.dp, end = 16.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.12f))
-                        .clickable { onBack() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = "‹", color = Color(0xFF0A84FF), fontSize = 28.sp)
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Liquid Glass",
-                    color = Color.White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Liquid Glass Engine", color = Color.White, fontSize = 20.sp) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Black
                 )
-            }
-
-            Box(
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.12f))
-                    .clickable {
-                        mode = "easy"
-                        transparency = 0.15f
-                        blurRadius = 0.30f
-                        refractionHeight = 20f
-                        refractionAmount = 35f
-                        depthEnabled = false
-                        settingsManager.glassMode = mode
-                        settingsManager.glassTransparency = transparency
-                        settingsManager.glassBlurRadius = blurRadius
-                        settingsManager.glassRefractionHeight = refractionHeight
-                        settingsManager.glassRefractionAmount = refractionAmount
-                        settingsManager.glassDepthEnabled = depthEnabled
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "↻", color = Color.White.copy(alpha = 0.7f), fontSize = 18.sp)
-            }
-        }
-
+            )
+        },
+        containerColor = Color.Black
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(innerPadding)
+                .verticalScroll(scrollState)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Live Preview
-            Box(
+            // Live Preview Box
+            Text(
+                text = "REAL-TIME PREVIEW",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 12.sp,
+                letterSpacing = 1.sp
+            )
+
+            LiquidGlassSurface(
+                settings = settings,
+                cornerRadius = 28.dp,
+                isDarkTheme = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                Color(0xFFCBB292),
-                                Color(0xFF8E7356),
-                                Color(0xFF352B20)
-                            )
-                        )
-                    ),
-                contentAlignment = Alignment.Center
+                    .height(180.dp)
             ) {
-                val glassShape = RoundedCornerShape(32.dp)
-                val glassAlpha = transparency.coerceIn(0.05f, 0.85f)
-                val borderAlpha = (refractionAmount / 50f).coerceIn(0.15f, 0.9f)
-                val topLightAlpha = (refractionHeight / 50f).coerceIn(0.2f, 0.95f)
-
-                val glassBg = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = (glassAlpha + 0.1f).coerceAtMost(0.9f)),
-                        Color.Black.copy(alpha = (1f - glassAlpha).coerceIn(0.1f, 0.6f))
-                    )
-                )
-
-                val glassBorder = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = topLightAlpha),
-                        Color.White.copy(alpha = borderAlpha * 0.3f),
-                        Color.Black.copy(alpha = 0.4f)
-                    )
-                )
-
-                Box(
+                Column(
                     modifier = Modifier
-                        .width(220.dp)
-                        .height(68.dp)
-                        .clip(glassShape)
-                        .background(glassBg)
-                        .padding(1.5.dp),
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("□", color = Color.White.copy(alpha = 0.9f), fontSize = 24.sp, fontWeight = FontWeight.Light)
-                        Text("○", color = Color.White.copy(alpha = 0.9f), fontSize = 24.sp, fontWeight = FontWeight.Light)
-                        Text("△", color = Color.White.copy(alpha = 0.9f), fontSize = 24.sp, fontWeight = FontWeight.Light)
+                        Column {
+                            Text(
+                                text = "Dynamic Refraction",
+                                color = Color.White,
+                                fontSize = 18.sp
+                            )
+                            Text(
+                                text = "Mode: ${settings.glassMode.name}",
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 13.sp
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, null, tint = Color.White)
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(36.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.White.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Specular: ${(settings.specularHighlight * 100).toInt()}%", color = Color.White, fontSize = 12.sp)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(36.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.White.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Blur: ${settings.glassBlurRadius.toInt()}px", color = Color.White, fontSize = 12.sp)
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            // Glass Mode Switcher Matrix
+            Text(
+                text = "GLASS MATERIAL MODE",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 12.sp,
+                letterSpacing = 1.sp
+            )
 
-            // Easy / Advanced Toggle
-            Box(
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                GlassMode.values().forEach { mode ->
+                    val isSelected = settings.glassMode == mode
+                    val targetBg = if (isSelected) Color(0xFF007AFF) else Color.White.copy(alpha = 0.08f)
+                    val bgColor by animateColorAsState(targetBg, label = "modeBg")
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(bgColor)
+                            .clickable { settings.glassMode = mode },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = mode.name.lowercase().replaceFirstChar { it.uppercase() },
+                            color = Color.White,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            // Sliders Section
+            Text(
+                text = "OPTICAL PARAMETERS",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 12.sp,
+                letterSpacing = 1.sp
+            )
+
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xFF1C1C1E))
-                    .padding(3.dp)
+                    .liquidGlassEffect(settings, cornerRadius = 24.dp, isDarkTheme = true)
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(if (mode == "easy") Color.White.copy(alpha = 0.15f) else Color.Transparent)
-                            .clickable {
-                                mode = "easy"
-                                settingsManager.glassMode = "easy"
-                            },
-                        contentAlignment = Alignment.Center
+                // Blur Radius
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = "Easy",
-                            color = if (mode == "easy") Color.White else Color.White.copy(alpha = 0.4f),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Text("Hardware Blur Radius", color = Color.White, fontSize = 14.sp)
+                        Text("${settings.glassBlurRadius.toInt()} dp", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
                     }
+                    Slider(
+                        value = settings.glassBlurRadius,
+                        onValueChange = { settings.glassBlurRadius = it },
+                        valueRange = 0f..60f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = Color(0xFF007AFF)
+                        )
+                    )
+                }
 
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(if (mode == "advanced") Color.White.copy(alpha = 0.15f) else Color.Transparent)
-                            .clickable {
-                                mode = "advanced"
-                                settingsManager.glassMode = "advanced"
-                            },
-                        contentAlignment = Alignment.Center
+                // Specular Highlights
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            text = "Advanced",
-                            color = if (mode == "advanced") Color.White else Color.White.copy(alpha = 0.4f),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Text("Specular Reflection Sheen", color = Color.White, fontSize = 14.sp)
+                        Text("${(settings.specularHighlight * 100).toInt()}%", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
                     }
+                    Slider(
+                        value = settings.specularHighlight,
+                        onValueChange = { settings.specularHighlight = it },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = Color(0xFF007AFF)
+                        )
+                    )
+                }
+
+                // Transparency Alpha
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Glass Base Transparency", color = Color.White, fontSize = 14.sp)
+                        Text("${(settings.glassTransparency * 100).toInt()}%", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+                    }
+                    Slider(
+                        value = settings.glassTransparency,
+                        onValueChange = { settings.glassTransparency = it },
+                        valueRange = 0.1f..1f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = Color(0xFF007AFF)
+                        )
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-            SettingsSectionHeader("LIQUID GLASS PROPERTIES")
-
-            SettingsGroup {
-                if (mode == "easy") {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Transparency", color = Color.White, fontSize = 14.sp)
-                            Text("${(transparency * 100).toInt()}%", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-                        LiquidGlassPillSlider(
-                            value = transparency,
-                            onValueChange = {
-                                transparency = it
-                                settingsManager.glassTransparency = it
-                            },
-                            valueRange = 0.05f..0.80f
-                        )
-                    }
-
-                    SettingsDivider()
-
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Blur", color = Color.White, fontSize = 14.sp)
-                            Text("${(blurRadius * 100).toInt()}%", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-                        LiquidGlassPillSlider(
-                            value = blurRadius,
-                            onValueChange = {
-                                blurRadius = it
-                                settingsManager.glassBlurRadius = it
-                            },
-                            valueRange = 0.0f..1.0f
-                        )
-                    }
-                } else {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Transparency", color = Color.White, fontSize = 14.sp)
-                            Text("${(transparency * 100).toInt()}%", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-                        LiquidGlassPillSlider(
-                            value = transparency,
-                            onValueChange = {
-                                transparency = it
-                                settingsManager.glassTransparency = it
-                            },
-                            valueRange = 0.05f..0.80f
-                        )
-                    }
-
-                    SettingsDivider()
-
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Blur Radius", color = Color.White, fontSize = 14.sp)
-                            Text("${(blurRadius * 100).toInt()}%", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-                        LiquidGlassPillSlider(
-                            value = blurRadius,
-                            onValueChange = {
-                                blurRadius = it
-                                settingsManager.glassBlurRadius = it
-                            },
-                            valueRange = 0.0f..1.0f
-                        )
-                    }
-
-                    SettingsDivider()
-
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Refraction Height", color = Color.White, fontSize = 14.sp)
-                            Text("${refractionHeight.toInt()} dp", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-                        LiquidGlassPillSlider(
-                            value = refractionHeight,
-                            onValueChange = {
-                                refractionHeight = it
-                                settingsManager.glassRefractionHeight = it
-                            },
-                            valueRange = 0f..50f
-                        )
-                    }
-
-                    SettingsDivider()
-
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Refraction Amount", color = Color.White, fontSize = 14.sp)
-                            Text("${refractionAmount.toInt()} dp", color = Color(0xFF00E5FF), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.height(10.dp))
-                        LiquidGlassPillSlider(
-                            value = refractionAmount,
-                            onValueChange = {
-                                refractionAmount = it
-                                settingsManager.glassRefractionAmount = it
-                            },
-                            valueRange = 0f..50f
-                        )
-                    }
+            // Toggles
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .liquidGlassEffect(settings, cornerRadius = 24.dp, isDarkTheme = true)
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Rainbow Edge Dispersion", color = Color.White, fontSize = 14.sp)
+                    Switch(
+                        checked = settings.enableRainbowSheen,
+                        onCheckedChange = { settings.enableRainbowSheen = it }
+                    )
                 }
 
-                SettingsDivider()
-
-                SettingsToggleRow(
-                    title = "Enable Depth",
-                    subtitle = if (!depthEnabled) "Disabled by current Graphic preset" else "Full 3D refractive depth enabled",
-                    checked = depthEnabled,
-                    onCheckedChange = {
-                        depthEnabled = it
-                        settingsManager.glassDepthEnabled = it
-                    }
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Inner Depth Gradient", color = Color.White, fontSize = 14.sp)
+                    Switch(
+                        checked = settings.glassDepthEnabled,
+                        onCheckedChange = { settings.glassDepthEnabled = it }
+                    )
+                }
             }
         }
     }
