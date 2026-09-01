@@ -1,6 +1,9 @@
 package com.ourlauncher.app.ui
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +39,38 @@ import com.ourlauncher.app.IconPackInfo
 import com.ourlauncher.app.SettingsManager
 import kotlin.math.roundToInt
 
+private data class CustomShapePreset(
+    val name: String,
+    val radiusPercent: Float
+)
+
+private fun scanDeviceIconPacks(context: Context): List<IconPackInfo> {
+    val pm = context.packageManager
+    val iconPacks = mutableListOf<IconPackInfo>()
+    iconPacks.add(IconPackInfo("system_default", "System Default"))
+
+    val intentActions = listOf(
+        "org.adw.launcher.THEMES",
+        "com.novalauncher.THEME",
+        "com.gau.go.launcherex.theme",
+        "com.teslacoilsw.launcher.THEME"
+    )
+
+    val seenPackages = mutableSetOf<String>()
+    intentActions.forEach { action ->
+        val resolveInfos: List<ResolveInfo> = pm.queryIntentActivities(Intent(action), PackageManager.GET_META_DATA)
+        for (info in resolveInfos) {
+            val pkg = info.activityInfo.packageName
+            if (pkg !in seenPackages) {
+                seenPackages.add(pkg)
+                val label = info.loadLabel(pm).toString()
+                iconPacks.add(IconPackInfo(pkg, label))
+            }
+        }
+    }
+    return iconPacks
+}
+
 @Composable
 fun SettingsScreen(
     settingsManager: SettingsManager,
@@ -51,10 +86,9 @@ fun SettingsScreen(
     var currentSubPage by remember { mutableStateOf("main") }
 
     val iconPacks = remember(installedIconPacks) {
-        if (installedIconPacks.isNotEmpty()) installedIconPacks else getInstalledIconPacks(context)
+        if (installedIconPacks.isNotEmpty()) installedIconPacks else scanDeviceIconPacks(context)
     }
 
-    // Live States
     var liveSize by remember { mutableFloatStateOf(settingsManager.iconSize) }
     var liveRadius by remember { mutableFloatStateOf(settingsManager.iconCornerRadius) }
     var liveOpacity by remember { mutableFloatStateOf(settingsManager.iconOpacity) }
@@ -64,7 +98,7 @@ fun SettingsScreen(
 
     var liveCols by remember { mutableIntStateOf(settingsManager.gridColumns) }
     var liveRows by remember { mutableIntStateOf(settingsManager.gridRows) }
-    var liveSearchOffset by remember { mutableFloatStateOf(settingsManager.searchOffset) }
+    var liveSearchOffset by remember { mutableFloatStateOf(0f) }
     var hideSearch by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
 
     var dockIconCount by remember { mutableIntStateOf(4) }
@@ -75,11 +109,11 @@ fun SettingsScreen(
 
     val shapePresets = remember {
         listOf(
-            ShapePreset("iOS Squircle", 38f),
-            ShapePreset("HyperOS", 28f),
-            ShapePreset("Circle", 50f),
-            ShapePreset("Square", 0f),
-            ShapePreset("Soft Square", 20f)
+            CustomShapePreset("iOS Squircle", 38f),
+            CustomShapePreset("HyperOS", 28f),
+            CustomShapePreset("Circle", 50f),
+            CustomShapePreset("Square", 0f),
+            CustomShapePreset("Soft Square", 20f)
         )
     }
 
@@ -124,7 +158,7 @@ fun SettingsScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Top Header
+                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -181,38 +215,34 @@ fun SettingsScreen(
                     }
                 }
 
-                // -------------------------------------------------------------
-                // 1. MAIN SETTINGS LIST
-                // -------------------------------------------------------------
+                // 1. MAIN MENU
                 if (currentSubPage == "main") {
                     Text("CUSTOMIZATION", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
                     Column(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A))
                     ) {
-                        SettingsNavRow("Desktop Grid", "Configure Columns & Rows") { currentSubPage = "grid" }
-                        SettingsDivider()
-                        SettingsNavRow("App icons", "Icon packs, Shape, Size & Lens Light") { currentSubPage = "icons" }
-                        SettingsDivider()
-                        SettingsNavRow("Dock", "Capacity, Padding & Corner Radius") { currentSubPage = "dock" }
-                        SettingsDivider()
-                        SettingsNavRow("Liquid Glass", "Refraction blur, Tint & Specular sheen") { currentSubPage = "glass" }
-                        SettingsDivider()
-                        SettingsNavRow("Search Bar Position", "Offset position, AI pill & Search Engine") { currentSubPage = "search" }
+                        LocalSettingsItem("Desktop Grid", "Configure Columns & Rows") { currentSubPage = "grid" }
+                        LocalItemDivider()
+                        LocalSettingsItem("App icons", "Icon packs, Shape, Size & Lens Light") { currentSubPage = "icons" }
+                        LocalItemDivider()
+                        LocalSettingsItem("Dock", "Capacity, Padding & Corner Radius") { currentSubPage = "dock" }
+                        LocalItemDivider()
+                        LocalSettingsItem("Liquid Glass", "Refraction blur, Tint & Specular sheen") { currentSubPage = "glass" }
+                        LocalItemDivider()
+                        LocalSettingsItem("Search Bar Position", "Offset position, AI pill & Search Engine") { currentSubPage = "search" }
                     }
 
                     Text("ANIMATIONS & BEHAVIOR", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
                     Column(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A))
                     ) {
-                        SettingsNavRow("App Open Animation", "Duration, Physics curves & Scale") { currentSubPage = "anim" }
-                        SettingsDivider()
-                        SettingsNavRow("Swipe actions", "Double tap lock, Gestures behaviors") { currentSubPage = "gestures" }
+                        LocalSettingsItem("App Open Animation", "Duration, Physics curves & Scale") { currentSubPage = "anim" }
+                        LocalItemDivider()
+                        LocalSettingsItem("Swipe actions", "Double tap lock, Gestures behaviors") { currentSubPage = "gestures" }
                     }
                 }
 
-                // -------------------------------------------------------------
                 // 2. DESKTOP GRID SUB-PAGE
-                // -------------------------------------------------------------
                 if (currentSubPage == "grid") {
                     Text("GRID DENSITY", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -239,9 +269,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // -------------------------------------------------------------
                 // 3. APP ICONS SUB-PAGE
-                // -------------------------------------------------------------
                 if (currentSubPage == "icons") {
                     Text("ICON PACK", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(12.dp)) {
@@ -310,7 +338,7 @@ fun SettingsScreen(
                                             }
                                             .padding(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
-                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
+                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -361,9 +389,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // -------------------------------------------------------------
                 // 4. DOCK SUB-PAGE
-                // -------------------------------------------------------------
                 if (currentSubPage == "dock") {
                     Text("DOCK TOGGLE", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Row(
@@ -399,9 +425,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // -------------------------------------------------------------
                 // 5. LIQUID GLASS & BLUR SUB-PAGE
-                // -------------------------------------------------------------
                 if (currentSubPage == "glass") {
                     Text("REFRACTION & BLUR", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
@@ -420,9 +444,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // -------------------------------------------------------------
                 // 6. SEARCH BAR POSITION & AI SUB-PAGE
-                // -------------------------------------------------------------
                 if (currentSubPage == "search") {
                     Text("SEARCH PILL VISIBILITY", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Row(
@@ -450,10 +472,7 @@ fun SettingsScreen(
                             }
                             Slider(
                                 value = liveSearchOffset,
-                                onValueChange = {
-                                    liveSearchOffset = it
-                                    settingsManager.searchOffset = it
-                                },
+                                onValueChange = { liveSearchOffset = it },
                                 valueRange = -100f..100f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
@@ -461,9 +480,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // -------------------------------------------------------------
                 // 7. APP OPEN ANIMATION SUB-PAGE
-                // -------------------------------------------------------------
                 if (currentSubPage == "anim") {
                     Text("ANIMATION SPEED & CURVES", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Column(
@@ -486,9 +503,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // -------------------------------------------------------------
                 // 8. GESTURES & ACTIONS SUB-PAGE
-                // -------------------------------------------------------------
                 if (currentSubPage == "gestures") {
                     Text("DOUBLE TAP ACTION", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Column(
@@ -529,7 +544,7 @@ fun SettingsScreen(
 }
 
 @Composable
-fun SettingsNavRow(title: String, subtitle: String, onClick: () -> Unit) {
+private fun LocalSettingsItem(title: String, subtitle: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -547,7 +562,7 @@ fun SettingsNavRow(title: String, subtitle: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun SettingsDivider() {
+private fun LocalItemDivider() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
