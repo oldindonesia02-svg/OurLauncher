@@ -5,6 +5,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -108,7 +111,7 @@ fun SettingsScreen(
     // Desktop Grid States
     var liveCols by remember { mutableIntStateOf(settingsManager.gridColumns) }
     var liveRows by remember { mutableIntStateOf(settingsManager.gridRows) }
-    var liveSearchOffset by remember { mutableFloatStateOf(0f) }
+    var liveSearchOffset by remember { mutableFloatStateOf(settingsManager.searchOffset) }
     var hideSearch by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
 
     // Dock Advanced States
@@ -130,6 +133,12 @@ fun SettingsScreen(
     var animationSpeed by remember { mutableStateOf("Smooth (300ms)") }
     var doubleTapAction by remember { mutableStateOf("Lock Screen") }
 
+    val isSearchPage = currentSubPage == "search"
+    val cardHeightFraction by animateFloatAsState(
+        targetValue = if (isSearchPage) 0.46f else 0.88f,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 320f), label = "h"
+    )
+
     val shapePresets = remember {
         listOf(
             CustomShapePreset("iOS Squircle", 38f),
@@ -143,19 +152,19 @@ fun SettingsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.55f))
+            .background(Color.Black.copy(alpha = if (isSearchPage) 0.22f else 0.55f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onDismiss() },
-        contentAlignment = Alignment.Center
+        contentAlignment = if (isSearchPage) Alignment.TopCenter else Alignment.Center
     ) {
         Box(
             modifier = Modifier
-                .padding(horizontal = 20.dp, vertical = 24.dp)
+                .padding(horizontal = 16.dp, vertical = if (isSearchPage) 48.dp else 24.dp)
                 .navigationBarsPadding()
                 .fillMaxWidth()
-                .fillMaxHeight(0.88f)
+                .fillMaxHeight(cardHeightFraction)
                 .shadow(28.dp, RoundedCornerShape(32.dp), spotColor = Color(0xFF00E5FF).copy(alpha = 0.35f))
                 .clip(RoundedCornerShape(32.dp))
                 .background(
@@ -212,13 +221,13 @@ fun SettingsScreen(
                             "icons" -> "App Icons"
                             "dock" -> "Dock Settings"
                             "glass" -> "Liquid Glass & Blur"
-                            "search" -> "Search Bar & AI"
+                            "search" -> "Search Bar Live Position"
                             "anim" -> "App Open Animation"
                             "gestures" -> "Gestures & Actions"
                             else -> "Launcher Settings"
                         },
                         color = Color.White,
-                        fontSize = 19.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
 
@@ -253,7 +262,7 @@ fun SettingsScreen(
                         LocalItemDivider()
                         LocalSettingsItem("Liquid Glass", "Refraction blur, Tint & Specular sheen") { currentSubPage = "glass" }
                         LocalItemDivider()
-                        LocalSettingsItem("Search Bar Position", "Offset position, AI pill & Search Engine") { currentSubPage = "search" }
+                        LocalSettingsItem("Search Bar Position", "Live adjustment, AI pill offset") { currentSubPage = "search" }
                     }
 
                     Text("ANIMATIONS & BEHAVIOR", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
@@ -293,8 +302,30 @@ fun SettingsScreen(
                     }
                 }
 
-                // 3. APP ICONS SUB-PAGE
+                // 3. APP ICONS SUB-PAGE (With Live Visual Preview)
                 if (currentSubPage == "icons") {
+                    // Live Icon Preview Box
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(96.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color.White.copy(alpha = 0.05f))
+                            .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.3f), RoundedCornerShape(18.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(liveSize.dp)
+                                .clip(RoundedCornerShape((liveRadius).dp))
+                                .background(Brush.linearGradient(listOf(Color(0xFF00B4D8), Color(0xFF0077B6))))
+                                .border(1.2.dp, Color.White.copy(alpha = liveOpacity), RoundedCornerShape((liveRadius).dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Rounded.Widgets, contentDescription = null, tint = Color.White, modifier = Modifier.size((liveSize * 0.5f).dp))
+                        }
+                    }
+
                     Text("ICON PACK", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(12.dp)) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -362,7 +393,7 @@ fun SettingsScreen(
                                             }
                                             .padding(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
-                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
+                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -489,12 +520,11 @@ fun SettingsScreen(
                     }
                 }
 
-                // 5. LIQUID GLASS & BLUR SUB-PAGE (Comprehensive Pro Settings)
+                // 5. LIQUID GLASS & BLUR SUB-PAGE
                 if (currentSubPage == "glass") {
                     Text("REFRACTION & BLUR", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            // Blur Intensity
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Blur Intensity", color = Color.White, fontSize = 15.sp)
                                 Text("${blurIntensity.roundToInt()} px", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -506,7 +536,6 @@ fun SettingsScreen(
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
 
-                            // Glass Tint Opacity
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Glass Tint Opacity", color = Color.White, fontSize = 15.sp)
                                 Text("${glassTintAlpha.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -518,7 +547,6 @@ fun SettingsScreen(
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
 
-                            // Specular Edge Highlight
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Specular Edge Highlight", color = Color.White, fontSize = 15.sp)
                                 Text("${specularHighlight.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -530,7 +558,6 @@ fun SettingsScreen(
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
 
-                            // Border Thickness
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Border Edge Width", color = Color.White, fontSize = 15.sp)
                                 Text(String.format("%.1f dp", borderWidth), color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -542,7 +569,6 @@ fun SettingsScreen(
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
 
-                            // Rainbow Sheen Toggle
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -555,27 +581,31 @@ fun SettingsScreen(
                                     colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
                                 )
                             }
-
-                            // Frosted Noise Texture Toggle
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Frosted Noise Texture", color = Color.White, fontSize = 15.sp)
-                                Switch(
-                                    checked = enableFrostedNoise,
-                                    onCheckedChange = { enableFrostedNoise = it },
-                                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
-                                )
-                            }
                         }
                     }
                 }
 
-                // 6. SEARCH BAR POSITION & AI SUB-PAGE
+                // 6. SEARCH BAR POSITION & AI SUB-PAGE (Real-time Live Adjustment)
                 if (currentSubPage == "search") {
-                    Text("SEARCH PILL VISIBILITY", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text("LIVE POSITION OFFSET", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Vertical Position", color = Color.White, fontSize = 15.sp)
+                                Text("${liveSearchOffset.roundToInt()} dp", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = liveSearchOffset,
+                                onValueChange = {
+                                    liveSearchOffset = it
+                                    settingsManager.searchOffset = it // Live real-time update to HomeScreen
+                                },
+                                valueRange = -100f..100f,
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
+                            )
+                        }
+                    }
+
                     Row(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -590,25 +620,6 @@ fun SettingsScreen(
                             },
                             colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
                         )
-                    }
-
-                    Text("VERTICAL OFFSET", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Position Offset", color = Color.White, fontSize = 15.sp)
-                                Text("${liveSearchOffset.roundToInt()} px", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Slider(
-                                value = liveSearchOffset,
-                                onValueChange = {
-                                    liveSearchOffset = it
-                                    settingsManager.searchOffset = it
-                                },
-                                valueRange = -100f..100f,
-                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
-                            )
-                        }
                     }
                 }
 
