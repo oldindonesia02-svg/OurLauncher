@@ -222,7 +222,7 @@ fun HomeScreen(
                 }
             }
 
-            // Fixed Bottom Section (With Dynamic Live Offset for Capsule)
+            // Fixed Bottom Section (Always Visible for Live Preview)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -230,12 +230,12 @@ fun HomeScreen(
                     .padding(horizontal = 14.dp, vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (!settingsManager.hideSearchCapsule && !isOverviewMode && !isAnySheetOpen) {
+                if (!settingsManager.hideSearchCapsule && !isOverviewMode) {
                     Box(modifier = Modifier.offset(y = settingsManager.searchOffset.dp)) {
                         LiquidSearchAiCapsule(
                             pagerState = pagerState,
                             totalPages = totalPages,
-                            onSearchClick = onOpenDrawer,
+                            onSearchClick = { if (!isAnySheetOpen) onOpenDrawer() },
                             onAiClick = {
                                 try {
                                     val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
@@ -258,28 +258,26 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                if (!isAnySheetOpen) {
-                    LiquidGlassDock {
-                        dockApps.forEach { app ->
-                            AppIcon(
-                                app = app,
-                                onClick = { onAppClick(app) },
-                                showLabel = false,
-                                fontFamilyName = settingsManager.fontFamily,
-                                iconSizeDp = settingsManager.iconSize,
-                                cornerRadiusPercent = settingsManager.iconCornerRadius,
-                                iconOpacity = settingsManager.iconOpacity,
-                                customDrawable = getCustomDrawable(app.packageName),
-                                onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
-                                modifier = Modifier.width(78.dp)
-                            )
-                        }
+                LiquidGlassDock {
+                    dockApps.forEach { app ->
+                        AppIcon(
+                            app = app,
+                            onClick = { if (!isAnySheetOpen) onAppClick(app) },
+                            showLabel = false,
+                            fontFamilyName = settingsManager.fontFamily,
+                            iconSizeDp = settingsManager.iconSize,
+                            cornerRadiusPercent = settingsManager.iconCornerRadius,
+                            iconOpacity = settingsManager.iconOpacity,
+                            customDrawable = getCustomDrawable(app.packageName),
+                            onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
+                            modifier = Modifier.width(78.dp)
+                        )
                     }
                 }
             }
         }
 
-        // 3-Tab Bottom Bar
+                // 3-Tab Bottom Bar
         AnimatedVisibility(
             visible = showLiquidBottomBar,
             enter = fadeIn(tween(200)) + slideInVertically(
@@ -311,7 +309,7 @@ fun HomeScreen(
             )
         }
 
-        // Home Screen Settings Sheet (4-Corners Rounded Floating Card)
+        // Home Screen Settings Sheet
         if (showHomeSettingsSheet) {
             HomeScreenSettingsSheet(
                 settingsManager = settingsManager,
