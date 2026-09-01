@@ -98,7 +98,7 @@ fun SettingsScreen(
         list
     }
 
-    // Live States - Fully connected to settingsManager
+    // Direct Synchronized Live States
     var liveSize by remember { mutableFloatStateOf(settingsManager.iconSize) }
     var liveRadius by remember { mutableFloatStateOf(settingsManager.iconCornerRadius) }
     var liveOpacity by remember { mutableFloatStateOf(settingsManager.iconOpacity) }
@@ -393,7 +393,7 @@ fun SettingsScreen(
                                             }
                                             .padding(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
-                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 12.sp)
+                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -647,14 +647,31 @@ fun SettingsScreen(
                     }
                 }
 
-                // Apply & Done Button
+                // Complete Synchronized Apply & Done Button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(Brush.horizontalGradient(listOf(Color(0xFF00A2FF), Color(0xFF0066FF))))
-                        .clickable { onDismiss() },
+                        .clickable {
+                            // 100% Guaranteed State Commit to settingsManager
+                            settingsManager.gridColumns = liveCols
+                            settingsManager.gridRows = liveRows
+                            settingsManager.iconSize = liveSize
+                            settingsManager.iconCornerRadius = liveRadius
+                            settingsManager.iconOpacity = liveOpacity
+                            settingsManager.showLabels = liveShowLabel
+                            settingsManager.searchOffset = liveSearchOffset
+                            settingsManager.hideSearchCapsule = hideSearch
+                            settingsManager.fontFamily = if (isMonochrome) "Monospace" else "SF Pro"
+                            
+                            // Apply Selected Icon Pack
+                            onIconPackSelect(activePack)
+                            
+                            // Close Sheet & Trigger Recomposition
+                            onDismiss()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Text("Apply & Done", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
