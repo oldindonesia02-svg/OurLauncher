@@ -222,12 +222,12 @@ fun HomeScreen(
                 }
             }
 
-            // Fixed Bottom Section (Search Bar + Spaced Dock)
+            // Fixed Bottom Section (Matching Size Dock)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (!settingsManager.hideSearchCapsule && !isOverviewMode && !isAnySheetOpen) {
@@ -253,7 +253,7 @@ fun HomeScreen(
                             }
                         }
                     )
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
                 if (!isAnySheetOpen) {
@@ -269,7 +269,7 @@ fun HomeScreen(
                                 iconOpacity = settingsManager.iconOpacity,
                                 customDrawable = getCustomDrawable(app.packageName),
                                 onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
-                                modifier = Modifier.width(62.dp)
+                                modifier = Modifier.width(78.dp)
                             )
                         }
                     }
