@@ -2,437 +2,209 @@ package com.ourlauncher.app.ui
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Rect
-import android.graphics.drawable.Drawable
-import android.provider.Settings
-import android.speech.RecognizerIntent
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.*
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Image
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Widgets
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.PointerInputChange
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ourlauncher.app.AppInfo
+import com.ourlauncher.app.IconPackInfo
 import com.ourlauncher.app.SettingsManager
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun HomeScreen(
-    apps: List<AppInfo>,
-    settingsManager: SettingsManager,
-    onOpenDrawer: () -> Unit,
-    getCustomDrawable: (String) -> Drawable? = { null },
-    onAppClick: (AppInfo) -> Unit = {},
-    onAppClickWithBounds: (AppInfo, Rect?) -> Unit = { _, _ -> },
-    onOpenSettings: () -> Unit = {},
-    clearIconCache: () -> Unit = {},
-    resumeTrigger: Long = 0L
-) {
-    val context = LocalContext.current
-    val density = LocalDensity.current
-    val dockApps = remember(apps) { apps.take(4) }
+data class ShapePreset(
+    val name: String,
+    val radiusPercent: Float
+)
 
-    val pageSize = (settingsManager.gridColumns * settingsManager.gridRows).coerceAtLeast(1)
-    val totalPages = if (apps.isEmpty()) 1 else (apps.size + pageSize - 1) / pageSize
-    val pagerState = rememberPagerState(pageCount = { totalPages })
+// Scan for Icon Packs installed on device
+fun getInstalledIconPacks(context: Context): List<IconPackInfo> {
+    val pm = context.packageManager
+    val iconPacks = mutableListOf<IconPackInfo>()
+    iconPacks.add(IconPackInfo("system_default", "System Default"))
 
-    val coroutineScope = rememberCoroutineScope()
+    val intentActions = listOf(
+        "org.adw.launcher.THEMES",
+        "com.novalauncher.THEME",
+        "com.gau.go.launcherex.theme",
+        "com.teslacoilsw.launcher.THEME"
+    )
 
-    var isOverviewMode by remember { mutableStateOf(false) }
-    val overviewAnim = remember { Animatable(0f) }
-
-    var showHomeSettingsSheet by remember { mutableStateOf(false) }
-    var showTransitionEffectsSheet by remember { mutableStateOf(false) }
-    var showLiquidBottomBar by remember { mutableStateOf(false) }
-
-    var selectedTransitionEffect by remember { mutableStateOf("Standard") }
-
-    val isAnySheetOpen = showHomeSettingsSheet || showTransitionEffectsSheet || 
-            showLiquidBottomBar || isOverviewMode
-
-    LaunchedEffect(isOverviewMode) {
-        overviewAnim.animateTo(
-            targetValue = if (isOverviewMode) 1f else 0f,
-            animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)
-        )
-    }
-
-    BackHandler(enabled = isAnySheetOpen) {
-        when {
-            showTransitionEffectsSheet -> showTransitionEffectsSheet = false
-            showHomeSettingsSheet -> showHomeSettingsSheet = false
-            showLiquidBottomBar -> showLiquidBottomBar = false
-            isOverviewMode -> isOverviewMode = false
-        }
-    }
-
-    val ov = overviewAnim.value
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(isAnySheetOpen) {
-                if (!isAnySheetOpen) {
-                    var totalVertical = 0f
-                    detectVerticalDragGestures(
-                        onDragStart = { totalVertical = 0f },
-                        onVerticalDrag = { _, dragAmount -> totalVertical += dragAmount },
-                        onDragEnd = {
-                            if (totalVertical < -50f) {
-                                onOpenDrawer()
-                            }
-                        }
-                    )
-                }
-            }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    scaleX = if (isAnySheetOpen && !isOverviewMode) 0.95f else 1f
-                    scaleY = if (isAnySheetOpen && !isOverviewMode) 0.95f else 1f
-                }
-        ) {
-            HorizontalPager(
-                state = pagerState,
-                userScrollEnabled = !isAnySheetOpen,
-                beyondBoundsPageCount = 1,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .graphicsLayer {
-                        scaleX = 1f - (0.28f * ov)
-                        scaleY = 1f - (0.28f * ov)
-                    }
-            ) { pageIndex ->
-                val pageStart = pageIndex * pageSize
-                val pageEnd = minOf(pageStart + pageSize, apps.size)
-                val currentGridItems = if (pageStart < apps.size) apps.subList(pageStart, pageEnd) else emptyList()
-                val pageOffset = ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction).absoluteValue
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            when (selectedTransitionEffect) {
-                                "Cube" -> {
-                                    val rotation = ((pagerState.currentPage - pageIndex) + pagerState.currentPageOffsetFraction) * 90f
-                                    rotationY = rotation.coerceIn(-90f, 90f)
-                                    cameraDistance = 12f * density.density
-                                }
-                                "Zoom" -> {
-                                    val scale = 1f - (pageOffset * 0.22f).coerceIn(0f, 0.22f)
-                                    scaleX = scale
-                                    scaleY = scale
-                                    alpha = 1f - pageOffset.coerceIn(0f, 0.6f)
-                                }
-                                "Fade" -> {
-                                    alpha = 1f - pageOffset.coerceIn(0f, 1f)
-                                }
-                                else -> {}
-                            }
-                        }
-                        .then(
-                            if (isOverviewMode) {
-                                Modifier
-                                    .padding(16.dp)
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(Color.White.copy(alpha = 0.08f))
-                                    .border(1.5.dp, Color(0xFF00E5FF).copy(alpha = 0.5f), RoundedCornerShape(24.dp))
-                                    .clickable { isOverviewMode = false }
-                            } else Modifier
-                        )
-                ) {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(settingsManager.gridColumns),
-                        contentPadding = PaddingValues(top = 28.dp, bottom = 2.dp, start = 8.dp, end = 8.dp),
-                        userScrollEnabled = false,
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .pointerInput(pageIndex, isAnySheetOpen) {
-                                if (!isAnySheetOpen) {
-                                    detectDragGesturesAfterLongPress(
-                                        onDragStart = { showLiquidBottomBar = true },
-                                        onDrag = { change: PointerInputChange, _: Offset -> change.consume() }
-                                    )
-                                }
-                            }
-                    ) {
-                        itemsIndexed(currentGridItems, key = { _, item -> item.packageName }) { _, app ->
-                            AppIcon(
-                                app = app,
-                                onClick = { onAppClick(app) },
-                                showLabel = settingsManager.showLabels,
-                                fontFamilyName = settingsManager.fontFamily,
-                                iconSizeDp = settingsManager.iconSize,
-                                cornerRadiusPercent = settingsManager.iconCornerRadius,
-                                iconOpacity = settingsManager.iconOpacity,
-                                customDrawable = getCustomDrawable(app.packageName),
-                                onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
-                                modifier = Modifier.width(78.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Fixed Bottom Section (Search Bar + Spaced Dock)
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (!settingsManager.hideSearchCapsule && !isOverviewMode && !isAnySheetOpen) {
-                    LiquidSearchAiCapsule(
-                        pagerState = pagerState,
-                        totalPages = totalPages,
-                        onSearchClick = onOpenDrawer,
-                        onAiClick = {
-                            try {
-                                val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                }
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                try {
-                                    val intent = Intent(RecognizerIntent.ACTION_WEB_SEARCH).apply {
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                    context.startActivity(intent)
-                                } catch (e2: Exception) {
-                                    onOpenDrawer()
-                                }
-                            }
-                        }
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                }
-
-                if (!isAnySheetOpen) {
-                    LiquidGlassDock {
-                        dockApps.forEach { app ->
-                            AppIcon(
-                                app = app,
-                                onClick = { onAppClick(app) },
-                                showLabel = false,
-                                fontFamilyName = settingsManager.fontFamily,
-                                iconSizeDp = settingsManager.iconSize,
-                                cornerRadiusPercent = settingsManager.iconCornerRadius,
-                                iconOpacity = settingsManager.iconOpacity,
-                                customDrawable = getCustomDrawable(app.packageName),
-                                onClickWithBounds = { bounds -> onAppClickWithBounds(app, bounds) },
-                                modifier = Modifier.width(62.dp)
-                            )
-                        }
-                    }
-                }
+    val seenPackages = mutableSetOf<String>()
+    intentActions.forEach { action ->
+        val resolveInfos: List<ResolveInfo> = pm.queryIntentActivities(Intent(action), PackageManager.GET_META_DATA)
+        for (info in resolveInfos) {
+            val pkg = info.activityInfo.packageName
+            if (pkg !in seenPackages) {
+                seenPackages.add(pkg)
+                val label = info.loadLabel(pm).toString()
+                iconPacks.add(IconPackInfo(pkg, label))
             }
         }
-
-        // 3-Tab Bottom Bar
-        AnimatedVisibility(
-            visible = showLiquidBottomBar,
-            enter = fadeIn(tween(200)) + slideInVertically(
-                animationSpec = spring(dampingRatio = 0.72f, stiffness = 320f)
-            ) { it },
-            exit = fadeOut(tween(180)) + slideOutVertically(
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-            ) { it }
-        ) {
-            HomeLiquidBottomBar(
-                onOpenWidgets = { showLiquidBottomBar = false },
-                onOpenWallpapers = {
-                    showLiquidBottomBar = false
-                    try {
-                        val intent = Intent(Intent.ACTION_SET_WALLPAPER)
-                        context.startActivity(Intent.createChooser(intent, "Choose Wallpaper"))
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                },
-                onOpenHomeSettings = {
-                    showLiquidBottomBar = false
-                    coroutineScope.launch {
-                        delay(120)
-                        showHomeSettingsSheet = true
-                    }
-                },
-                onDismiss = { showLiquidBottomBar = false }
-            )
-        }
-
-        // Home Screen Settings Sheet
-        if (showHomeSettingsSheet) {
-            HomeScreenSettingsSheet(
-                settingsManager = settingsManager,
-                onOpenTransitionEffects = {
-                    showHomeSettingsSheet = false
-                    coroutineScope.launch {
-                        delay(120)
-                        showTransitionEffectsSheet = true
-                    }
-                },
-                onSetDefaultScreen = {
-                    showHomeSettingsSheet = false
-                    try {
-                        val intent = Intent(Settings.ACTION_HOME_SETTINGS)
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        try {
-                            val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
-                            context.startActivity(intent)
-                        } catch (e2: Exception) {
-                            e2.printStackTrace()
-                        }
-                    }
-                },
-                onRegenerateIcons = {
-                    showHomeSettingsSheet = false
-                    clearIconCache()
-                },
-                onOpenMoreSettings = {
-                    showHomeSettingsSheet = false
-                    onOpenSettings()
-                },
-                onDismiss = { showHomeSettingsSheet = false }
-            )
-        }
-
-        // Transition Effects Selector Sheet
-        if (showTransitionEffectsSheet) {
-            TransitionEffectsSheet(
-                currentEffect = selectedTransitionEffect,
-                onSelectEffect = { newEffect ->
-                    selectedTransitionEffect = newEffect
-                },
-                onDismiss = { showTransitionEffectsSheet = false }
-            )
-        }
     }
+    return iconPacks
 }
 
-// -------------------------------------------------------------
-// Transition Effects Bottom Sheet
-// -------------------------------------------------------------
 @Composable
-fun TransitionEffectsSheet(
-    currentEffect: String,
-    onSelectEffect: (String) -> Unit,
-    onDismiss: () -> Unit
+fun SettingsScreen(
+    settingsManager: SettingsManager,
+    onBack: () -> Unit = {},
+    onDismiss: () -> Unit = onBack,
+    installedIconPacks: List<IconPackInfo> = emptyList(),
+    selectedIconPack: String = "system_default",
+    onIconPackSelect: (String) -> Unit = {}
 ) {
     BackHandler { onDismiss() }
 
-    val effects = listOf("Standard", "Cube", "Zoom", "Depth", "Fade")
+    val context = LocalContext.current
+    var currentSubPage by remember { mutableStateOf("main") }
+
+    val iconPacks = remember(installedIconPacks) {
+        if (installedIconPacks.isNotEmpty()) installedIconPacks else getInstalledIconPacks(context)
+    }
+
+    // Live States
+    var liveSize by remember { mutableFloatStateOf(settingsManager.iconSize) }
+    var liveRadius by remember { mutableFloatStateOf(settingsManager.iconCornerRadius) }
+    var liveOpacity by remember { mutableFloatStateOf(settingsManager.iconOpacity) }
+    var liveShowLabel by remember { mutableStateOf(settingsManager.showLabels) }
+    var activePack by remember { mutableStateOf(selectedIconPack) }
+    var isMonochrome by remember { mutableStateOf(settingsManager.fontFamily.equals("Monospace", ignoreCase = true)) }
+
+    var liveCols by remember { mutableIntStateOf(settingsManager.gridColumns) }
+    var liveRows by remember { mutableIntStateOf(settingsManager.gridRows) }
+    var liveSearchOffset by remember { mutableFloatStateOf(settingsManager.searchOffset) }
+    var hideSearch by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
+
+    var dockIconCount by remember { mutableIntStateOf(4) }
+    var isDockEnabled by remember { mutableStateOf(true) }
+    var blurIntensity by remember { mutableFloatStateOf(24f) }
+    var animationSpeed by remember { mutableStateOf("Smooth (300ms)") }
+    var doubleTapAction by remember { mutableStateOf("Lock Screen") }
+
+    val shapePresets = remember {
+        listOf(
+            ShapePreset("iOS Squircle", 38f),
+            ShapePreset("HyperOS", 28f),
+            ShapePreset("Circle", 50f),
+            ShapePreset("Square", 0f),
+            ShapePreset("Soft Square", 20f)
+        )
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
+            .background(Color.Black.copy(alpha = 0.55f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onDismiss() },
-        contentAlignment = Alignment.BottomCenter
+        contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
+                .padding(horizontal = 20.dp, vertical = 32.dp)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                .fillMaxHeight(0.92f)
+                .shadow(24.dp, RoundedCornerShape(32.dp), spotColor = Color(0xFF00E5FF).copy(alpha = 0.3f))
+                .clip(RoundedCornerShape(32.dp))
                 .background(
                     Brush.verticalGradient(
-                        listOf(
-                            Color(0xFF14222E).copy(alpha = 0.96f),
-                            Color(0xFF09121A).copy(alpha = 0.99f)
-                        )
+                        listOf(Color(0xFF162330).copy(alpha = 0.96f), Color(0xFF0D161F).copy(alpha = 0.98f))
                     )
                 )
                 .border(
                     width = 1.3.dp,
                     brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.75f),
-                            Color(0xFF00E5FF).copy(alpha = 0.35f),
-                            Color.Transparent
-                        )
+                        listOf(Color.White.copy(alpha = 0.75f), Color(0xFF00E5FF).copy(alpha = 0.35f), Color.Transparent)
                     ),
-                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+                    shape = RoundedCornerShape(32.dp)
                 )
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) {}
-                .padding(horizontal = 24.dp, vertical = 20.dp)
-                .navigationBarsPadding()
+                .padding(20.dp)
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .width(42.dp)
-                        .height(4.5.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.35f))
-                )
-
+                // Header
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.10f))
+                            .clickable {
+                                if (currentSubPage != "main") currentSubPage = "main" else onDismiss()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.ChevronLeft,
+                            contentDescription = "Back",
+                            tint = Color(0xFF00E5FF),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Text(
+                        text = when (currentSubPage) {
+                            "grid" -> "Desktop Grid"
+                            "icons" -> "App Icons"
+                            "dock" -> "Dock Settings"
+                            "glass" -> "Liquid Glass & Blur"
+                            "search" -> "Search Bar & AI"
+                            "anim" -> "App Open Animation"
+                            "gestures" -> "Gestures & Actions"
+                            else -> "Launcher Settings"
+                        },
+                        color = Color.White,
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.10f))
                             .clickable { onDismiss() },
                         contentAlignment = Alignment.Center
                     ) {
@@ -440,271 +212,386 @@ fun TransitionEffectsSheet(
                             imageVector = Icons.Rounded.Close,
                             contentDescription = "Close",
                             tint = Color.White.copy(alpha = 0.85f),
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Transition effects",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
                 }
 
-                effects.forEach { effect ->
-                    val isSelected = effect == currentEffect
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (isSelected) Color(0xFF007BFF).copy(alpha = 0.22f) else Color.White.copy(alpha = 0.04f))
-                            .border(
-                                1.dp,
-                                if (isSelected) Color(0xFF00E5FF).copy(alpha = 0.5f) else Color.Transparent,
-                                RoundedCornerShape(14.dp)
-                            )
-                            .clickable {
-                                onSelectEffect(effect)
-                                onDismiss()
-                            }
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                // 1. MAIN MENU
+                if (currentSubPage == "main") {
+                    Text("CUSTOMIZATION", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+                    Column(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A))
                     ) {
-                        Text(
-                            text = effect,
-                            color = if (isSelected) Color(0xFF00E5FF) else Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                        if (isSelected) {
-                            Icon(Icons.Rounded.Check, contentDescription = null, tint = Color(0xFF00E5FF))
+                        SettingsNavRow("Desktop Grid", "Configure Columns & Rows") { currentSubPage = "grid" }
+                        SettingsDivider()
+                        SettingsNavRow("App icons", "Icon packs, Shape, Size & Lens Light") { currentSubPage = "icons" }
+                        SettingsDivider()
+                        SettingsNavRow("Dock", "Capacity, Padding & Corner Radius") { currentSubPage = "dock" }
+                        SettingsDivider()
+                        SettingsNavRow("Liquid Glass", "Refraction blur, Tint & Specular sheen") { currentSubPage = "glass" }
+                        SettingsDivider()
+                        SettingsNavRow("Search Bar Position", "Offset position, AI pill & Search Engine") { currentSubPage = "search" }
+                    }
+
+                    Text("ANIMATIONS & BEHAVIOR", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
+                    Column(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A))
+                    ) {
+                        SettingsNavRow("App Open Animation", "Duration, Physics curves & Scale") { currentSubPage = "anim" }
+                        SettingsDivider()
+                        SettingsNavRow("Swipe actions", "Double tap lock, Gestures behaviors") { currentSubPage = "gestures" }
+                    }
+                }
+
+                // 2. DESKTOP GRID SUB-PAGE
+                if (currentSubPage == "grid") {
+                    Text("GRID DENSITY", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(Pair(4, 4), Pair(4, 5), Pair(4, 6), Pair(5, 5), Pair(5, 6)).forEach { (c, r) ->
+                            val isSelected = liveCols == c && liveRows == r
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) Color(0xFF007BFF).copy(alpha = 0.35f) else Color.White.copy(alpha = 0.06f))
+                                    .border(1.dp, if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        liveCols = c
+                                        liveRows = r
+                                        settingsManager.gridColumns = c
+                                        settingsManager.gridRows = r
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("$c × $r", color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                // 3. APP ICONS SUB-PAGE
+                if (currentSubPage == "icons") {
+                    Text("ICON PACK", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(12.dp)) {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(iconPacks) { pack ->
+                                val isSelected = activePack == pack.packageName
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isSelected) Color(0xFF007BFF).copy(alpha = 0.35f) else Color.White.copy(alpha = 0.06f))
+                                        .border(1.dp, if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                                        .clickable {
+                                            activePack = pack.packageName
+                                            onIconPackSelect(pack.packageName)
+                                        }
+                                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                                ) {
+                                    Text(pack.label, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 13.sp)
+                                }
+                            }
+                        }
+                    }
+
+                    Text("ICON SIZE & SHAPE", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Size", color = Color.White, fontSize = 15.sp)
+                                Text("${liveSize.roundToInt()} dp", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = liveSize,
+                                onValueChange = {
+                                    liveSize = it
+                                    settingsManager.iconSize = it
+                                },
+                                valueRange = 40f..85f,
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
+                            )
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Corner Radius", color = Color.White, fontSize = 15.sp)
+                                Text("${liveRadius.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = liveRadius,
+                                onValueChange = {
+                                    liveRadius = it
+                                    settingsManager.iconCornerRadius = it
+                                },
+                                valueRange = 0f..50f,
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
+                            )
+
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(shapePresets) { preset ->
+                                    val isSelected = liveRadius.roundToInt() == preset.radiusPercent.roundToInt()
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(if (isSelected) Color(0xFF00E5FF).copy(alpha = 0.25f) else Color.White.copy(alpha = 0.06f))
+                                            .border(1.dp, if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                                            .clickable {
+                                                liveRadius = preset.radiusPercent
+                                                settingsManager.iconCornerRadius = preset.radiusPercent
+                                            }
+                                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Text("GLASS & LABELS", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Glass Specular Sheen", color = Color.White, fontSize = 15.sp)
+                                Text("${(liveOpacity * 100).roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = liveOpacity,
+                                onValueChange = {
+                                    liveOpacity = it
+                                    settingsManager.iconOpacity = it
+                                },
+                                valueRange = 0.2f..1.0f,
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
+                            )
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("Monochrome B&W", color = Color.White, fontSize = 15.sp)
+                                Switch(
+                                    checked = isMonochrome,
+                                    onCheckedChange = {
+                                        isMonochrome = it
+                                        settingsManager.fontFamily = if (it) "Monospace" else "SF Pro"
+                                    },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Show Labels", color = Color.White, fontSize = 15.sp)
+                                Switch(
+                                    checked = liveShowLabel,
+                                    onCheckedChange = {
+                                        liveShowLabel = it
+                                        settingsManager.showLabels = it
+                                    },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = Color(0xFF007BFF),
+                                        uncheckedThumbColor = Color.White.copy(alpha = 0.8f),
+                                        uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // -------------------------------------------------------------
+                // 4. DOCK SUB-PAGE
+                // -------------------------------------------------------------
+                if (currentSubPage == "dock") {
+                    Text("DOCK TOGGLE", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Enable Liquid Dock", color = Color.White, fontSize = 15.sp)
+                        Switch(
+                            checked = isDockEnabled,
+                            onCheckedChange = { isDockEnabled = it },
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
+                        )
+                    }
+
+                    Text("DOCK CAPACITY", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        listOf(4, 5, 6).forEach { count ->
+                            val isSelected = dockIconCount == count
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (isSelected) Color(0xFF007BFF).copy(alpha = 0.35f) else Color.White.copy(alpha = 0.06f))
+                                    .border(1.dp, if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
+                                    .clickable { dockIconCount = count },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("$count Apps", color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                }
+
+                // -------------------------------------------------------------
+                // 5. LIQUID GLASS & BLUR SUB-PAGE
+                // -------------------------------------------------------------
+                if (currentSubPage == "glass") {
+                    Text("REFRACTION & BLUR", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Blur Intensity", color = Color.White, fontSize = 15.sp)
+                                Text("${blurIntensity.roundToInt()} px", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = blurIntensity,
+                                onValueChange = { blurIntensity = it },
+                                valueRange = 5f..40f,
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
+                            )
+                        }
+                    }
+                }
+
+                // -------------------------------------------------------------
+                // 6. SEARCH BAR POSITION & AI SUB-PAGE
+                // -------------------------------------------------------------
+                if (currentSubPage == "search") {
+                    Text("SEARCH PILL VISIBILITY", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Hide Search Capsule", color = Color.White, fontSize = 15.sp)
+                        Switch(
+                            checked = hideSearch,
+                            onCheckedChange = {
+                                hideSearch = it
+                                settingsManager.hideSearchCapsule = it
+                            },
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
+                        )
+                    }
+
+                    Text("VERTICAL OFFSET", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Position Offset", color = Color.White, fontSize = 15.sp)
+                                Text("${liveSearchOffset.roundToInt()} px", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = liveSearchOffset,
+                                onValueChange = {
+                                    liveSearchOffset = it
+                                    settingsManager.searchOffset = it
+                                },
+                                valueRange = -100f..100f,
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
+                            )
+                        }
+                    }
+                }
+
+                // -------------------------------------------------------------
+                // 7. APP OPEN ANIMATION SUB-PAGE
+                // -------------------------------------------------------------
+                if (currentSubPage == "anim") {
+                    Text("ANIMATION SPEED & CURVES", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Column(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A))
+                    ) {
+                        listOf("Fast (180ms)", "Smooth (300ms)", "Bouncy Spring (400ms)").forEach { speed ->
+                            val isSelected = animationSpeed == speed
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { animationSpeed = speed }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(speed, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 15.sp)
+                                if (isSelected) Icon(Icons.Rounded.Check, contentDescription = null, tint = Color(0xFF00E5FF))
+                            }
+                        }
+                    }
+                }
+
+                // -------------------------------------------------------------
+                // 8. GESTURES & ACTIONS SUB-PAGE
+                // -------------------------------------------------------------
+                if (currentSubPage == "gestures") {
+                    Text("DOUBLE TAP ACTION", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Column(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A))
+                    ) {
+                        listOf("Lock Screen", "Open Search", "None").forEach { action ->
+                            val isSelected = doubleTapAction == action
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { doubleTapAction = action }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(action, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 15.sp)
+                                if (isSelected) Icon(Icons.Rounded.Check, contentDescription = null, tint = Color(0xFF00E5FF))
+                            }
+                        }
+                    }
+                }
+
+                // Done Button
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Brush.horizontalGradient(listOf(Color(0xFF00A2FF), Color(0xFF0066FF))))
+                        .clickable { onDismiss() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Apply & Done", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
 }
 
-// -------------------------------------------------------------
-// 3-Tab Interactive Liquid Glass Bottom Bar
-// -------------------------------------------------------------
-data class HomeActionItem(
-    val title: String,
-    val icon: ImageVector
-)
+@Composable
+fun SettingsNavRow(title: String, subtitle: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(text = title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(text = subtitle, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+        }
+        Icon(imageVector = Icons.Rounded.ChevronRight, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+    }
+}
 
 @Composable
-fun HomeLiquidBottomBar(
-    onOpenWidgets: () -> Unit,
-    onOpenWallpapers: () -> Unit,
-    onOpenHomeSettings: () -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    BackHandler { onDismiss() }
-
-    val actions = remember {
-        listOf(
-            HomeActionItem("Widgets", Icons.Rounded.Widgets),
-            HomeActionItem("Wallpapers", Icons.Rounded.Image),
-            HomeActionItem("Home Settings", Icons.Rounded.Settings)
-        )
-    }
-
-    val coroutineScope = rememberCoroutineScope()
-    val dragOffsetPx = remember { Animatable(0f) }
-    var selectedIndex by remember { mutableIntStateOf(0) }
-    var isDragging by remember { mutableStateOf(false) }
-
-    fun triggerAction(index: Int) {
-        when (index) {
-            0 -> onOpenWidgets()
-            1 -> onOpenWallpapers()
-            2 -> onOpenHomeSettings()
-        }
-    }
-
+fun SettingsDivider() {
     Box(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.42f))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { onDismiss() },
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        BoxWithConstraints(
-            modifier = modifier
-                .padding(horizontal = 14.dp, vertical = 24.dp)
-                .navigationBarsPadding()
-                .fillMaxWidth()
-                .height(72.dp)
-                .shadow(
-                    elevation = 24.dp,
-                    shape = RoundedCornerShape(28.dp),
-                    spotColor = Color(0xFF00E5FF).copy(alpha = 0.35f),
-                    ambientColor = Color.Black.copy(alpha = 0.6f)
-                )
-                .clip(RoundedCornerShape(28.dp))
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color(0xFF132330).copy(alpha = 0.94f),
-                            Color(0xFF09121A).copy(alpha = 0.98f)
-                        )
-                    )
-                )
-                .border(
-                    width = 1.4.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.75f),
-                            Color(0xFF00E5FF).copy(alpha = 0.40f),
-                            Color.White.copy(alpha = 0.12f)
-                        )
-                    ),
-                    shape = RoundedCornerShape(28.dp)
-                )
-                .padding(6.dp),
-            contentAlignment = Alignment.CenterStart
-        ) {
-            val totalWidthPx = constraints.maxWidth.toFloat()
-            val tabCount = actions.size
-            val tabWidthPx = totalWidthPx / tabCount
-            val tabWidthDp = maxWidth / tabCount
-
-            LaunchedEffect(tabWidthPx) {
-                if (!isDragging) {
-                    dragOffsetPx.snapTo(selectedIndex * tabWidthPx)
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(tabWidthPx) {
-                        detectHorizontalDragGestures(
-                            onDragStart = { isDragging = true },
-                            onHorizontalDrag = { change, dragAmount ->
-                                change.consume()
-                                val newOffset = (dragOffsetPx.value + dragAmount)
-                                    .coerceIn(0f, (tabCount - 1) * tabWidthPx)
-                                coroutineScope.launch {
-                                    dragOffsetPx.snapTo(newOffset)
-                                }
-                            },
-                            onDragEnd = {
-                                isDragging = false
-                                val targetIndex = (dragOffsetPx.value / tabWidthPx).roundToInt()
-                                    .coerceIn(0, tabCount - 1)
-                                selectedIndex = targetIndex
-                                coroutineScope.launch {
-                                    dragOffsetPx.animateTo(
-                                        targetValue = targetIndex * tabWidthPx,
-                                        animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f)
-                                    )
-                                    delay(100)
-                                    triggerAction(targetIndex)
-                                }
-                            },
-                            onDragCancel = {
-                                isDragging = false
-                                coroutineScope.launch {
-                                    dragOffsetPx.animateTo(
-                                        targetValue = selectedIndex * tabWidthPx,
-                                        animationSpec = spring(dampingRatio = 0.72f, stiffness = 400f)
-                                    )
-                                }
-                            }
-                        )
-                    }
-            ) {
-                val densityLocal = LocalDensity.current
-                val currentOffsetDp = with(densityLocal) { dragOffsetPx.value.toDp() }
-
-                Box(
-                    modifier = Modifier
-                        .offset(x = currentOffsetDp)
-                        .width(tabWidthDp)
-                        .fillMaxHeight()
-                        .graphicsLayer {
-                            scaleX = if (isDragging) 1.08f else 1f
-                            scaleY = if (isDragging) 0.94f else 1f
-                        }
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color(0xFF00B4D8).copy(alpha = 0.40f),
-                                    Color(0xFF0077B6).copy(alpha = 0.60f)
-                                )
-                            )
-                        )
-                        .border(
-                            1.dp,
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.85f),
-                                    Color(0xFF00E5FF).copy(alpha = 0.35f)
-                                )
-                            ),
-                            RoundedCornerShape(22.dp)
-                        )
-                )
-
-                Row(modifier = Modifier.fillMaxSize()) {
-                    actions.forEachIndexed { index, item ->
-                        val isCurrentTab = (dragOffsetPx.value / tabWidthPx).roundToInt() == index
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) {
-                                    selectedIndex = index
-                                    coroutineScope.launch {
-                                        dragOffsetPx.animateTo(
-                                            targetValue = index * tabWidthPx,
-                                            animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f)
-                                        )
-                                        delay(100)
-                                        triggerAction(index)
-                                    }
-                                },
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = item.title,
-                                tint = if (isCurrentTab) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.75f),
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .graphicsLayer {
-                                        val s = if (isCurrentTab) 1.12f else 1f
-                                        scaleX = s
-                                        scaleY = s
-                                    }
-                            )
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text(
-                                text = item.title,
-                                color = if (isCurrentTab) Color.White else Color.White.copy(alpha = 0.75f),
-                                fontSize = 11.sp,
-                                fontWeight = if (isCurrentTab) FontWeight.Bold else FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .height(0.6.dp)
+            .background(Color.White.copy(alpha = 0.08f))
+    )
 }
