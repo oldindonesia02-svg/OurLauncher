@@ -38,34 +38,38 @@ fun HomeScreenSettingsSheet(
 ) {
     BackHandler { onDismiss() }
 
-    var showLabel by remember { mutableStateOf(settingsManager.showLabels) }
+    var showLabels by remember { mutableStateOf(settingsManager.showLabels) }
     var liquidFolder by remember { mutableStateOf(true) }
 
+    // Transparent Glass Backdrop (Dark Black overlay removed)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.48f))
+            .background(Color.Black.copy(alpha = 0.20f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onDismiss() },
         contentAlignment = Alignment.BottomCenter
     ) {
+        // Floating 4-Corners Rounded Card
         Box(
             modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .navigationBarsPadding()
                 .fillMaxWidth()
                 .shadow(
-                    elevation = 24.dp,
-                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                    elevation = 28.dp,
+                    shape = RoundedCornerShape(32.dp),
                     spotColor = Color(0xFF00E5FF).copy(alpha = 0.35f),
-                    ambientColor = Color.Black.copy(alpha = 0.6f)
+                    ambientColor = Color.Black.copy(alpha = 0.5f)
                 )
-                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                .clip(RoundedCornerShape(32.dp))
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFF14222E).copy(alpha = 0.94f),
-                            Color(0xFF0A1218).copy(alpha = 0.98f)
+                            Color(0xFF162330).copy(alpha = 0.95f),
+                            Color(0xFF0D161F).copy(alpha = 0.98f)
                         )
                     )
                 )
@@ -73,25 +77,24 @@ fun HomeScreenSettingsSheet(
                     width = 1.3.dp,
                     brush = Brush.verticalGradient(
                         listOf(
-                            Color.White.copy(alpha = 0.75f),
+                            Color.White.copy(alpha = 0.80f),
                             Color(0xFF00E5FF).copy(alpha = 0.40f),
                             Color.White.copy(alpha = 0.10f)
                         )
                     ),
-                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+                    shape = RoundedCornerShape(32.dp)
                 )
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) {}
-                .padding(horizontal = 22.dp, vertical = 18.dp)
-                .navigationBarsPadding()
+                .padding(20.dp)
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Handle Bar
+                // Top Indicator Pill
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
@@ -104,13 +107,15 @@ fun HomeScreenSettingsSheet(
                 // Header
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
+                            .background(Color.White.copy(alpha = 0.10f))
                             .clickable { onDismiss() },
                         contentAlignment = Alignment.Center
                     ) {
@@ -130,61 +135,38 @@ fun HomeScreenSettingsSheet(
                     )
                 }
 
-                // Transition Effects Row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .clickable { onOpenTransitionEffects() }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = "Transition effects", color = Color.White, fontSize = 15.sp)
-                    Icon(
-                        imageVector = Icons.Rounded.ChevronRight,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                // Transition Effects
+                HomeSheetNavRow(
+                    title = "Transition effects",
+                    onClick = onOpenTransitionEffects
+                )
 
-                // Set Default Screen Row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .clickable { onSetDefaultScreen() }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = "Set default screen", color = Color.White, fontSize = 15.sp)
-                    Icon(
-                        imageVector = Icons.Rounded.ChevronRight,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                // Set Default Screen
+                HomeSheetNavRow(
+                    title = "Set default screen",
+                    onClick = onSetDefaultScreen
+                )
 
-                // Show Label Switch
+                                // Show Label Toggle
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .background(Color(0xFF131F2A))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Show label", color = Color.White, fontSize = 15.sp)
+                    Text(
+                        text = "Show label",
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                     Switch(
-                        checked = showLabel,
+                        checked = showLabels,
                         onCheckedChange = {
-                            showLabel = it
+                            showLabels = it
                             settingsManager.showLabels = it
                         },
                         colors = SwitchDefaults.colors(
@@ -196,17 +178,22 @@ fun HomeScreenSettingsSheet(
                     )
                 }
 
-                // Liquid Folder Switch
+                // Liquid Folder Toggle
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                        .background(Color(0xFF131F2A))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Liquid folder", color = Color.White, fontSize = 15.sp)
+                    Text(
+                        text = "Liquid folder",
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                     Switch(
                         checked = liquidFolder,
                         onCheckedChange = { liquidFolder = it },
@@ -219,34 +206,60 @@ fun HomeScreenSettingsSheet(
                     )
                 }
 
-                // Regenerate all icons
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Regenerate All Icons Action
                 Text(
                     text = "Regenerate all icons",
-                    color = Color(0xFF00B4D8),
+                    color = Color(0xFF00E5FF),
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
                         .clickable { onRegenerateIcons() }
-                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                        .padding(vertical = 4.dp, horizontal = 4.dp)
                 )
 
-                // More Settings
+                // More Settings Action
                 Text(
                     text = "More settings",
-                    color = Color(0xFF00B4D8),
+                    color = Color(0xFF00E5FF),
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
                         .clickable { onOpenMoreSettings() }
-                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                        .padding(vertical = 4.dp, horizontal = 4.dp)
                 )
-
-                Spacer(modifier = Modifier.height(6.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun HomeSheetNavRow(
+    title: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF131F2A))
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 15.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            color = Color.White,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Icon(
+            imageVector = Icons.Rounded.ChevronRight,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.5f),
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
