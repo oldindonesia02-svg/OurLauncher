@@ -119,7 +119,8 @@ fun SettingsScreen(
     var dockGlassOpacity by remember { mutableFloatStateOf(94f) }
     var dockSpecularGlow by remember { mutableStateOf(true) }
 
-    // Liquid Glass Advanced States
+    // Liquid Glass & Window Blur States
+    var windowBlurRadius by remember { mutableFloatStateOf(22f) }
     var blurIntensity by remember { mutableFloatStateOf(24f) }
     var glassTintAlpha by remember { mutableFloatStateOf(65f) }
     var specularHighlight by remember { mutableFloatStateOf(85f) }
@@ -140,19 +141,26 @@ fun SettingsScreen(
         )
     }
 
+    val isSearchPage = currentSubPage == "search"
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = if (currentSubPage == "search") 0.15f else 0.52f))
+            .background(Color.Black.copy(alpha = if (isSearchPage) 0.12f else 0.40f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onDismiss() },
-        contentAlignment = Alignment.TopCenter
+        contentAlignment = if (isSearchPage) Alignment.TopCenter else Alignment.Center // Center position for all cards!
     ) {
         Box(
             modifier = Modifier
-                .padding(top = 42.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)
+                .padding(
+                    top = if (isSearchPage) 48.dp else 24.dp,
+                    bottom = 24.dp,
+                    start = 16.dp,
+                    end = 16.dp
+                )
                 .navigationBarsPadding()
                 .fillMaxWidth()
                 .wrapContentHeight()
@@ -161,13 +169,20 @@ fun SettingsScreen(
                 .clip(RoundedCornerShape(32.dp))
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xFF162330).copy(alpha = 0.97f), Color(0xFF0D161F).copy(alpha = 0.99f))
+                        listOf(
+                            Color(0xFF14212D).copy(alpha = 0.85f),
+                            Color(0xFF0A121A).copy(alpha = 0.90f)
+                        )
                     )
                 )
                 .border(
                     width = 1.3.dp,
                     brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.80f), Color(0xFF00E5FF).copy(alpha = 0.40f), Color.Transparent)
+                        listOf(
+                            Color.White.copy(alpha = 0.75f),
+                            Color(0xFF00E5FF).copy(alpha = 0.40f),
+                            Color.White.copy(alpha = 0.12f)
+                        )
                     ),
                     shape = RoundedCornerShape(32.dp)
                 )
@@ -194,7 +209,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.10f))
+                            .background(Color.White.copy(alpha = 0.12f))
                             .clickable {
                                 if (currentSubPage != "main") currentSubPage = "main" else onDismiss()
                             },
@@ -228,7 +243,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.10f))
+                            .background(Color.White.copy(alpha = 0.12f))
                             .clickable { onDismiss() },
                         contentAlignment = Alignment.Center
                     ) {
@@ -245,7 +260,7 @@ fun SettingsScreen(
                 if (currentSubPage == "main") {
                     Text("CUSTOMIZATION", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
                     Column(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A))
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f))
                     ) {
                         LocalSettingsItem("Desktop Grid", "Configure Columns & Rows") { currentSubPage = "grid" }
                         LocalItemDivider()
@@ -253,14 +268,14 @@ fun SettingsScreen(
                         LocalItemDivider()
                         LocalSettingsItem("Dock", "Capacity, Size, Radius & Glass opacity") { currentSubPage = "dock" }
                         LocalItemDivider()
-                        LocalSettingsItem("Liquid Glass", "Refraction blur, Tint & Specular sheen") { currentSubPage = "glass" }
+                        LocalSettingsItem("Liquid Glass", "Window blur, Refraction & Specular sheen") { currentSubPage = "glass" }
                         LocalItemDivider()
                         LocalSettingsItem("Search Bar Position", "Live adjustment, AI pill offset") { currentSubPage = "search" }
                     }
 
                     Text("ANIMATIONS & BEHAVIOR", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)
                     Column(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A))
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f))
                     ) {
                         LocalSettingsItem("App Open Animation", "Duration, Physics curves & Scale") { currentSubPage = "anim" }
                         LocalItemDivider()
@@ -295,7 +310,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // 3. APP ICONS SUB-PAGE (Live Preview Box)
+                // 3. APP ICONS SUB-PAGE
                 if (currentSubPage == "icons") {
                     Box(
                         modifier = Modifier
@@ -319,7 +334,7 @@ fun SettingsScreen(
                     }
 
                     Text("ICON PACK", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(12.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f)).padding(12.dp)) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(iconPacks) { pack ->
                                 val isSelected = activePack == pack.packageName
@@ -341,7 +356,7 @@ fun SettingsScreen(
                     }
 
                     Text("ICON SIZE & SHAPE", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f)).padding(16.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Size", color = Color.White, fontSize = 15.sp)
@@ -393,7 +408,7 @@ fun SettingsScreen(
                     }
 
                     Text("GLASS & LABELS", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f)).padding(16.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Glass Specular Sheen", color = Color.White, fontSize = 15.sp)
@@ -436,11 +451,11 @@ fun SettingsScreen(
                     }
                 }
 
-                // 4. DOCK SUB-PAGE
+                                // 4. DOCK SUB-PAGE
                 if (currentSubPage == "dock") {
                     Text("DOCK TOGGLE", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp),
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f)).padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -472,7 +487,7 @@ fun SettingsScreen(
                     }
 
                     Text("DOCK DIMENSIONS & GLASS", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f)).padding(16.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Dock Corner Radius", color = Color.White, fontSize = 15.sp)
@@ -512,35 +527,26 @@ fun SettingsScreen(
                     }
                 }
 
-                // 5. LIQUID GLASS & BLUR SUB-PAGE
+                // 5. LIQUID GLASS & BLUR SUB-PAGE (With Window Blur Level Slider)
                 if (currentSubPage == "glass") {
-                    Text("REFRACTION & BLUR", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
+                    Text("WINDOW & MATERIAL BLUR", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f)).padding(16.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            // Window Blur Level Slider (Live Wallpaper Blur)
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Blur Intensity", color = Color.White, fontSize = 15.sp)
-                                Text("${blurIntensity.roundToInt()} px", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("Window Background Blur", color = Color.White, fontSize = 15.sp)
+                                Text("${windowBlurRadius.roundToInt()} px", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
                             Slider(
-                                value = blurIntensity,
-                                onValueChange = { blurIntensity = it },
-                                valueRange = 5f..50f,
+                                value = windowBlurRadius,
+                                onValueChange = { windowBlurRadius = it },
+                                valueRange = 0f..40f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
 
+                            // Glass Specular Highlight
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Glass Tint Opacity", color = Color.White, fontSize = 15.sp)
-                                Text("${glassTintAlpha.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Slider(
-                                value = glassTintAlpha,
-                                onValueChange = { glassTintAlpha = it },
-                                valueRange = 10f..95f,
-                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
-                            )
-
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Specular Edge Highlight", color = Color.White, fontSize = 15.sp)
+                                Text("Specular Edge Glow", color = Color.White, fontSize = 15.sp)
                                 Text("${specularHighlight.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
                             Slider(
@@ -550,17 +556,7 @@ fun SettingsScreen(
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
 
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Border Edge Width", color = Color.White, fontSize = 15.sp)
-                                Text(String.format("%.1f dp", borderWidth), color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Slider(
-                                value = borderWidth,
-                                onValueChange = { borderWidth = it },
-                                valueRange = 0.5f..3.0f,
-                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
-                            )
-
+                            // Rainbow Refraction Toggle
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -577,10 +573,10 @@ fun SettingsScreen(
                     }
                 }
 
-                // 6. LIVE SEARCH BAR POSITION & AI SUB-PAGE (Real-time Live Offset on HomeScreen)
+                // 6. LIVE SEARCH BAR POSITION SUB-PAGE
                 if (currentSubPage == "search") {
                     Text("LIVE REALTIME POSITION", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f)).padding(16.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Vertical Offset", color = Color.White, fontSize = 15.sp)
@@ -590,7 +586,7 @@ fun SettingsScreen(
                                 value = liveSearchOffset,
                                 onValueChange = {
                                     liveSearchOffset = it
-                                    settingsManager.searchOffset = it // Live instant movement on homescreen
+                                    settingsManager.searchOffset = it
                                 },
                                 valueRange = -100f..100f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
@@ -599,7 +595,7 @@ fun SettingsScreen(
                     }
 
                     Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp),
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f)).padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -619,7 +615,7 @@ fun SettingsScreen(
                 if (currentSubPage == "anim") {
                     Text("ANIMATION SPEED & CURVES", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Column(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A))
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f))
                     ) {
                         listOf("Fast (180ms)", "Smooth (300ms)", "Bouncy Spring (400ms)").forEach { speed ->
                             val isSelected = animationSpeed == speed
@@ -642,7 +638,7 @@ fun SettingsScreen(
                 if (currentSubPage == "gestures") {
                     Text("DOUBLE TAP ACTION", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Column(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A))
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f))
                     ) {
                         listOf("Lock Screen", "Open Search", "None").forEach { action ->
                             val isSelected = doubleTapAction == action
