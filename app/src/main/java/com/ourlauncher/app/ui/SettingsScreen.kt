@@ -5,8 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -88,7 +87,6 @@ fun SettingsScreen(
     val context = LocalContext.current
     var currentSubPage by remember { mutableStateOf("main") }
 
-    // Always include System Default at first position
     val iconPacks = remember(installedIconPacks) {
         val list = mutableListOf(IconPackInfo("system_default", "System Default"))
         val scanned = if (installedIconPacks.isNotEmpty()) installedIconPacks else scanDeviceIconPacks(context)
@@ -127,17 +125,10 @@ fun SettingsScreen(
     var specularHighlight by remember { mutableFloatStateOf(85f) }
     var borderWidth by remember { mutableFloatStateOf(1.3f) }
     var enableRainbowSheen by remember { mutableStateOf(true) }
-    var enableFrostedNoise by remember { mutableStateOf(false) }
 
     // Animations & Gestures States
     var animationSpeed by remember { mutableStateOf("Smooth (300ms)") }
     var doubleTapAction by remember { mutableStateOf("Lock Screen") }
-
-    val isSearchPage = currentSubPage == "search"
-    val cardHeightFraction by animateFloatAsState(
-        targetValue = if (isSearchPage) 0.46f else 0.88f,
-        animationSpec = spring(dampingRatio = 0.78f, stiffness = 320f), label = "h"
-    )
 
     val shapePresets = remember {
         listOf(
@@ -152,19 +143,20 @@ fun SettingsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = if (isSearchPage) 0.22f else 0.55f))
+            .background(Color.Black.copy(alpha = if (currentSubPage == "search") 0.15f else 0.52f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onDismiss() },
-        contentAlignment = if (isSearchPage) Alignment.TopCenter else Alignment.Center
+        contentAlignment = Alignment.TopCenter
     ) {
         Box(
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = if (isSearchPage) 48.dp else 24.dp)
+                .padding(top = 42.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)
                 .navigationBarsPadding()
                 .fillMaxWidth()
-                .fillMaxHeight(cardHeightFraction)
+                .wrapContentHeight()
+                .animateContentSize(animationSpec = spring(dampingRatio = 0.82f, stiffness = 380f))
                 .shadow(28.dp, RoundedCornerShape(32.dp), spotColor = Color(0xFF00E5FF).copy(alpha = 0.35f))
                 .clip(RoundedCornerShape(32.dp))
                 .background(
@@ -187,7 +179,8 @@ fun SettingsScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .heightIn(max = 580.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -221,7 +214,7 @@ fun SettingsScreen(
                             "icons" -> "App Icons"
                             "dock" -> "Dock Settings"
                             "glass" -> "Liquid Glass & Blur"
-                            "search" -> "Search Bar Live Position"
+                            "search" -> "Live Search Bar Position"
                             "anim" -> "App Open Animation"
                             "gestures" -> "Gestures & Actions"
                             else -> "Launcher Settings"
@@ -302,13 +295,12 @@ fun SettingsScreen(
                     }
                 }
 
-                // 3. APP ICONS SUB-PAGE (With Live Visual Preview)
+                // 3. APP ICONS SUB-PAGE (Live Preview Box)
                 if (currentSubPage == "icons") {
-                    // Live Icon Preview Box
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(96.dp)
+                            .height(90.dp)
                             .clip(RoundedCornerShape(18.dp))
                             .background(Color.White.copy(alpha = 0.05f))
                             .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.3f), RoundedCornerShape(18.dp)),
@@ -393,7 +385,7 @@ fun SettingsScreen(
                                             }
                                             .padding(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
-                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 12.sp)
+                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -444,7 +436,7 @@ fun SettingsScreen(
                     }
                 }
 
-                                // 4. DOCK SUB-PAGE
+                // 4. DOCK SUB-PAGE
                 if (currentSubPage == "dock") {
                     Text("DOCK TOGGLE", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Row(
@@ -585,20 +577,20 @@ fun SettingsScreen(
                     }
                 }
 
-                // 6. SEARCH BAR POSITION & AI SUB-PAGE (Real-time Live Adjustment)
+                // 6. LIVE SEARCH BAR POSITION & AI SUB-PAGE (Real-time Live Offset on HomeScreen)
                 if (currentSubPage == "search") {
-                    Text("LIVE POSITION OFFSET", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    Text("LIVE REALTIME POSITION", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Vertical Position", color = Color.White, fontSize = 15.sp)
+                                Text("Vertical Offset", color = Color.White, fontSize = 15.sp)
                                 Text("${liveSearchOffset.roundToInt()} dp", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
                             Slider(
                                 value = liveSearchOffset,
                                 onValueChange = {
                                     liveSearchOffset = it
-                                    settingsManager.searchOffset = it // Live real-time update to HomeScreen
+                                    settingsManager.searchOffset = it // Live instant movement on homescreen
                                 },
                                 valueRange = -100f..100f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
