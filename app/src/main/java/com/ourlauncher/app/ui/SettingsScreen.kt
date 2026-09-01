@@ -85,8 +85,16 @@ fun SettingsScreen(
     val context = LocalContext.current
     var currentSubPage by remember { mutableStateOf("main") }
 
+    // Always include System Default at first position
     val iconPacks = remember(installedIconPacks) {
-        if (installedIconPacks.isNotEmpty()) installedIconPacks else scanDeviceIconPacks(context)
+        val list = mutableListOf(IconPackInfo("system_default", "System Default"))
+        val scanned = if (installedIconPacks.isNotEmpty()) installedIconPacks else scanDeviceIconPacks(context)
+        scanned.forEach { pack ->
+            if (pack.packageName != "system_default" && list.none { it.packageName == pack.packageName }) {
+                list.add(pack)
+            }
+        }
+        list
     }
 
     // Icon Live States
@@ -110,8 +118,15 @@ fun SettingsScreen(
     var dockGlassOpacity by remember { mutableFloatStateOf(94f) }
     var dockSpecularGlow by remember { mutableStateOf(true) }
 
-    // Blur & Animations States
+    // Liquid Glass Advanced States
     var blurIntensity by remember { mutableFloatStateOf(24f) }
+    var glassTintAlpha by remember { mutableFloatStateOf(65f) }
+    var specularHighlight by remember { mutableFloatStateOf(85f) }
+    var borderWidth by remember { mutableFloatStateOf(1.3f) }
+    var enableRainbowSheen by remember { mutableStateOf(true) }
+    var enableFrostedNoise by remember { mutableStateOf(false) }
+
+    // Animations & Gestures States
     var animationSpeed by remember { mutableStateOf("Smooth (300ms)") }
     var doubleTapAction by remember { mutableStateOf("Lock Screen") }
 
@@ -137,20 +152,21 @@ fun SettingsScreen(
     ) {
         Box(
             modifier = Modifier
-                .padding(horizontal = 20.dp, vertical = 32.dp)
+                .padding(horizontal = 20.dp, vertical = 24.dp)
+                .navigationBarsPadding()
                 .fillMaxWidth()
-                .fillMaxHeight(0.92f)
-                .shadow(24.dp, RoundedCornerShape(32.dp), spotColor = Color(0xFF00E5FF).copy(alpha = 0.3f))
+                .fillMaxHeight(0.88f)
+                .shadow(28.dp, RoundedCornerShape(32.dp), spotColor = Color(0xFF00E5FF).copy(alpha = 0.35f))
                 .clip(RoundedCornerShape(32.dp))
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xFF162330).copy(alpha = 0.96f), Color(0xFF0D161F).copy(alpha = 0.98f))
+                        listOf(Color(0xFF162330).copy(alpha = 0.97f), Color(0xFF0D161F).copy(alpha = 0.99f))
                     )
                 )
                 .border(
                     width = 1.3.dp,
                     brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.75f), Color(0xFF00E5FF).copy(alpha = 0.35f), Color.Transparent)
+                        listOf(Color.White.copy(alpha = 0.80f), Color(0xFF00E5FF).copy(alpha = 0.40f), Color.Transparent)
                     ),
                     shape = RoundedCornerShape(32.dp)
                 )
@@ -295,7 +311,7 @@ fun SettingsScreen(
                                         }
                                         .padding(horizontal = 14.dp, vertical = 10.dp)
                                 ) {
-                                    Text(pack.label, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 13.sp)
+                                    Text(pack.label, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 13.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                                 }
                             }
                         }
@@ -395,9 +411,9 @@ fun SettingsScreen(
                             }
                         }
                     }
-               }
+                }
 
-                // 4. DOCK SUB-PAGE (Capacity, Radius, Opacity & Glow)
+                                // 4. DOCK SUB-PAGE
                 if (currentSubPage == "dock") {
                     Text("DOCK TOGGLE", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Row(
@@ -473,11 +489,12 @@ fun SettingsScreen(
                     }
                 }
 
-                // 5. LIQUID GLASS & BLUR SUB-PAGE
+                // 5. LIQUID GLASS & BLUR SUB-PAGE (Comprehensive Pro Settings)
                 if (currentSubPage == "glass") {
                     Text("REFRACTION & BLUR", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A)).padding(16.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            // Blur Intensity
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Blur Intensity", color = Color.White, fontSize = 15.sp)
                                 Text("${blurIntensity.roundToInt()} px", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -485,9 +502,73 @@ fun SettingsScreen(
                             Slider(
                                 value = blurIntensity,
                                 onValueChange = { blurIntensity = it },
-                                valueRange = 5f..40f,
+                                valueRange = 5f..50f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
+
+                            // Glass Tint Opacity
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Glass Tint Opacity", color = Color.White, fontSize = 15.sp)
+                                Text("${glassTintAlpha.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = glassTintAlpha,
+                                onValueChange = { glassTintAlpha = it },
+                                valueRange = 10f..95f,
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
+                            )
+
+                            // Specular Edge Highlight
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Specular Edge Highlight", color = Color.White, fontSize = 15.sp)
+                                Text("${specularHighlight.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = specularHighlight,
+                                onValueChange = { specularHighlight = it },
+                                valueRange = 10f..100f,
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
+                            )
+
+                            // Border Thickness
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("Border Edge Width", color = Color.White, fontSize = 15.sp)
+                                Text(String.format("%.1f dp", borderWidth), color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                            Slider(
+                                value = borderWidth,
+                                onValueChange = { borderWidth = it },
+                                valueRange = 0.5f..3.0f,
+                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
+                            )
+
+                            // Rainbow Sheen Toggle
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Rainbow Refraction Sheen", color = Color.White, fontSize = 15.sp)
+                                Switch(
+                                    checked = enableRainbowSheen,
+                                    onCheckedChange = { enableRainbowSheen = it },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
+                                )
+                            }
+
+                            // Frosted Noise Texture Toggle
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Frosted Noise Texture", color = Color.White, fontSize = 15.sp)
+                                Switch(
+                                    checked = enableFrostedNoise,
+                                    onCheckedChange = { enableFrostedNoise = it },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
+                                )
+                            }
                         }
                     }
                 }
@@ -520,7 +601,10 @@ fun SettingsScreen(
                             }
                             Slider(
                                 value = liveSearchOffset,
-                                onValueChange = { liveSearchOffset = it },
+                                onValueChange = {
+                                    liveSearchOffset = it
+                                    settingsManager.searchOffset = it
+                                },
                                 valueRange = -100f..100f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
