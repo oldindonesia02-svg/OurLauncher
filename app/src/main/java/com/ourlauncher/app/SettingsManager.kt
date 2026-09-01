@@ -43,7 +43,9 @@ class SettingsManager(context: Context) {
     var swipeUpAction by mutableStateOf(prefs.getString("swipe_up", "App Drawer") ?: "App Drawer")
     var swipeDownAction by mutableStateOf(prefs.getString("swipe_down", "Search") ?: "Search")
 
-    // Liquid Glass Advanced Features
+    // Liquid Glass Advanced Features & References
+    var glassBlurRadius by mutableFloatStateOf(prefs.getFloat("glass_blur_radius", 24f))
+    var glassTransparency by mutableFloatStateOf(prefs.getFloat("glass_transparency", 0.65f))
     var glassRefractionHeight by mutableFloatStateOf(prefs.getFloat("glass_refraction_height", 24f))
     var glassRefractionAmount by mutableFloatStateOf(prefs.getFloat("glass_refraction_amount", 0.5f))
     var glassDepthEnabled by mutableStateOf(prefs.getBoolean("glass_depth_enabled", true))
@@ -73,6 +75,8 @@ class SettingsManager(context: Context) {
             putString("right_pull_down", rightPullDownAction)
             putString("swipe_up", swipeUpAction)
             putString("swipe_down", swipeDownAction)
+            putFloat("glass_blur_radius", glassBlurRadius)
+            putFloat("glass_transparency", glassTransparency)
             putFloat("glass_refraction_height", glassRefractionHeight)
             putFloat("glass_refraction_amount", glassRefractionAmount)
             putBoolean("glass_depth_enabled", glassDepthEnabled)
