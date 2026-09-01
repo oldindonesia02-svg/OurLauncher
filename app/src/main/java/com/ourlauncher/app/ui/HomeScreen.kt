@@ -222,7 +222,7 @@ fun HomeScreen(
                 }
             }
 
-            // Fixed Bottom Section (Matching Size Dock)
+            // Fixed Bottom Section (With Dynamic Live Offset for Capsule)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -231,28 +231,30 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (!settingsManager.hideSearchCapsule && !isOverviewMode && !isAnySheetOpen) {
-                    LiquidSearchAiCapsule(
-                        pagerState = pagerState,
-                        totalPages = totalPages,
-                        onSearchClick = onOpenDrawer,
-                        onAiClick = {
-                            try {
-                                val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                }
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
+                    Box(modifier = Modifier.offset(y = settingsManager.searchOffset.dp)) {
+                        LiquidSearchAiCapsule(
+                            pagerState = pagerState,
+                            totalPages = totalPages,
+                            onSearchClick = onOpenDrawer,
+                            onAiClick = {
                                 try {
-                                    val intent = Intent(RecognizerIntent.ACTION_WEB_SEARCH).apply {
+                                    val intent = Intent(Intent.ACTION_VOICE_COMMAND).apply {
                                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                     }
                                     context.startActivity(intent)
-                                } catch (e2: Exception) {
-                                    onOpenDrawer()
+                                } catch (e: Exception) {
+                                    try {
+                                        val intent = Intent(RecognizerIntent.ACTION_WEB_SEARCH).apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        context.startActivity(intent)
+                                    } catch (e2: Exception) {
+                                        onOpenDrawer()
+                                    }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
                     Spacer(modifier = Modifier.height(12.dp))
                 }
 
@@ -309,7 +311,7 @@ fun HomeScreen(
             )
         }
 
-        // Home Screen Settings Sheet
+        // Home Screen Settings Sheet (4-Corners Rounded Floating Card)
         if (showHomeSettingsSheet) {
             HomeScreenSettingsSheet(
                 settingsManager = settingsManager,
@@ -384,8 +386,10 @@ fun TransitionEffectsSheet(
     ) {
         Box(
             modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .navigationBarsPadding()
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                .clip(RoundedCornerShape(32.dp))
                 .background(
                     Brush.verticalGradient(
                         listOf(
@@ -403,14 +407,13 @@ fun TransitionEffectsSheet(
                             Color.Transparent
                         )
                     ),
-                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+                    shape = RoundedCornerShape(32.dp)
                 )
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) {}
-                .padding(horizontal = 24.dp, vertical = 20.dp)
-                .navigationBarsPadding()
+                .padding(20.dp)
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
