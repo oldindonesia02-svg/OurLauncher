@@ -98,7 +98,7 @@ fun SettingsScreen(
         list
     }
 
-    // Icon Live States
+    // Live States - Fully connected to settingsManager
     var liveSize by remember { mutableFloatStateOf(settingsManager.iconSize) }
     var liveRadius by remember { mutableFloatStateOf(settingsManager.iconCornerRadius) }
     var liveOpacity by remember { mutableFloatStateOf(settingsManager.iconOpacity) }
@@ -106,28 +106,21 @@ fun SettingsScreen(
     var activePack by remember { mutableStateOf(selectedIconPack) }
     var isMonochrome by remember { mutableStateOf(settingsManager.fontFamily.equals("Monospace", ignoreCase = true)) }
 
-    // Desktop Grid States
     var liveCols by remember { mutableIntStateOf(settingsManager.gridColumns) }
     var liveRows by remember { mutableIntStateOf(settingsManager.gridRows) }
     var liveSearchOffset by remember { mutableFloatStateOf(settingsManager.searchOffset) }
     var hideSearch by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
 
-    // Dock Advanced States
     var dockIconCount by remember { mutableIntStateOf(4) }
     var isDockEnabled by remember { mutableStateOf(true) }
     var dockCornerRadius by remember { mutableFloatStateOf(28f) }
     var dockGlassOpacity by remember { mutableFloatStateOf(94f) }
     var dockSpecularGlow by remember { mutableStateOf(true) }
 
-    // Liquid Glass & Window Blur States
     var windowBlurRadius by remember { mutableFloatStateOf(22f) }
-    var blurIntensity by remember { mutableFloatStateOf(24f) }
-    var glassTintAlpha by remember { mutableFloatStateOf(65f) }
     var specularHighlight by remember { mutableFloatStateOf(85f) }
-    var borderWidth by remember { mutableFloatStateOf(1.3f) }
     var enableRainbowSheen by remember { mutableStateOf(true) }
 
-    // Animations & Gestures States
     var animationSpeed by remember { mutableStateOf("Smooth (300ms)") }
     var doubleTapAction by remember { mutableStateOf("Lock Screen") }
 
@@ -146,12 +139,12 @@ fun SettingsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = if (isSearchPage) 0.12f else 0.40f))
+            .background(Color.Black.copy(alpha = if (isSearchPage) 0.12f else 0.42f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onDismiss() },
-        contentAlignment = if (isSearchPage) Alignment.TopCenter else Alignment.Center // Center position for all cards!
+        contentAlignment = if (isSearchPage) Alignment.TopCenter else Alignment.Center
     ) {
         Box(
             modifier = Modifier
@@ -170,8 +163,8 @@ fun SettingsScreen(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFF14212D).copy(alpha = 0.85f),
-                            Color(0xFF0A121A).copy(alpha = 0.90f)
+                            Color(0xFF14212D).copy(alpha = 0.90f),
+                            Color(0xFF0A121A).copy(alpha = 0.94f)
                         )
                     )
                 )
@@ -400,7 +393,7 @@ fun SettingsScreen(
                                             }
                                             .padding(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
-                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
+                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -527,12 +520,11 @@ fun SettingsScreen(
                     }
                 }
 
-                // 5. LIQUID GLASS & BLUR SUB-PAGE (With Window Blur Level Slider)
+                // 5. LIQUID GLASS & BLUR SUB-PAGE
                 if (currentSubPage == "glass") {
                     Text("WINDOW & MATERIAL BLUR", color = Color(0xFF00E5FF), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f)).padding(16.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            // Window Blur Level Slider (Live Wallpaper Blur)
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Window Background Blur", color = Color.White, fontSize = 15.sp)
                                 Text("${windowBlurRadius.roundToInt()} px", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -544,7 +536,6 @@ fun SettingsScreen(
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
 
-                            // Glass Specular Highlight
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Specular Edge Glow", color = Color.White, fontSize = 15.sp)
                                 Text("${specularHighlight.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -556,7 +547,6 @@ fun SettingsScreen(
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
 
-                            // Rainbow Refraction Toggle
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
