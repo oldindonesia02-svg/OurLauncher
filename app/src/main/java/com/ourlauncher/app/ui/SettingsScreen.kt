@@ -444,7 +444,7 @@ fun SettingsScreen(
                     }
                 }
 
-                                // 4. DOCK SUB-PAGE
+                // 4. DOCK SUB-PAGE
                 if (currentSubPage == "dock") {
                     Text("DOCK TOGGLE", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Row(
