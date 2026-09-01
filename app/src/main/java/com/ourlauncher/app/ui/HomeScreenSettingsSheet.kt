@@ -41,7 +41,6 @@ fun HomeScreenSettingsSheet(
     var showLabels by remember { mutableStateOf(settingsManager.showLabels) }
     var liquidFolder by remember { mutableStateOf(true) }
 
-    // Transparent Background Click-to-Dismiss (Zero dark overlay)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -51,14 +50,14 @@ fun HomeScreenSettingsSheet(
             ) { onDismiss() },
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Floating Balanced Dark Liquid Glass Card
+        // Balanced Dark Frosted Glass Card (Matching 27391.png)
         Box(
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 24.dp)
                 .navigationBarsPadding()
                 .fillMaxWidth()
                 .shadow(
-                    elevation = 32.dp,
+                    elevation = 30.dp,
                     shape = RoundedCornerShape(32.dp),
                     spotColor = Color(0xFF00E5FF).copy(alpha = 0.35f),
                     ambientColor = Color.Black.copy(alpha = 0.55f)
@@ -67,8 +66,8 @@ fun HomeScreenSettingsSheet(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFF14212D).copy(alpha = 0.84f),
-                            Color(0xFF0A121A).copy(alpha = 0.90f)
+                            Color(0xFF14212D).copy(alpha = 0.90f),
+                            Color(0xFF0A121A).copy(alpha = 0.94f)
                         )
                     )
                 )
@@ -103,7 +102,7 @@ fun HomeScreenSettingsSheet(
                         .background(Color.White.copy(alpha = 0.35f))
                 )
 
-                // Header / Title Bar
+                // Header
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -151,8 +150,8 @@ fun HomeScreenSettingsSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(18.dp))
-                        .background(Color.White.copy(alpha = 0.06f))
-                        .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(18.dp))
+                        .background(Color(0xFF131F2A).copy(alpha = 0.75f))
+                        .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(18.dp))
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -183,8 +182,8 @@ fun HomeScreenSettingsSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(18.dp))
-                        .background(Color.White.copy(alpha = 0.06f))
-                        .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(18.dp))
+                        .background(Color(0xFF131F2A).copy(alpha = 0.75f))
+                        .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(18.dp))
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -209,7 +208,7 @@ fun HomeScreenSettingsSheet(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Footer Action Links
+                // Footer Actions
                 Text(
                     text = "Regenerate all icons",
                     color = Color(0xFF00E5FF),
@@ -243,8 +242,8 @@ private fun HomeSheetNavRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(Color.White.copy(alpha = 0.06f))
-            .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(18.dp))
+            .background(Color(0xFF131F2A).copy(alpha = 0.75f))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(18.dp))
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 15.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
