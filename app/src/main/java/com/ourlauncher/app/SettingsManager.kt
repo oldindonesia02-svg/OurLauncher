@@ -43,6 +43,14 @@ class SettingsManager(context: Context) {
     var swipeUpAction by mutableStateOf(prefs.getString("swipe_up", "App Drawer") ?: "App Drawer")
     var swipeDownAction by mutableStateOf(prefs.getString("swipe_down", "Search") ?: "Search")
 
+    // Liquid Glass Advanced Features
+    var glassRefractionHeight by mutableFloatStateOf(prefs.getFloat("glass_refraction_height", 24f))
+    var glassRefractionAmount by mutableFloatStateOf(prefs.getFloat("glass_refraction_amount", 0.5f))
+    var glassDepthEnabled by mutableStateOf(prefs.getBoolean("glass_depth_enabled", true))
+    var glassTintAlpha by mutableFloatStateOf(prefs.getFloat("glass_tint_alpha", 0.65f))
+    var specularHighlight by mutableFloatStateOf(prefs.getFloat("specular_highlight", 0.85f))
+    var enableRainbowSheen by mutableStateOf(prefs.getBoolean("rainbow_sheen", true))
+
     fun saveAll() {
         prefs.edit().apply {
             putInt("grid_columns", gridColumns)
@@ -65,6 +73,12 @@ class SettingsManager(context: Context) {
             putString("right_pull_down", rightPullDownAction)
             putString("swipe_up", swipeUpAction)
             putString("swipe_down", swipeDownAction)
+            putFloat("glass_refraction_height", glassRefractionHeight)
+            putFloat("glass_refraction_amount", glassRefractionAmount)
+            putBoolean("glass_depth_enabled", glassDepthEnabled)
+            putFloat("glass_tint_alpha", glassTintAlpha)
+            putFloat("specular_highlight", specularHighlight)
+            putBoolean("rainbow_sheen", enableRainbowSheen)
             apply()
         }
     }
