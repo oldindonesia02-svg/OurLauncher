@@ -1,8 +1,10 @@
 package com.ourlauncher.app
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
@@ -13,7 +15,10 @@ enum class GlassMode {
     ADAPTIVE
 }
 
-class SettingsManager(context: Context) {
+class SettingsManager(private val context: Context) {
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences("our_launcher_prefs", Context.MODE_PRIVATE)
+
     // Glass & Shader Configurations
     var glassMode by mutableStateOf(GlassMode.FROSTED)
     var glassBlurRadius by mutableFloatStateOf(25f)
@@ -24,8 +29,41 @@ class SettingsManager(context: Context) {
     var glassDepthEnabled by mutableStateOf(true)
     var dockCornerRadius by mutableFloatStateOf(32f)
 
-    // Gesture & System Triggers
+    // Gesture & System Controls
     var rightPullDownAction by mutableStateOf("Control Center")
     var leftPullDownAction by mutableStateOf("Notifications")
+    var doubleTapAction by mutableStateOf("Lock Screen")
     var isControlCenterEnabled by mutableStateOf(true)
+
+    // Animation & Performance
+    var animationSpeed by mutableFloatStateOf(1.0f)
+
+    // UI Customization
+    var iconSize by mutableFloatStateOf(60f)
+    var showAppLabels by mutableStateOf(true)
+    var gridColumns by mutableIntStateOf(4)
+    var gridRows by mutableIntStateOf(5)
+
+    fun saveAll() {
+        prefs.edit().apply {
+            putString("glassMode", glassMode.name)
+            putFloat("glassBlurRadius", glassBlurRadius)
+            putFloat("glassTransparency", glassTransparency)
+            putFloat("glassTintAlpha", glassTintAlpha)
+            putFloat("specularHighlight", specularHighlight)
+            putBoolean("enableRainbowSheen", enableRainbowSheen)
+            putBoolean("glassDepthEnabled", glassDepthEnabled)
+            putFloat("dockCornerRadius", dockCornerRadius)
+            putString("rightPullDownAction", rightPullDownAction)
+            putString("leftPullDownAction", leftPullDownAction)
+            putString("doubleTapAction", doubleTapAction)
+            putBoolean("isControlCenterEnabled", isControlCenterEnabled)
+            putFloat("animationSpeed", animationSpeed)
+            putFloat("iconSize", iconSize)
+            putBoolean("showAppLabels", showAppLabels)
+            putInt("gridColumns", gridColumns)
+            putInt("gridRows", gridRows)
+            apply()
+        }
+    }
 }
