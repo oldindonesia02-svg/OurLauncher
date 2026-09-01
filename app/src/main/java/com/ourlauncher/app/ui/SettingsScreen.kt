@@ -98,31 +98,8 @@ fun SettingsScreen(
         list
     }
 
-    // Direct Synchronized Live States
-    var liveSize by remember { mutableFloatStateOf(settingsManager.iconSize) }
-    var liveRadius by remember { mutableFloatStateOf(settingsManager.iconCornerRadius) }
-    var liveOpacity by remember { mutableFloatStateOf(settingsManager.iconOpacity) }
-    var liveShowLabel by remember { mutableStateOf(settingsManager.showLabels) }
     var activePack by remember { mutableStateOf(selectedIconPack) }
     var isMonochrome by remember { mutableStateOf(settingsManager.fontFamily.equals("Monospace", ignoreCase = true)) }
-
-    var liveCols by remember { mutableIntStateOf(settingsManager.gridColumns) }
-    var liveRows by remember { mutableIntStateOf(settingsManager.gridRows) }
-    var liveSearchOffset by remember { mutableFloatStateOf(settingsManager.searchOffset) }
-    var hideSearch by remember { mutableStateOf(settingsManager.hideSearchCapsule) }
-
-    var dockIconCount by remember { mutableIntStateOf(4) }
-    var isDockEnabled by remember { mutableStateOf(true) }
-    var dockCornerRadius by remember { mutableFloatStateOf(28f) }
-    var dockGlassOpacity by remember { mutableFloatStateOf(94f) }
-    var dockSpecularGlow by remember { mutableStateOf(true) }
-
-    var windowBlurRadius by remember { mutableFloatStateOf(22f) }
-    var specularHighlight by remember { mutableFloatStateOf(85f) }
-    var enableRainbowSheen by remember { mutableStateOf(true) }
-
-    var animationSpeed by remember { mutableStateOf("Smooth (300ms)") }
-    var doubleTapAction by remember { mutableStateOf("Lock Screen") }
 
     val shapePresets = remember {
         listOf(
@@ -281,7 +258,7 @@ fun SettingsScreen(
                     Text("GRID DENSITY", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(Pair(4, 4), Pair(4, 5), Pair(4, 6), Pair(5, 5), Pair(5, 6)).forEach { (c, r) ->
-                            val isSelected = liveCols == c && liveRows == r
+                            val isSelected = settingsManager.gridColumns == c && settingsManager.gridRows == r
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -290,8 +267,6 @@ fun SettingsScreen(
                                     .background(if (isSelected) Color(0xFF007BFF).copy(alpha = 0.35f) else Color.White.copy(alpha = 0.06f))
                                     .border(1.dp, if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                                     .clickable {
-                                        liveCols = c
-                                        liveRows = r
                                         settingsManager.gridColumns = c
                                         settingsManager.gridRows = r
                                     },
@@ -316,13 +291,13 @@ fun SettingsScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(liveSize.dp)
-                                .clip(RoundedCornerShape((liveRadius).dp))
+                                .size(settingsManager.iconSize.dp)
+                                .clip(RoundedCornerShape((settingsManager.iconCornerRadius).dp))
                                 .background(Brush.linearGradient(listOf(Color(0xFF00B4D8), Color(0xFF0077B6))))
-                                .border(1.2.dp, Color.White.copy(alpha = liveOpacity), RoundedCornerShape((liveRadius).dp)),
+                                .border(1.2.dp, Color.White.copy(alpha = settingsManager.iconOpacity), RoundedCornerShape((settingsManager.iconCornerRadius).dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Rounded.Widgets, contentDescription = null, tint = Color.White, modifier = Modifier.size((liveSize * 0.5f).dp))
+                            Icon(Icons.Rounded.Widgets, contentDescription = null, tint = Color.White, modifier = Modifier.size((settingsManager.iconSize * 0.5f).dp))
                         }
                     }
 
@@ -353,47 +328,40 @@ fun SettingsScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Size", color = Color.White, fontSize = 15.sp)
-                                Text("${liveSize.roundToInt()} dp", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("${settingsManager.iconSize.roundToInt()} dp", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
                             Slider(
-                                value = liveSize,
-                                onValueChange = {
-                                    liveSize = it
-                                    settingsManager.iconSize = it
-                                },
+                                value = settingsManager.iconSize,
+                                onValueChange = { settingsManager.iconSize = it },
                                 valueRange = 40f..85f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
 
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Corner Radius", color = Color.White, fontSize = 15.sp)
-                                Text("${liveRadius.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("${settingsManager.iconCornerRadius.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
                             Slider(
-                                value = liveRadius,
-                                onValueChange = {
-                                    liveRadius = it
-                                    settingsManager.iconCornerRadius = it
-                                },
+                                value = settingsManager.iconCornerRadius,
+                                onValueChange = { settingsManager.iconCornerRadius = it },
                                 valueRange = 0f..50f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
 
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 items(shapePresets) { preset ->
-                                    val isSelected = liveRadius.roundToInt() == preset.radiusPercent.roundToInt()
+                                    val isSelected = settingsManager.iconCornerRadius.roundToInt() == preset.radiusPercent.roundToInt()
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(10.dp))
                                             .background(if (isSelected) Color(0xFF00E5FF).copy(alpha = 0.25f) else Color.White.copy(alpha = 0.06f))
                                             .border(1.dp, if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
                                             .clickable {
-                                                liveRadius = preset.radiusPercent
                                                 settingsManager.iconCornerRadius = preset.radiusPercent
                                             }
                                             .padding(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
-                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
+                                        Text(preset.name, color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -405,14 +373,11 @@ fun SettingsScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Glass Specular Sheen", color = Color.White, fontSize = 15.sp)
-                                Text("${(liveOpacity * 100).roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("${(settingsManager.iconOpacity * 100).roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
                             Slider(
-                                value = liveOpacity,
-                                onValueChange = {
-                                    liveOpacity = it
-                                    settingsManager.iconOpacity = it
-                                },
+                                value = settingsManager.iconOpacity,
+                                onValueChange = { settingsManager.iconOpacity = it },
                                 valueRange = 0.2f..1.0f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
@@ -432,11 +397,8 @@ fun SettingsScreen(
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("Show Labels", color = Color.White, fontSize = 15.sp)
                                 Switch(
-                                    checked = liveShowLabel,
-                                    onCheckedChange = {
-                                        liveShowLabel = it
-                                        settingsManager.showLabels = it
-                                    },
+                                    checked = settingsManager.showLabels,
+                                    onCheckedChange = { settingsManager.showLabels = it },
                                     colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
                                 )
                             }
@@ -444,26 +406,12 @@ fun SettingsScreen(
                     }
                 }
 
-                // 4. DOCK SUB-PAGE
+                                // 4. DOCK SUB-PAGE
                 if (currentSubPage == "dock") {
-                    Text("DOCK TOGGLE", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f)).padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Enable Liquid Dock", color = Color.White, fontSize = 15.sp)
-                        Switch(
-                            checked = isDockEnabled,
-                            onCheckedChange = { isDockEnabled = it },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
-                        )
-                    }
-
                     Text("DOCK CAPACITY", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(4, 5, 6, 7).forEach { count ->
-                            val isSelected = dockIconCount == count
+                            val isSelected = settingsManager.dockCapacity == count
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -471,7 +419,7 @@ fun SettingsScreen(
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(if (isSelected) Color(0xFF007BFF).copy(alpha = 0.35f) else Color.White.copy(alpha = 0.06f))
                                     .border(1.dp, if (isSelected) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.12f), RoundedCornerShape(14.dp))
-                                    .clickable { dockIconCount = count },
+                                    .clickable { settingsManager.dockCapacity = count },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("$count", color = if (isSelected) Color(0xFF00E5FF) else Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -484,23 +432,23 @@ fun SettingsScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Dock Corner Radius", color = Color.White, fontSize = 15.sp)
-                                Text("${dockCornerRadius.roundToInt()} dp", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("${settingsManager.dockCornerRadius.roundToInt()} dp", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
                             Slider(
-                                value = dockCornerRadius,
-                                onValueChange = { dockCornerRadius = it },
+                                value = settingsManager.dockCornerRadius,
+                                onValueChange = { settingsManager.dockCornerRadius = it },
                                 valueRange = 8f..40f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
 
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Glass Transparency", color = Color.White, fontSize = 15.sp)
-                                Text("${dockGlassOpacity.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("${(settingsManager.dockGlassOpacity * 100).roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
                             Slider(
-                                value = dockGlassOpacity,
-                                onValueChange = { dockGlassOpacity = it },
-                                valueRange = 20f..100f,
+                                value = settingsManager.dockGlassOpacity,
+                                onValueChange = { settingsManager.dockGlassOpacity = it },
+                                valueRange = 0.2f..1.0f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
 
@@ -511,8 +459,8 @@ fun SettingsScreen(
                             ) {
                                 Text("Specular Light Glow", color = Color.White, fontSize = 15.sp)
                                 Switch(
-                                    checked = dockSpecularGlow,
-                                    onCheckedChange = { dockSpecularGlow = it },
+                                    checked = settingsManager.dockSpecularGlow,
+                                    onCheckedChange = { settingsManager.dockSpecularGlow = it },
                                     colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
                                 )
                             }
@@ -527,38 +475,14 @@ fun SettingsScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Window Background Blur", color = Color.White, fontSize = 15.sp)
-                                Text("${windowBlurRadius.roundToInt()} px", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("${settingsManager.windowBlurRadius.roundToInt()} px", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
                             Slider(
-                                value = windowBlurRadius,
-                                onValueChange = { windowBlurRadius = it },
+                                value = settingsManager.windowBlurRadius,
+                                onValueChange = { settingsManager.windowBlurRadius = it },
                                 valueRange = 0f..40f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
-
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Specular Edge Glow", color = Color.White, fontSize = 15.sp)
-                                Text("${specularHighlight.roundToInt()}%", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Slider(
-                                value = specularHighlight,
-                                onValueChange = { specularHighlight = it },
-                                valueRange = 10f..100f,
-                                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
-                            )
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Rainbow Refraction Sheen", color = Color.White, fontSize = 15.sp)
-                                Switch(
-                                    checked = enableRainbowSheen,
-                                    onCheckedChange = { enableRainbowSheen = it },
-                                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
-                                )
-                            }
                         }
                     }
                 }
@@ -570,14 +494,11 @@ fun SettingsScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Vertical Offset", color = Color.White, fontSize = 15.sp)
-                                Text("${liveSearchOffset.roundToInt()} dp", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                Text("${settingsManager.searchOffset.roundToInt()} dp", color = Color(0xFF00E5FF), fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
                             Slider(
-                                value = liveSearchOffset,
-                                onValueChange = {
-                                    liveSearchOffset = it
-                                    settingsManager.searchOffset = it
-                                },
+                                value = settingsManager.searchOffset,
+                                onValueChange = { settingsManager.searchOffset = it },
                                 valueRange = -100f..100f,
                                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFF00E5FF))
                             )
@@ -591,11 +512,8 @@ fun SettingsScreen(
                     ) {
                         Text("Hide Search Capsule", color = Color.White, fontSize = 15.sp)
                         Switch(
-                            checked = hideSearch,
-                            onCheckedChange = {
-                                hideSearch = it
-                                settingsManager.hideSearchCapsule = it
-                            },
+                            checked = settingsManager.hideSearchCapsule,
+                            onCheckedChange = { settingsManager.hideSearchCapsule = it },
                             colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF007BFF))
                         )
                     }
@@ -608,11 +526,11 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f))
                     ) {
                         listOf("Fast (180ms)", "Smooth (300ms)", "Bouncy Spring (400ms)").forEach { speed ->
-                            val isSelected = animationSpeed == speed
+                            val isSelected = settingsManager.animationSpeed == speed
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { animationSpeed = speed }
+                                    .clickable { settingsManager.animationSpeed = speed }
                                     .padding(horizontal = 16.dp, vertical = 14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
@@ -631,11 +549,11 @@ fun SettingsScreen(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF131F2A).copy(alpha = 0.8f))
                     ) {
                         listOf("Lock Screen", "Open Search", "None").forEach { action ->
-                            val isSelected = doubleTapAction == action
+                            val isSelected = settingsManager.doubleTapAction == action
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { doubleTapAction = action }
+                                    .clickable { settingsManager.doubleTapAction = action }
                                     .padding(horizontal = 16.dp, vertical = 14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
@@ -647,7 +565,7 @@ fun SettingsScreen(
                     }
                 }
 
-                // Complete Synchronized Apply & Done Button
+                // Instant Save & Apply Done Button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -655,21 +573,8 @@ fun SettingsScreen(
                         .clip(RoundedCornerShape(16.dp))
                         .background(Brush.horizontalGradient(listOf(Color(0xFF00A2FF), Color(0xFF0066FF))))
                         .clickable {
-                            // 100% Guaranteed State Commit to settingsManager
-                            settingsManager.gridColumns = liveCols
-                            settingsManager.gridRows = liveRows
-                            settingsManager.iconSize = liveSize
-                            settingsManager.iconCornerRadius = liveRadius
-                            settingsManager.iconOpacity = liveOpacity
-                            settingsManager.showLabels = liveShowLabel
-                            settingsManager.searchOffset = liveSearchOffset
-                            settingsManager.hideSearchCapsule = hideSearch
-                            settingsManager.fontFamily = if (isMonochrome) "Monospace" else "SF Pro"
-                            
-                            // Apply Selected Icon Pack
+                            settingsManager.saveAll()
                             onIconPackSelect(activePack)
-                            
-                            // Close Sheet & Trigger Recomposition
                             onDismiss()
                         },
                     contentAlignment = Alignment.Center
