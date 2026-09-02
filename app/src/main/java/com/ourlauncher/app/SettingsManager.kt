@@ -37,6 +37,8 @@ class SettingsManager(private val context: Context) {
     var lensLightEnabled by mutableStateOf(true)
 
     // Dock Customizations
+    var showDockBg by mutableStateOf(true)
+    var dockRadius by mutableFloatStateOf(32f)
     var dockCornerRadius by mutableFloatStateOf(32f)
     var dockCapacity by mutableIntStateOf(4)
     var dockGlassOpacity by mutableFloatStateOf(0.8f)
@@ -85,6 +87,8 @@ class SettingsManager(private val context: Context) {
             putFloat("lensIntensity", lensIntensity)
             putFloat("lensStrokeWidth", lensStrokeWidth)
             putBoolean("lensLightEnabled", lensLightEnabled)
+            putBoolean("showDockBg", showDockBg)
+            putFloat("dockRadius", dockRadius)
             putFloat("dockCornerRadius", dockCornerRadius)
             putInt("dockCapacity", dockCapacity)
             putFloat("dockGlassOpacity", dockGlassOpacity)
