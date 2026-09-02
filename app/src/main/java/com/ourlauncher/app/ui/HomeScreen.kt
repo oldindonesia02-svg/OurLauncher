@@ -141,8 +141,7 @@ fun HomeScreen(
                 }
             }
     ) {
-
-                Column(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .blur(if (isAnySheetOpen && !isOverviewMode && !isControlCenterOpen) 22.dp else 0.dp)
@@ -375,9 +374,6 @@ fun HomeScreen(
     }
 }
 
-// -------------------------------------------------------------
-// Transition Effects Bottom Sheet
-// -------------------------------------------------------------
 @Composable
 fun TransitionEffectsSheet(
     currentEffect: String,
@@ -506,222 +502,219 @@ fun TransitionEffectsSheet(
             }
         }
     }
+}
 
-    // -------------------------------------------------------------
-    // 3-Tab Interactive Liquid Glass Bottom Bar
-    // -------------------------------------------------------------
-    data class HomeActionItem(
-        val title: String,
-        val icon: ImageVector
-    )
+data class HomeActionItem(
+    val title: String,
+    val icon: ImageVector
+)
 
-    @Composable
-    fun HomeLiquidBottomBar(
-        onOpenWidgets: () -> Unit,
-        onOpenWallpapers: () -> Unit,
-        onOpenHomeSettings: () -> Unit,
-        onDismiss: () -> Unit,
-        modifier: Modifier = Modifier
+@Composable
+fun HomeLiquidBottomBar(
+    onOpenWidgets: () -> Unit,
+    onOpenWallpapers: () -> Unit,
+    onOpenHomeSettings: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    BackHandler { onDismiss() }
+
+    val actions = remember {
+        listOf(
+            HomeActionItem("Widgets", Icons.Rounded.Widgets),
+            HomeActionItem("Wallpapers", Icons.Rounded.Image),
+            HomeActionItem("Home Settings", Icons.Rounded.Settings)
+        )
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+    val dragOffsetPx = remember { Animatable(0f) }
+    var selectedIndex by remember { mutableIntStateOf(0) }
+    var isDragging by remember { mutableStateOf(false) }
+
+    fun triggerAction(index: Int) {
+        when (index) {
+            0 -> onOpenWidgets()
+            1 -> onOpenWallpapers()
+            2 -> onOpenHomeSettings()
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onDismiss() },
+        contentAlignment = Alignment.BottomCenter
     ) {
-        BackHandler { onDismiss() }
-
-        val actions = remember {
-            listOf(
-                HomeActionItem("Widgets", Icons.Rounded.Widgets),
-                HomeActionItem("Wallpapers", Icons.Rounded.Image),
-                HomeActionItem("Home Settings", Icons.Rounded.Settings)
-            )
-        }
-
-        val coroutineScope = rememberCoroutineScope()
-        val dragOffsetPx = remember { Animatable(0f) }
-        var selectedIndex by remember { mutableIntStateOf(0) }
-        var isDragging by remember { mutableStateOf(false) }
-
-        fun triggerAction(index: Int) {
-            when (index) {
-                0 -> onOpenWidgets()
-                1 -> onOpenWallpapers()
-                2 -> onOpenHomeSettings()
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { onDismiss() },
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            BoxWithConstraints(
-                modifier = modifier
-                    .padding(horizontal = 14.dp, vertical = 24.dp)
-                    .navigationBarsPadding()
-                    .fillMaxWidth()
-                    .height(72.dp)
-                    .shadow(
-                        elevation = 28.dp,
-                        shape = RoundedCornerShape(28.dp),
-                        spotColor = Color(0xFF00E5FF).copy(alpha = 0.35f),
-                        ambientColor = Color.Black.copy(alpha = 0.4f)
-                    )
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.14f),
-                                Color(0xFF09121A).copy(alpha = 0.50f)
-                            )
+        BoxWithConstraints(
+            modifier = modifier
+                .padding(horizontal = 14.dp, vertical = 24.dp)
+                .navigationBarsPadding()
+                .fillMaxWidth()
+                .height(72.dp)
+                .shadow(
+                    elevation = 28.dp,
+                    shape = RoundedCornerShape(28.dp),
+                    spotColor = Color(0xFF00E5FF).copy(alpha = 0.35f),
+                    ambientColor = Color.Black.copy(alpha = 0.4f)
+                )
+                .clip(RoundedCornerShape(28.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.14f),
+                            Color(0xFF09121A).copy(alpha = 0.50f)
                         )
                     )
-                    .border(
-                        width = 1.4.dp,
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.85f),
-                                Color(0xFF00E5FF).copy(alpha = 0.40f),
-                                Color.White.copy(alpha = 0.12f)
-                            )
-                        ),
-                        shape = RoundedCornerShape(28.dp)
-                    )
-                    .padding(6.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                val totalWidthPx = constraints.maxWidth.toFloat()
-                val tabCount = actions.size
-                val tabWidthPx = totalWidthPx / tabCount
-                val tabWidthDp = maxWidth / tabCount
+                )
+                .border(
+                    width = 1.4.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.85f),
+                            Color(0xFF00E5FF).copy(alpha = 0.40f),
+                            Color.White.copy(alpha = 0.12f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(28.dp)
+                )
+                .padding(6.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            val totalWidthPx = constraints.maxWidth.toFloat()
+            val tabCount = actions.size
+            val tabWidthPx = totalWidthPx / tabCount
+            val tabWidthDp = maxWidth / tabCount
 
-                LaunchedEffect(tabWidthPx) {
-                    if (!isDragging) {
-                        dragOffsetPx.snapTo(selectedIndex * tabWidthPx)
-                    }
+            LaunchedEffect(tabWidthPx) {
+                if (!isDragging) {
+                    dragOffsetPx.snapTo(selectedIndex * tabWidthPx)
                 }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(tabWidthPx) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { isDragging = true },
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
+                                val newOffset = (dragOffsetPx.value + dragAmount)
+                                    .coerceIn(0f, (tabCount - 1) * tabWidthPx)
+                                coroutineScope.launch {
+                                    dragOffsetPx.snapTo(newOffset)
+                                }
+                            },
+                            onDragEnd = {
+                                isDragging = false
+                                val targetIndex = (dragOffsetPx.value / tabWidthPx).roundToInt()
+                                    .coerceIn(0, tabCount - 1)
+                                selectedIndex = targetIndex
+                                coroutineScope.launch {
+                                    dragOffsetPx.animateTo(
+                                        targetValue = targetIndex * tabWidthPx,
+                                        animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f)
+                                    )
+                                    delay(100)
+                                    triggerAction(targetIndex)
+                                }
+                            },
+                            onDragCancel = {
+                                isDragging = false
+                                coroutineScope.launch {
+                                    dragOffsetPx.animateTo(
+                                        targetValue = selectedIndex * tabWidthPx,
+                                        animationSpec = spring(dampingRatio = 0.72f, stiffness = 400f)
+                                    )
+                                }
+                            }
+                        )
+                    }
+            ) {
+                val densityLocal = LocalDensity.current
+                val currentOffsetDp = with(densityLocal) { dragOffsetPx.value.toDp() }
 
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInput(tabWidthPx) {
-                            detectHorizontalDragGestures(
-                                onDragStart = { isDragging = true },
-                                onHorizontalDrag = { change, dragAmount ->
-                                    change.consume()
-                                    val newOffset = (dragOffsetPx.value + dragAmount)
-                                        .coerceIn(0f, (tabCount - 1) * tabWidthPx)
-                                    coroutineScope.launch {
-                                        dragOffsetPx.snapTo(newOffset)
-                                    }
-                                },
-                                onDragEnd = {
-                                    isDragging = false
-                                    val targetIndex = (dragOffsetPx.value / tabWidthPx).roundToInt()
-                                        .coerceIn(0, tabCount - 1)
-                                    selectedIndex = targetIndex
+                        .offset(x = currentOffsetDp)
+                        .width(tabWidthDp)
+                        .fillMaxHeight()
+                        .graphicsLayer {
+                            scaleX = if (isDragging) 1.08f else 1f
+                            scaleY = if (isDragging) 0.94f else 1f
+                        }
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFF00B4D8).copy(alpha = 0.40f),
+                                    Color(0xFF0077B6).copy(alpha = 0.60f)
+                                )
+                            )
+                        )
+                        .border(
+                            1.dp,
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.85f),
+                                    Color(0xFF00E5FF).copy(alpha = 0.35f)
+                                )
+                            ),
+                            RoundedCornerShape(22.dp)
+                        )
+                )
+
+                Row(modifier = Modifier.fillMaxSize()) {
+                    actions.forEachIndexed { index, item ->
+                        val isCurrentTab = (dragOffsetPx.value / tabWidthPx).roundToInt() == index
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    selectedIndex = index
                                     coroutineScope.launch {
                                         dragOffsetPx.animateTo(
-                                            targetValue = targetIndex * tabWidthPx,
+                                            targetValue = index * tabWidthPx,
                                             animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f)
                                         )
                                         delay(100)
-                                        triggerAction(targetIndex)
+                                        triggerAction(index)
                                     }
                                 },
-                                onDragCancel = {
-                                    isDragging = false
-                                    coroutineScope.launch {
-                                        dragOffsetPx.animateTo(
-                                            targetValue = selectedIndex * tabWidthPx,
-                                            animationSpec = spring(dampingRatio = 0.72f, stiffness = 400f)
-                                        )
-                                    }
-                                }
-                            )
-                        }
-                ) {
-                    val densityLocal = LocalDensity.current
-                    val currentOffsetDp = with(densityLocal) { dragOffsetPx.value.toDp() }
-
-                    Box(
-                        modifier = Modifier
-                            .offset(x = currentOffsetDp)
-                            .width(tabWidthDp)
-                            .fillMaxHeight()
-                            .graphicsLayer {
-                                scaleX = if (isDragging) 1.08f else 1f
-                                scaleY = if (isDragging) 0.94f else 1f
-                            }
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        Color(0xFF00B4D8).copy(alpha = 0.40f),
-                                        Color(0xFF0077B6).copy(alpha = 0.60f)
-                                    )
-                                )
-                            )
-                            .border(
-                                1.dp,
-                                Brush.verticalGradient(
-                                    listOf(
-                                        Color.White.copy(alpha = 0.85f),
-                                        Color(0xFF00E5FF).copy(alpha = 0.35f)
-                                    )
-                                ),
-                                RoundedCornerShape(22.dp)
-                            )
-                    )
-
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        actions.forEachIndexed { index, item ->
-                            val isCurrentTab = (dragOffsetPx.value / tabWidthPx).roundToInt() == index
-                            Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.title,
+                                tint = if (isCurrentTab) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.75f),
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null
-                                    ) {
-                                        selectedIndex = index
-                                        coroutineScope.launch {
-                                            dragOffsetPx.animateTo(
-                                                targetValue = index * tabWidthPx,
-                                                animationSpec = spring(dampingRatio = 0.68f, stiffness = 380f)
-                                            )
-                                            delay(100)
-                                            triggerAction(index)
-                                        }
-                                    },
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = item.icon,
-                                    contentDescription = item.title,
-                                    tint = if (isCurrentTab) Color(0xFF00E5FF) else Color.White.copy(alpha = 0.75f),
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .graphicsLayer {
-                                            val s = if (isCurrentTab) 1.12f else 1f
-                                            scaleX = s
-                                            scaleY = s
-                                        }
-                                )
-                                Spacer(modifier = Modifier.height(3.dp))
-                                Text(
-                                    text = item.title,
-                                    color = if (isCurrentTab) Color.White else Color.White.copy(alpha = 0.75f),
-                                    fontSize = 11.sp,
-                                    fontWeight = if (isCurrentTab) FontWeight.Bold else FontWeight.Medium
-                                )
-                            }
+                                    .size(24.dp)
+                                    .graphicsLayer {
+                                        val s = if (isCurrentTab) 1.12f else 1f
+                                        scaleX = s
+                                        scaleY = s
+                                    }
+                            )
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Text(
+                                text = item.title,
+                                color = if (isCurrentTab) Color.White else Color.White.copy(alpha = 0.75f),
+                                fontSize = 11.sp,
+                                fontWeight = if (isCurrentTab) FontWeight.Bold else FontWeight.Medium
+                            )
                         }
                     }
                 }
             }
         }
     }
-    
+}
