@@ -35,8 +35,11 @@ class SettingsManager(private val context: Context) {
     var doubleTapAction by mutableStateOf("Lock Screen")
     var isControlCenterEnabled by mutableStateOf(true)
 
-    // Animation & Performance
-    var animationSpeed by mutableFloatStateOf(1.0f)
+    // Search Capsule
+    var hideSearchCapsule by mutableStateOf(false)
+
+    // Animation Speed (String type expected by SettingsScreen)
+    var animationSpeed by mutableStateOf("Normal")
 
     // UI Customization
     var iconSize by mutableFloatStateOf(60f)
@@ -58,7 +61,8 @@ class SettingsManager(private val context: Context) {
             putString("leftPullDownAction", leftPullDownAction)
             putString("doubleTapAction", doubleTapAction)
             putBoolean("isControlCenterEnabled", isControlCenterEnabled)
-            putFloat("animationSpeed", animationSpeed)
+            putBoolean("hideSearchCapsule", hideSearchCapsule)
+            putString("animationSpeed", animationSpeed)
             putFloat("iconSize", iconSize)
             putBoolean("showAppLabels", showAppLabels)
             putInt("gridColumns", gridColumns)
