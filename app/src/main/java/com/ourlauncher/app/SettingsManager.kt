@@ -22,6 +22,7 @@ class SettingsManager(private val context: Context) {
     // Glass & Shader Configurations
     var glassMode by mutableStateOf(GlassMode.FROSTED)
     var glassBlurRadius by mutableFloatStateOf(25f)
+    var windowBlurRadius by mutableFloatStateOf(20f)
     var glassTransparency by mutableFloatStateOf(0.85f)
     var glassTintAlpha by mutableFloatStateOf(0.18f)
     var specularHighlight by mutableFloatStateOf(0.65f)
@@ -29,16 +30,17 @@ class SettingsManager(private val context: Context) {
     var glassDepthEnabled by mutableStateOf(true)
     var dockCornerRadius by mutableFloatStateOf(32f)
 
+    // Search Capsule & Layout Offsets
+    var hideSearchCapsule by mutableStateOf(false)
+    var searchOffset by mutableFloatStateOf(0f)
+
     // Gesture & System Controls
     var rightPullDownAction by mutableStateOf("Control Center")
     var leftPullDownAction by mutableStateOf("Notifications")
     var doubleTapAction by mutableStateOf("Lock Screen")
     var isControlCenterEnabled by mutableStateOf(true)
 
-    // Search Capsule
-    var hideSearchCapsule by mutableStateOf(false)
-
-    // Animation Speed (String type expected by SettingsScreen)
+    // Animation & Performance
     var animationSpeed by mutableStateOf("Normal")
 
     // UI Customization
@@ -51,17 +53,19 @@ class SettingsManager(private val context: Context) {
         prefs.edit().apply {
             putString("glassMode", glassMode.name)
             putFloat("glassBlurRadius", glassBlurRadius)
+            putFloat("windowBlurRadius", windowBlurRadius)
             putFloat("glassTransparency", glassTransparency)
             putFloat("glassTintAlpha", glassTintAlpha)
             putFloat("specularHighlight", specularHighlight)
             putBoolean("enableRainbowSheen", enableRainbowSheen)
             putBoolean("glassDepthEnabled", glassDepthEnabled)
             putFloat("dockCornerRadius", dockCornerRadius)
+            putBoolean("hideSearchCapsule", hideSearchCapsule)
+            putFloat("searchOffset", searchOffset)
             putString("rightPullDownAction", rightPullDownAction)
             putString("leftPullDownAction", leftPullDownAction)
             putString("doubleTapAction", doubleTapAction)
             putBoolean("isControlCenterEnabled", isControlCenterEnabled)
-            putBoolean("hideSearchCapsule", hideSearchCapsule)
             putString("animationSpeed", animationSpeed)
             putFloat("iconSize", iconSize)
             putBoolean("showAppLabels", showAppLabels)
