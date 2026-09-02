@@ -29,6 +29,11 @@ class SettingsManager(private val context: Context) {
     var enableRainbowSheen by mutableStateOf(true)
     var glassDepthEnabled by mutableStateOf(true)
 
+    // Lens & Folder Shader Configurations
+    var lensAngle by mutableFloatStateOf(45f)
+    var lensIntensity by mutableFloatStateOf(0.7f)
+    var lensStrokeWidth by mutableFloatStateOf(1.5f)
+
     // Dock Customizations
     var dockCornerRadius by mutableFloatStateOf(32f)
     var dockCapacity by mutableIntStateOf(4)
@@ -72,6 +77,9 @@ class SettingsManager(private val context: Context) {
             putFloat("specularHighlight", specularHighlight)
             putBoolean("enableRainbowSheen", enableRainbowSheen)
             putBoolean("glassDepthEnabled", glassDepthEnabled)
+            putFloat("lensAngle", lensAngle)
+            putFloat("lensIntensity", lensIntensity)
+            putFloat("lensStrokeWidth", lensStrokeWidth)
             putFloat("dockCornerRadius", dockCornerRadius)
             putInt("dockCapacity", dockCapacity)
             putFloat("dockGlassOpacity", dockGlassOpacity)
