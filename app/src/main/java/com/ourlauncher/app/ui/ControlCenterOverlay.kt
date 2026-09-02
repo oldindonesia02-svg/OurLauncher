@@ -9,15 +9,12 @@ import android.provider.MediaStore
 import android.provider.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -305,7 +302,7 @@ fun ControlCenterOverlay(
                     }
                 }
 
-                // Row 2: 27530.mp4 Exact Video Layout (Left Buttons + Right Sliders)
+                // Row 2: Video 27530 Exact Layout (Left Buttons + Right Sliders)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
