@@ -45,7 +45,17 @@ fun ControlCenterOverlay(
     var volume by remember { 
         val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).toFloat()
         val current = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat()
-        mutableFloatStateOf(current / max) 
+        mutableFloatStateOf(if (max > 0) current / max else 0f) 
+    }
+
+    // সেফটি ফাংশন: যাতে কোনো ফোনে সেটিংস ওপেন হতে সমস্যা না হয়
+    fun launchSetting(action: String) {
+        try {
+            val intent = Intent(action).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     AnimatedVisibility(
@@ -57,12 +67,12 @@ fun ControlCenterOverlay(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.45f))
-                .clickable(onClick = onDismiss) // Click outside to dismiss
-                // Swipe Up to dismiss logic
+                .clickable(onClick = onDismiss) // বাইরে ক্লিক করলে বন্ধ হবে
+                // নিচ থেকে উপরে সোয়াইপ করলে বন্ধ হওয়ার লজিক
                 .pointerInput(Unit) {
                     detectVerticalDragGestures { change, dragAmount ->
                         change.consume()
-                        if (dragAmount < -15) { // If swiped UP
+                        if (dragAmount < -20) { // Swipe UP
                             onDismiss()
                         }
                     }
@@ -73,7 +83,7 @@ fun ControlCenterOverlay(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(enabled = false) {} // Prevent click-through
+                    .clickable(enabled = false) {} // প্যানেলের ভেতর ক্লিক করলে যাতে বন্ধ না হয়
                     .liquidGlassEffect(settings = settings, cornerRadius = 36.dp, isDarkTheme = isDarkTheme)
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -102,21 +112,13 @@ fun ControlCenterOverlay(
                                 ControlIconButton(
                                     icon = Icons.Default.AirplanemodeActive,
                                     active = false,
-                                    onClick = { 
-                                        val intent = Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS)
-                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                        context.startActivity(intent)
-                                    }
+                                    onClick = { launchSetting(Settings.ACTION_AIRPLANE_MODE_SETTINGS) }
                                 )
                                 // Mobile Data
                                 ControlIconButton(
                                     icon = Icons.Default.SignalCellularAlt,
                                     active = true,
-                                    onClick = { 
-                                        val intent = Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS)
-                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                        context.startActivity(intent)
-                                    }
+                                    onClick = { launchSetting(Settings.ACTION_NETWORK_OPERATOR_SETTINGS) }
                                 )
                             }
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -124,21 +126,13 @@ fun ControlCenterOverlay(
                                 ControlIconButton(
                                     icon = Icons.Default.Wifi,
                                     active = true,
-                                    onClick = { 
-                                        val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
-                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                        context.startActivity(intent)
-                                    }
+                                    onClick = { launchSetting(Settings.ACTION_WIFI_SETTINGS) }
                                 )
                                 // Bluetooth
                                 ControlIconButton(
                                     icon = Icons.Default.Bluetooth,
                                     active = true,
-                                    onClick = { 
-                                        val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
-                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                        context.startActivity(intent)
-                                    }
+                                    onClick = { launchSetting(Settings.ACTION_BLUETOOTH_SETTINGS) }
                                 )
                             }
                         }
@@ -154,7 +148,7 @@ fun ControlCenterOverlay(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text("NOT PLAYING", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, letterSpacing = 1.sp)
-                            Text("Our Launcher Audio", color = Color.White, fontSize = 14.sp)
+                            Text("Our Launcher", color = Color.White, fontSize = 14.sp)
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.SkipPrevious, null, tint = Color.White.copy(alpha = 0.7f))
                                 Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(28.dp))
@@ -182,11 +176,7 @@ fun ControlCenterOverlay(
                         // Settings Shortcut
                         LiquidGlassSurface(
                             settings = settings, cornerRadius = 20.dp, isDarkTheme = isDarkTheme, modifier = Modifier.fillMaxWidth().weight(1f),
-                            onClick = { 
-                                val intent = Intent(Settings.ACTION_SETTINGS)
-                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                context.startActivity(intent)
-                            }
+                            onClick = { launchSetting(Settings.ACTION_SETTINGS) }
                         ) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Icon(Icons.Default.Settings, null, tint = Color.White)
