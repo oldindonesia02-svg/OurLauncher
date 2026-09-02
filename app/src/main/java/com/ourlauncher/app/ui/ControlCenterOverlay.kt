@@ -65,7 +65,7 @@ fun ControlCenterOverlay(
     val currentAmPm = remember { SimpleDateFormat("a", Locale.getDefault()).format(Date()) }
     val currentDate = remember { SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date()) }
 
-    fun openInternetConnectivity() {
+    fun openInternetPanel() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val panelIntent = Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY).apply {
@@ -84,7 +84,7 @@ fun ControlCenterOverlay(
         }
     }
 
-    fun openSettingsScreen(action: String) {
+    fun openSetting(action: String) {
         try {
             val intent = Intent(action).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
             context.startActivity(intent)
@@ -114,8 +114,8 @@ fun ControlCenterOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                // পেছনের অ্যাপ আইকন পুরোপুরি ঢেকে ফেলার জন্য ডিপ ফ্রস্টেড ব্যাকগ্রাউন্ড
-                .background(Color(0xF005080E))
+                // কোনো কালো পর্দা নেই, একদম স্বচ্ছ ওভারলে যাতে পেছনের ব্লার ওয়ালপেপার ফুটে ওঠে
+                .background(Color.Black.copy(alpha = 0.12f))
                 .clickable(onClick = onDismiss)
                 .pointerInput(Unit) {
                     detectVerticalDragGestures { change, dragAmount ->
@@ -126,7 +126,7 @@ fun ControlCenterOverlay(
                     }
                 }
                 .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -140,16 +140,16 @@ fun ControlCenterOverlay(
                         .align(Alignment.CenterHorizontally)
                         .size(width = 42.dp, height = 4.5.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.4f))
+                        .background(Color.White.copy(alpha = 0.5f))
                 )
 
-                // ====================================================
-                // Row 1: 2x2 Network Tile (Left) + Clock & Date (Right)
-                // ====================================================
+                // ==========================================
+                // ROW 1: 2x2 Network Tile + Clock Card
+                // ==========================================
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(160.dp),
+                        .height(165.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     // Connectivity Tile
@@ -169,29 +169,29 @@ fun ControlCenterOverlay(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                RoundGlassToggle(icon = Icons.Default.Wifi, active = true) {
-                                    openInternetConnectivity()
+                                QuickActionCircle(icon = Icons.Default.Wifi, active = true) {
+                                    openInternetPanel()
                                 }
-                                RoundGlassToggle(icon = Icons.Default.SignalCellularAlt, active = true) {
-                                    openInternetConnectivity()
+                                QuickActionCircle(icon = Icons.Default.SignalCellularAlt, active = true) {
+                                    openInternetPanel()
                                 }
                             }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
-                                RoundGlassToggle(icon = Icons.Default.Bluetooth, active = isBluetoothActive) {
+                                QuickActionCircle(icon = Icons.Default.Bluetooth, active = isBluetoothActive) {
                                     isBluetoothActive = !isBluetoothActive
-                                    openSettingsScreen(Settings.ACTION_BLUETOOTH_SETTINGS)
+                                    openSetting(Settings.ACTION_BLUETOOTH_SETTINGS)
                                 }
-                                RoundGlassToggle(icon = Icons.Default.AirplanemodeActive, active = false) {
-                                    openSettingsScreen(Settings.ACTION_AIRPLANE_MODE_SETTINGS)
+                                QuickActionCircle(icon = Icons.Default.AirplanemodeActive, active = false) {
+                                    openSetting(Settings.ACTION_AIRPLANE_MODE_SETTINGS)
                                 }
                             }
                         }
                     }
 
-                    // Clock & Date Tile
+                    // Date & Time Display Tile
                     LiquidGlassSurface(
                         settings = settings,
                         cornerRadius = 28.dp,
@@ -202,53 +202,58 @@ fun ControlCenterOverlay(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(16.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.Start
+                            verticalArrangement = Arrangement.Center
                         ) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarToday,
+                                contentDescription = null,
+                                tint = Color(0xFF00E5FF),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.Bottom) {
                                 Text(
                                     text = currentTime,
                                     color = Color.White,
-                                    fontSize = 32.sp,
+                                    fontSize = 28.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = currentAmPm,
                                     color = Color(0xFF00E5FF),
-                                    fontSize = 14.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(bottom = 4.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = currentDate,
-                                color = Color.White.copy(alpha = 0.7f),
-                                fontSize = 13.sp,
+                                color = Color.White.copy(alpha = 0.75f),
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Normal
                             )
                         }
                     }
                 }
 
-                // ====================================================
-                // Row 2: Left Tools Cluster + Right Vertical Sliders
-                // ====================================================
+                // ==========================================
+                // ROW 2: Toggles + Sliders
+                // ==========================================
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(210.dp),
+                        .height(195.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Left Column (Torch, Mute, Hotspot, Settings)
+                    // Left Column
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight(),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Flashlight & Mute Toggles
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -289,7 +294,7 @@ fun ControlCenterOverlay(
                                             isMuted = true
                                         }
                                     } catch (e: Exception) {
-                                        openSettingsScreen(Settings.ACTION_SOUND_SETTINGS)
+                                        openSetting(Settings.ACTION_SOUND_SETTINGS)
                                     }
                                 }
                             ) {
@@ -320,7 +325,7 @@ fun ControlCenterOverlay(
                                     }
                                     context.startActivity(tetherIntent)
                                 } catch (e: Exception) {
-                                    openSettingsScreen(Settings.ACTION_WIRELESS_SETTINGS)
+                                    openSetting(Settings.ACTION_WIRELESS_SETTINGS)
                                 }
                             }
                         ) {
@@ -347,39 +352,31 @@ fun ControlCenterOverlay(
                             }
                         }
 
-                        // Settings & Display Shortcuts
-                        Row(
+                        // Settings Shortcut Tile
+                        LiquidGlassSurface(
+                            settings = settings,
+                            cornerRadius = 22.dp,
+                            isDarkTheme = isDarkTheme,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(1f),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                .weight(0.9f),
+                            onClick = { openSetting(Settings.ACTION_SETTINGS) }
                         ) {
-                            LiquidGlassSurface(
-                                settings = settings,
-                                cornerRadius = 22.dp,
-                                isDarkTheme = isDarkTheme,
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                                onClick = { openSettingsScreen(Settings.ACTION_SETTINGS) }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
                             ) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.Settings, null, tint = Color.White, modifier = Modifier.size(22.dp))
-                                }
-                            }
-                            LiquidGlassSurface(
-                                settings = settings,
-                                cornerRadius = 22.dp,
-                                isDarkTheme = isDarkTheme,
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                                onClick = { openSettingsScreen(Settings.ACTION_DISPLAY_SETTINGS) }
-                            ) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.ScreenRotation, null, tint = Color.White, modifier = Modifier.size(22.dp))
-                                }
+                                Icon(Icons.Default.Settings, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Settings", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
 
-                    // Right Columns: 2 Vertical Pill Sliders (Brightness & Volume)
+                    // Right Column: 2 Tall Pill Sliders
                     Row(
                         modifier = Modifier
                             .weight(1f)
@@ -396,7 +393,7 @@ fun ControlCenterOverlay(
                             modifier = Modifier.weight(1f).fillMaxHeight()
                         )
 
-                        // Real System Volume Slider
+                        // Volume Slider
                         BackdropPillSlider(
                             value = currentVolume,
                             onValueChange = {
@@ -421,7 +418,7 @@ fun ControlCenterOverlay(
 }
 
 @Composable
-fun RoundGlassToggle(
+fun QuickActionCircle(
     icon: ImageVector,
     active: Boolean,
     onClick: () -> Unit
@@ -434,7 +431,7 @@ fun RoundGlassToggle(
                 if (active) {
                     Brush.linearGradient(listOf(Color(0xFF0091EA), Color(0xFF00B4D8)))
                 } else {
-                    Brush.linearGradient(listOf(Color.White.copy(alpha = 0.14f), Color.White.copy(alpha = 0.06f)))
+                    Brush.linearGradient(listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.08f)))
                 }
             )
             .clickable(onClick = onClick),
@@ -475,15 +472,13 @@ fun BackdropPillSlider(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.BottomCenter
         ) {
-            // White Level Fill
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(value.coerceIn(0f, 1f))
-                    .background(Color.White.copy(alpha = 0.92f))
+                    .background(Color.White.copy(alpha = 0.90f))
             )
 
-            // Bottom Icon Indicator
             Icon(
                 imageVector = icon,
                 contentDescription = null,
