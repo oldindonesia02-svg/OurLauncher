@@ -28,7 +28,10 @@ class SettingsManager(private val context: Context) {
     var specularHighlight by mutableFloatStateOf(0.65f)
     var enableRainbowSheen by mutableStateOf(true)
     var glassDepthEnabled by mutableStateOf(true)
+
+    // Dock Customizations
     var dockCornerRadius by mutableFloatStateOf(32f)
+    var dockSpecularGlow by mutableStateOf(true)
 
     // Search Capsule & Layout Offsets
     var hideSearchCapsule by mutableStateOf(false)
@@ -60,6 +63,7 @@ class SettingsManager(private val context: Context) {
             putBoolean("enableRainbowSheen", enableRainbowSheen)
             putBoolean("glassDepthEnabled", glassDepthEnabled)
             putFloat("dockCornerRadius", dockCornerRadius)
+            putBoolean("dockSpecularGlow", dockSpecularGlow)
             putBoolean("hideSearchCapsule", hideSearchCapsule)
             putFloat("searchOffset", searchOffset)
             putString("rightPullDownAction", rightPullDownAction)
