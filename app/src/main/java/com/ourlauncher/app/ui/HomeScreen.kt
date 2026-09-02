@@ -1,5 +1,6 @@
 package com.ourlauncher.app.ui
 
+import android.app.WallpaperManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Rect
@@ -8,11 +9,8 @@ import android.provider.Settings
 import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -47,6 +45,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
@@ -86,6 +85,11 @@ fun HomeScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
+    val wallpaperManager = remember { WallpaperManager.getInstance(context) }
+    val sysWallpaper = remember(resumeTrigger) {
+        try { wallpaperManager.drawable } catch (e: Exception) { null }
+    }
+
     var isOverviewMode by remember { mutableStateOf(false) }
     val overviewAnim = remember { Animatable(0f) }
 
@@ -118,6 +122,41 @@ fun HomeScreen(
 
     val ov = overviewAnim.value
 
+    val bgBlurRadius by animateDpAsState(
+        targetValue = if (isControlCenterOpen) 35.dp else 0.dp,
+        animationSpec = tween(300),
+        label = "bgBlur"
+    )
+    val bgDimAlpha by animateFloatAsState(
+        targetValue = if (isControlCenterOpen) 0.35f else 0f,
+        animationSpec = tween(300),
+        label = "bgDim"
+    )
+
+    val homeBlur by animateDpAsState(
+        targetValue = when {
+            isControlCenterOpen -> 30.dp
+            isAnySheetOpen && !isOverviewMode -> 22.dp
+            else -> 0.dp
+        },
+        animationSpec = tween(300),
+        label = "homeBlur"
+    )
+    val homeScale by animateFloatAsState(
+        targetValue = when {
+            isControlCenterOpen -> 0.94f
+            isAnySheetOpen && !isOverviewMode -> 0.96f
+            else -> 1f
+        },
+        animationSpec = tween(300),
+        label = "homeScale"
+    )
+    val homeDimAlpha by animateFloatAsState(
+        targetValue = if (isControlCenterOpen) 0.30f else 1f,
+        animationSpec = tween(300),
+        label = "homeDimAlpha"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -143,29 +182,22 @@ fun HomeScreen(
                 }
             }
     ) {
-        val homeBlur by animateDpAsState(
-            targetValue = when {
-                isControlCenterOpen -> 32.dp
-                isAnySheetOpen && !isOverviewMode -> 22.dp
-                else -> 0.dp
-            },
-            animationSpec = tween(300),
-            label = "homeBlur"
-        )
-        val homeScale by animateFloatAsState(
-            targetValue = when {
-                isControlCenterOpen -> 0.93f
-                isAnySheetOpen && !isOverviewMode -> 0.96f
-                else -> 1f
-            },
-            animationSpec = tween(300),
-            label = "homeScale"
-        )
-        val homeDimAlpha by animateFloatAsState(
-            targetValue = if (isControlCenterOpen) 0.35f else 1f,
-            animationSpec = tween(300),
-            label = "homeDimAlpha"
-        )
+        // রিয়েল ওয়ালপেপার ব্লার লেয়ার (কন্ট্রোল সেন্টার খুললে ওয়ালপেপার ব্লার হবে)
+        if (isControlCenterOpen && sysWallpaper != null) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(bgBlurRadius)
+            ) {
+                sysWallpaper.setBounds(0, 0, size.width.toInt(), size.height.toInt())
+                sysWallpaper.draw(drawContext.canvas.nativeCanvas)
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = bgDimAlpha))
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -178,7 +210,7 @@ fun HomeScreen(
                 }
         ) {
 
-                        HorizontalPager(
+                      HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = !isAnySheetOpen,
                 beyondBoundsPageCount = 1,
@@ -396,8 +428,7 @@ fun HomeScreen(
         ControlCenterOverlay(
             isOpen = isControlCenterOpen,
             onDismiss = { isControlCenterOpen = false },
-            settings = settingsManager,
-            isDarkTheme = true
+            settings = settingsManager
         )
     }
 }
