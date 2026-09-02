@@ -25,7 +25,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -36,6 +35,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.SettingsManager
+import com.ourlauncher.app.ui.components.LiquidGlassSurface
+import com.ourlauncher.app.ui.components.liquidGlassEffect
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -63,6 +64,7 @@ fun ControlCenterOverlay(
     settings: SettingsManager? = null
 ) {
     val context = LocalContext.current
+    val fallbackSettings = remember { settings ?: SettingsManager(context) }
     val prefs = remember { context.getSharedPreferences("control_center_custom_prefs", Context.MODE_PRIVATE) }
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     val cameraManager = remember { context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager }
@@ -200,7 +202,7 @@ fun ControlCenterOverlay(
                     .clickable(enabled = false) {},
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Top Bar with Edit Mode Button
+                // Top Bar with Edit Button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -240,18 +242,21 @@ fun ControlCenterOverlay(
                     )
                 }
 
-                // Row 1: 2x2 Network + 2x2 Clock/Media
+                // Row 1: 2x2 Network + 2x2 Media
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(160.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    PureGlassCard(modifier = Modifier.weight(1f).fillMaxHeight(), cornerRadius = 32.dp) {
+                    LiquidGlassSurface(
+                        settings = fallbackSettings,
+                        cornerRadius = 32.dp,
+                        isDarkTheme = true,
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    ) {
                         Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(10.dp),
+                            modifier = Modifier.fillMaxSize().padding(10.dp),
                             verticalArrangement = Arrangement.SpaceEvenly
                         ) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -265,11 +270,14 @@ fun ControlCenterOverlay(
                         }
                     }
 
-                    PureGlassCard(modifier = Modifier.weight(1f).fillMaxHeight(), cornerRadius = 32.dp) {
+                    LiquidGlassSurface(
+                        settings = fallbackSettings,
+                        cornerRadius = 32.dp,
+                        isDarkTheme = true,
+                        modifier = Modifier.weight(1f).fillMaxHeight()
+                    ) {
                         Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
+                            modifier = Modifier.fillMaxSize().padding(16.dp),
                             verticalArrangement = Arrangement.SpaceBetween,
                             horizontalAlignment = Alignment.Start
                         ) {
@@ -302,7 +310,7 @@ fun ControlCenterOverlay(
                     }
                 }
 
-                // Row 2: Video 27530 Exact Layout (Left Buttons + Right Sliders)
+                // Row 2: 27530 Video Exact Layout with Liquid Glass Refraction
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -311,9 +319,7 @@ fun ControlCenterOverlay(
                 ) {
                     // Left Column
                     Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -334,22 +340,19 @@ fun ControlCenterOverlay(
                         }
 
                         // Wide Capsule (Slot 7)
-                        PureGlassCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
+                        LiquidGlassSurface(
+                            settings = fallbackSettings,
                             cornerRadius = 28.dp,
+                            isDarkTheme = true,
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
                             onClick = {
                                 if (isEditMode) activeEditingSlot = "slot7"
                                 else executeControl(slot7)
                             }
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Start
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(slot7.icon, null, tint = if (isEditMode) Color(0xFF00E5FF) else Color.White, modifier = Modifier.size(22.dp))
                                 Spacer(modifier = Modifier.width(10.dp))
@@ -361,18 +364,16 @@ fun ControlCenterOverlay(
                             }
                         }
 
-                        // Square Card Deck
-                        PureGlassCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
+                        // Square Control Deck Card
+                        LiquidGlassSurface(
+                            settings = fallbackSettings,
                             cornerRadius = 28.dp,
+                            isDarkTheme = true,
+                            modifier = Modifier.fillMaxWidth().weight(1f),
                             onClick = { executeControl(ControlType.SETTINGS) }
                         ) {
                             Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(14.dp),
+                                modifier = Modifier.fillMaxSize().padding(14.dp),
                                 verticalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Row(
@@ -396,22 +397,18 @@ fun ControlCenterOverlay(
 
                     // Right Column
                     Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Sliders
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(160.dp),
+                            modifier = Modifier.fillMaxWidth().height(160.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             VideoStyleSlider(
                                 value = brightnessLevel,
                                 onValueChange = { brightnessLevel = it },
                                 icon = Icons.Default.WbSunny,
+                                settings = fallbackSettings,
                                 modifier = Modifier.weight(1f).fillMaxHeight()
                             )
                             VideoStyleSlider(
@@ -422,6 +419,7 @@ fun ControlCenterOverlay(
                                     audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (it * max).toInt().coerceIn(0, max), 0)
                                 },
                                 icon = Icons.Default.VolumeUp,
+                                settings = fallbackSettings,
                                 modifier = Modifier.weight(1f).fillMaxHeight()
                             )
                         }
@@ -456,7 +454,7 @@ fun ControlCenterOverlay(
                 }
             }
 
-            // Customization Picker Bottom Sheet
+                        // Customization Picker Bottom Sheet
             if (activeEditingSlot != null) {
                 Box(
                     modifier = Modifier
@@ -465,17 +463,14 @@ fun ControlCenterOverlay(
                         .clickable { activeEditingSlot = null },
                     contentAlignment = Alignment.BottomCenter
                 ) {
-                    PureGlassCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.55f)
-                            .clickable(enabled = false) {},
-                        cornerRadius = 32.dp
+                    LiquidGlassSurface(
+                        settings = fallbackSettings,
+                        cornerRadius = 32.dp,
+                        isDarkTheme = true,
+                        modifier = Modifier.fillMaxWidth().fillMaxHeight(0.55f).clickable(enabled = false) {}
                     ) {
                         Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(18.dp)
+                            modifier = Modifier.fillMaxSize().padding(18.dp)
                         ) {
                             Text(
                                 text = "Select Function for this Button",
@@ -526,42 +521,6 @@ fun ControlCenterOverlay(
 }
 
 @Composable
-fun PureGlassCard(
-    modifier: Modifier = Modifier,
-    cornerRadius: Dp = 26.dp,
-    onClick: (() -> Unit)? = null,
-    content: @Composable BoxScope.() -> Unit
-) {
-    val shape = RoundedCornerShape(cornerRadius)
-    Box(
-        modifier = modifier
-            .shadow(12.dp, shape, spotColor = Color(0xFF00E5FF).copy(alpha = 0.22f), ambientColor = Color.Black.copy(alpha = 0.35f))
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.20f),
-                        Color(0xFF0F1A24).copy(alpha = 0.48f)
-                    )
-                )
-            )
-            .border(
-                width = 1.2.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.85f),
-                        Color(0xFF00E5FF).copy(alpha = 0.35f),
-                        Color.White.copy(alpha = 0.12f)
-                    )
-                ),
-                shape = shape
-            )
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
-        content = content
-    )
-}
-
-@Composable
 fun GlassCircleToggle(
     icon: ImageVector,
     active: Boolean,
@@ -576,12 +535,12 @@ fun GlassCircleToggle(
                 if (active) {
                     Brush.linearGradient(listOf(Color(0xFF007AFF), Color(0xFF0A84FF)))
                 } else {
-                    Brush.linearGradient(listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.08f)))
+                    Brush.linearGradient(listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.10f)))
                 }
             )
             .border(
                 1.dp,
-                if (active) Color(0xFF00E5FF).copy(alpha = 0.8f) else Color.White.copy(alpha = 0.25f),
+                if (active) Color(0xFF00E5FF).copy(alpha = 0.8f) else Color.White.copy(alpha = 0.35f),
                 CircleShape
             )
             .clickable(onClick = onClick),
@@ -607,12 +566,12 @@ fun EditableCircleToggle(
                 if (active) {
                     Brush.linearGradient(listOf(Color(0xFF007AFF), Color(0xFF0A84FF)))
                 } else {
-                    Brush.linearGradient(listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.08f)))
+                    Brush.linearGradient(listOf(Color.White.copy(alpha = 0.22f), Color.White.copy(alpha = 0.10f)))
                 }
             )
             .border(
                 1.dp,
-                if (isEditMode) Color(0xFF00E5FF) else if (active) Color(0xFF00E5FF).copy(alpha = 0.8f) else Color.White.copy(alpha = 0.25f),
+                if (isEditMode) Color(0xFF00E5FF) else if (active) Color(0xFF00E5FF).copy(alpha = 0.8f) else Color.White.copy(alpha = 0.35f),
                 CircleShape
             )
             .clickable {
@@ -641,39 +600,20 @@ fun VideoStyleSlider(
     value: Float,
     onValueChange: (Float) -> Unit,
     icon: ImageVector,
+    settings: SettingsManager,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(32.dp)
-    Box(
-        modifier = modifier
-            .shadow(14.dp, shape, spotColor = Color(0xFF00E5FF).copy(alpha = 0.20f))
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.16f),
-                        Color(0xFF0A1520).copy(alpha = 0.50f)
-                    )
-                )
-            )
-            .border(
-                1.3.dp,
-                Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.85f),
-                        Color(0xFF00E5FF).copy(alpha = 0.35f),
-                        Color.White.copy(alpha = 0.12f)
-                    )
-                ),
-                shape
-            )
-            .pointerInput(Unit) {
-                detectVerticalDragGestures { change, dragAmount ->
-                    change.consume()
-                    val delta = -dragAmount / size.height
-                    onValueChange((value + delta).coerceIn(0f, 1f))
-                }
+    LiquidGlassSurface(
+        settings = settings,
+        cornerRadius = 32.dp,
+        isDarkTheme = true,
+        modifier = modifier.pointerInput(Unit) {
+            detectVerticalDragGestures { change, dragAmount ->
+                change.consume()
+                val delta = -dragAmount / size.height
+                onValueChange((value + delta).coerceIn(0f, 1f))
             }
+        }
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
             Box(
