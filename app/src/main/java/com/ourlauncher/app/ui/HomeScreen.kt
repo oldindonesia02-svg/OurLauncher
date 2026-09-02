@@ -9,6 +9,8 @@ import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -141,16 +143,42 @@ fun HomeScreen(
                 }
             }
     ) {
+        val homeBlur by animateDpAsState(
+            targetValue = when {
+                isControlCenterOpen -> 32.dp
+                isAnySheetOpen && !isOverviewMode -> 22.dp
+                else -> 0.dp
+            },
+            animationSpec = tween(300),
+            label = "homeBlur"
+        )
+        val homeScale by animateFloatAsState(
+            targetValue = when {
+                isControlCenterOpen -> 0.93f
+                isAnySheetOpen && !isOverviewMode -> 0.96f
+                else -> 1f
+            },
+            animationSpec = tween(300),
+            label = "homeScale"
+        )
+        val homeDimAlpha by animateFloatAsState(
+            targetValue = if (isControlCenterOpen) 0.35f else 1f,
+            animationSpec = tween(300),
+            label = "homeDimAlpha"
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .blur(if (isAnySheetOpen && !isOverviewMode && !isControlCenterOpen) 22.dp else 0.dp)
+                .blur(homeBlur)
                 .graphicsLayer {
-                    scaleX = if (isAnySheetOpen && !isOverviewMode && !isControlCenterOpen) 0.96f else 1f
-                    scaleY = if (isAnySheetOpen && !isOverviewMode && !isControlCenterOpen) 0.96f else 1f
+                    scaleX = homeScale
+                    scaleY = homeScale
+                    alpha = homeDimAlpha
                 }
         ) {
-            HorizontalPager(
+
+                        HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = !isAnySheetOpen,
                 beyondBoundsPageCount = 1,
