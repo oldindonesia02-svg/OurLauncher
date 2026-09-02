@@ -35,6 +35,11 @@ class SettingsManager(private val context: Context) {
     var dockGlassOpacity by mutableFloatStateOf(0.8f)
     var dockSpecularGlow by mutableStateOf(true)
 
+    // Typography & Icon Labels
+    var fontFamily by mutableStateOf("System")
+    var showLabels by mutableStateOf(true)
+    var showAppLabels by mutableStateOf(true)
+
     // Search Capsule & Layout Offsets
     var hideSearchCapsule by mutableStateOf(false)
     var searchOffset by mutableFloatStateOf(0f)
@@ -48,9 +53,8 @@ class SettingsManager(private val context: Context) {
     // Animation & Performance
     var animationSpeed by mutableStateOf("Normal")
 
-    // UI Customization
+    // UI Grid Customization
     var iconSize by mutableFloatStateOf(60f)
-    var showAppLabels by mutableStateOf(true)
     var gridColumns by mutableIntStateOf(4)
     var gridRows by mutableIntStateOf(5)
 
@@ -68,6 +72,9 @@ class SettingsManager(private val context: Context) {
             putInt("dockCapacity", dockCapacity)
             putFloat("dockGlassOpacity", dockGlassOpacity)
             putBoolean("dockSpecularGlow", dockSpecularGlow)
+            putString("fontFamily", fontFamily)
+            putBoolean("showLabels", showLabels)
+            putBoolean("showAppLabels", showAppLabels)
             putBoolean("hideSearchCapsule", hideSearchCapsule)
             putFloat("searchOffset", searchOffset)
             putString("rightPullDownAction", rightPullDownAction)
@@ -76,7 +83,6 @@ class SettingsManager(private val context: Context) {
             putBoolean("isControlCenterEnabled", isControlCenterEnabled)
             putString("animationSpeed", animationSpeed)
             putFloat("iconSize", iconSize)
-            putBoolean("showAppLabels", showAppLabels)
             putInt("gridColumns", gridColumns)
             putInt("gridRows", gridRows)
             apply()
