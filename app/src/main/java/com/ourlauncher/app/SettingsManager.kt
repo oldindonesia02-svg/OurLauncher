@@ -41,6 +41,9 @@ class SettingsManager(private val context: Context) {
     var showAppLabels by mutableStateOf(true)
     var iconSize by mutableFloatStateOf(60f)
     var iconOpacity by mutableFloatStateOf(1.0f)
+    var iconCornerRadius by mutableFloatStateOf(16f)
+    var iconShape by mutableStateOf("Squircle")
+    var iconPack by mutableStateOf("Default")
 
     // Search Capsule & Layout Offsets
     var hideSearchCapsule by mutableStateOf(false)
@@ -78,6 +81,9 @@ class SettingsManager(private val context: Context) {
             putBoolean("showAppLabels", showAppLabels)
             putFloat("iconSize", iconSize)
             putFloat("iconOpacity", iconOpacity)
+            putFloat("iconCornerRadius", iconCornerRadius)
+            putString("iconShape", iconShape)
+            putString("iconPack", iconPack)
             putBoolean("hideSearchCapsule", hideSearchCapsule)
             putFloat("searchOffset", searchOffset)
             putString("rightPullDownAction", rightPullDownAction)
