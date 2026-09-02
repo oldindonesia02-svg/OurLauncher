@@ -28,17 +28,20 @@ class SettingsManager(private val context: Context) {
     var specularHighlight by mutableFloatStateOf(0.65f)
     var enableRainbowSheen by mutableStateOf(true)
     var glassDepthEnabled by mutableStateOf(true)
+    var graphicPreset by mutableStateOf("Default")
 
     // Lens & Folder Shader Configurations
     var lensAngle by mutableFloatStateOf(45f)
     var lensIntensity by mutableFloatStateOf(0.7f)
     var lensStrokeWidth by mutableFloatStateOf(1.5f)
+    var lensLightEnabled by mutableStateOf(true)
 
     // Dock Customizations
     var dockCornerRadius by mutableFloatStateOf(32f)
     var dockCapacity by mutableIntStateOf(4)
     var dockGlassOpacity by mutableFloatStateOf(0.8f)
     var dockSpecularGlow by mutableStateOf(true)
+    var dockOffset by mutableFloatStateOf(0f)
 
     // Typography & Icon Customizations
     var fontFamily by mutableStateOf("System")
@@ -77,13 +80,16 @@ class SettingsManager(private val context: Context) {
             putFloat("specularHighlight", specularHighlight)
             putBoolean("enableRainbowSheen", enableRainbowSheen)
             putBoolean("glassDepthEnabled", glassDepthEnabled)
+            putString("graphicPreset", graphicPreset)
             putFloat("lensAngle", lensAngle)
             putFloat("lensIntensity", lensIntensity)
             putFloat("lensStrokeWidth", lensStrokeWidth)
+            putBoolean("lensLightEnabled", lensLightEnabled)
             putFloat("dockCornerRadius", dockCornerRadius)
             putInt("dockCapacity", dockCapacity)
             putFloat("dockGlassOpacity", dockGlassOpacity)
             putBoolean("dockSpecularGlow", dockSpecularGlow)
+            putFloat("dockOffset", dockOffset)
             putString("fontFamily", fontFamily)
             putBoolean("showLabels", showLabels)
             putBoolean("showAppLabels", showAppLabels)
