@@ -9,6 +9,7 @@ import android.provider.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
@@ -22,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -31,7 +33,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ourlauncher.app.SettingsManager
-import com.ourlauncher.app.ui.components.LiquidGlassSurface
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -40,8 +41,7 @@ import java.util.Locale
 fun ControlCenterOverlay(
     isOpen: Boolean,
     onDismiss: () -> Unit,
-    settings: SettingsManager,
-    isDarkTheme: Boolean = true
+    settings: SettingsManager
 ) {
     val context = LocalContext.current
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -50,10 +50,9 @@ fun ControlCenterOverlay(
         try { cameraManager?.cameraIdList?.firstOrNull() } catch (e: Exception) { null }
     }
 
-    var isFlashlightOn by remember { mutableStateOf(false) }
+    var isTorchOn by remember { mutableStateOf(false) }
     var isMuted by remember { mutableStateOf(audioManager.ringerMode != AudioManager.RINGER_MODE_NORMAL) }
-    var isBluetoothActive by remember { mutableStateOf(true) }
-    var brightnessLevel by remember { mutableFloatStateOf(0.72f) }
+    var brightness by remember { mutableFloatStateOf(0.72f) }
 
     var currentVolume by remember {
         val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).toFloat()
@@ -61,48 +60,43 @@ fun ControlCenterOverlay(
         mutableFloatStateOf(if (max > 0) curr / max else 0f)
     }
 
-    val currentTime = remember { SimpleDateFormat("h:mm", Locale.getDefault()).format(Date()) }
-    val currentAmPm = remember { SimpleDateFormat("a", Locale.getDefault()).format(Date()) }
-    val currentDate = remember { SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date()) }
+    val timeText = remember { SimpleDateFormat("h:mm", Locale.getDefault()).format(Date()) }
+    val amPmText = remember { SimpleDateFormat("a", Locale.getDefault()).format(Date()) }
+    val dateText = remember { SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date()) }
 
-    fun openInternetPanel() {
+    fun openNetworkPanel() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val panelIntent = Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY).apply {
+                context.startActivity(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                context.startActivity(panelIntent)
+                })
             } else {
-                val fallbackIntent = Intent(Settings.ACTION_WIFI_SETTINGS).apply {
+                context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                context.startActivity(fallbackIntent)
+                })
             }
         } catch (e: Exception) {
-            val fallback = Intent(Settings.ACTION_WIRELESS_SETTINGS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
-            context.startActivity(fallback)
+            context.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
         }
     }
 
-    fun openSetting(action: String) {
+    fun openAction(action: String) {
         try {
-            val intent = Intent(action).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
-            context.startActivity(intent)
+            context.startActivity(Intent(action).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK })
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    fun toggleTorch() {
+    fun toggleFlashlight() {
         try {
             if (cameraId != null && cameraManager != null) {
-                val nextState = !isFlashlightOn
-                cameraManager.setTorchMode(cameraId, nextState)
-                isFlashlightOn = nextState
+                val next = !isTorchOn
+                cameraManager.setTorchMode(cameraId, next)
+                isTorchOn = next
             }
         } catch (e: Exception) {
-            e.printStackTrace()
-            isFlashlightOn = !isFlashlightOn
+            isTorchOn = !isTorchOn
         }
     }
 
@@ -114,15 +108,11 @@ fun ControlCenterOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                // কোনো কালো পর্দা নেই, একদম স্বচ্ছ ওভারলে যাতে পেছনের ব্লার ওয়ালপেপার ফুটে ওঠে
-                .background(Color.Black.copy(alpha = 0.12f))
                 .clickable(onClick = onDismiss)
                 .pointerInput(Unit) {
                     detectVerticalDragGestures { change, dragAmount ->
                         change.consume()
-                        if (dragAmount < -20f) {
-                            onDismiss()
-                        }
+                        if (dragAmount < -20f) onDismiss()
                     }
                 }
                 .statusBarsPadding()
@@ -134,174 +124,102 @@ fun ControlCenterOverlay(
                     .clickable(enabled = false) {},
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Top Grab Bar
+                // Grab Pill
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
-                        .size(width = 42.dp, height = 4.5.dp)
+                        .size(width = 44.dp, height = 4.5.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.5f))
+                        .background(Color.White.copy(alpha = 0.55f))
                 )
 
                 // ==========================================
-                // ROW 1: 2x2 Network Tile + Clock Card
+                // Row 1: Connectivity Card + Time Card
                 // ==========================================
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(165.dp),
+                    modifier = Modifier.fillMaxWidth().height(165.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     // Connectivity Tile
-                    LiquidGlassSurface(
-                        settings = settings,
-                        cornerRadius = 28.dp,
-                        isDarkTheme = isDarkTheme,
-                        modifier = Modifier.weight(1f).fillMaxHeight()
-                    ) {
+                    GlassCard(modifier = Modifier.weight(1f).fillMaxHeight(), cornerRadius = 30.dp) {
                         Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(10.dp),
+                            modifier = Modifier.fillMaxSize().padding(10.dp),
                             verticalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                QuickActionCircle(icon = Icons.Default.Wifi, active = true) {
-                                    openInternetPanel()
-                                }
-                                QuickActionCircle(icon = Icons.Default.SignalCellularAlt, active = true) {
-                                    openInternetPanel()
-                                }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                GlassCircleButton(icon = Icons.Default.Wifi, active = true) { openNetworkPanel() }
+                                GlassCircleButton(icon = Icons.Default.SignalCellularAlt, active = true) { openNetworkPanel() }
                             }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
-                            ) {
-                                QuickActionCircle(icon = Icons.Default.Bluetooth, active = isBluetoothActive) {
-                                    isBluetoothActive = !isBluetoothActive
-                                    openSetting(Settings.ACTION_BLUETOOTH_SETTINGS)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                GlassCircleButton(icon = Icons.Default.Bluetooth, active = true) {
+                                    openAction(Settings.ACTION_BLUETOOTH_SETTINGS)
                                 }
-                                QuickActionCircle(icon = Icons.Default.AirplanemodeActive, active = false) {
-                                    openSetting(Settings.ACTION_AIRPLANE_MODE_SETTINGS)
+                                GlassCircleButton(icon = Icons.Default.AirplanemodeActive, active = false) {
+                                    openAction(Settings.ACTION_AIRPLANE_MODE_SETTINGS)
                                 }
                             }
                         }
                     }
 
-                    // Date & Time Display Tile
-                    LiquidGlassSurface(
-                        settings = settings,
-                        cornerRadius = 28.dp,
-                        isDarkTheme = isDarkTheme,
-                        modifier = Modifier.weight(1f).fillMaxHeight()
-                    ) {
+                    // Clock & Date Tile
+                    GlassCard(modifier = Modifier.weight(1f).fillMaxHeight(), cornerRadius = 30.dp) {
                         Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
+                            modifier = Modifier.fillMaxSize().padding(16.dp),
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = null,
-                                tint = Color(0xFF00E5FF),
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Icon(Icons.Default.CalendarToday, null, tint = Color(0xFF00E5FF), modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.Bottom) {
-                                Text(
-                                    text = currentTime,
-                                    color = Color.White,
-                                    fontSize = 28.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Text(timeText, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = currentAmPm,
-                                    color = Color(0xFF00E5FF),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(bottom = 4.dp)
-                                )
+                                Text(amPmText, color = Color(0xFF00E5FF), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 4.dp))
                             }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = currentDate,
-                                color = Color.White.copy(alpha = 0.75f),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Normal
-                            )
+                            Text(dateText, color = Color.White.copy(alpha = 0.75f), fontSize = 12.sp)
                         }
                     }
                 }
 
                 // ==========================================
-                // ROW 2: Toggles + Sliders
+                // Row 2: Toggles + Vertical Pill Sliders
                 // ==========================================
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(195.dp),
+                    modifier = Modifier.fillMaxWidth().height(200.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     // Left Column
                     Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            // Flashlight Tile
-                            LiquidGlassSurface(
-                                settings = settings,
-                                cornerRadius = 22.dp,
-                                isDarkTheme = isDarkTheme,
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                                onClick = { toggleTorch() }
-                            ) {
+                        Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            // Flashlight
+                            GlassCard(modifier = Modifier.weight(1f).fillMaxHeight(), cornerRadius = 24.dp, onClick = { toggleFlashlight() }) {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     Icon(
-                                        imageVector = Icons.Default.FlashlightOn,
-                                        contentDescription = "Flashlight",
-                                        tint = if (isFlashlightOn) Color(0xFF00E5FF) else Color.White,
+                                        Icons.Default.FlashlightOn, null,
+                                        tint = if (isTorchOn) Color(0xFF00E5FF) else Color.White,
                                         modifier = Modifier.size(26.dp)
                                     )
                                 }
                             }
 
-                            // Sound Mode (Mute) Tile
-                            LiquidGlassSurface(
-                                settings = settings,
-                                cornerRadius = 22.dp,
-                                isDarkTheme = isDarkTheme,
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                                onClick = {
-                                    try {
-                                        if (isMuted) {
-                                            audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
-                                            isMuted = false
-                                        } else {
-                                            audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
-                                            isMuted = true
-                                        }
-                                    } catch (e: Exception) {
-                                        openSetting(Settings.ACTION_SOUND_SETTINGS)
+                            // Mute Mode
+                            GlassCard(modifier = Modifier.weight(1f).fillMaxHeight(), cornerRadius = 24.dp, onClick = {
+                                try {
+                                    if (isMuted) {
+                                        audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
+                                        isMuted = false
+                                    } else {
+                                        audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
+                                        isMuted = true
                                     }
+                                } catch (e: Exception) {
+                                    openAction(Settings.ACTION_SOUND_SETTINGS)
                                 }
-                            ) {
+                            }) {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     Icon(
-                                        imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                                        contentDescription = "Sound Mode",
+                                        if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp, null,
                                         tint = if (isMuted) Color(0xFFFF453A) else Color.White,
                                         modifier = Modifier.size(26.dp)
                                     )
@@ -309,63 +227,40 @@ fun ControlCenterOverlay(
                             }
                         }
 
-                        // Hotspot Capsule Tile
-                        LiquidGlassSurface(
-                            settings = settings,
-                            cornerRadius = 22.dp,
-                            isDarkTheme = isDarkTheme,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(0.9f),
+                        // Hotspot Capsule
+                        GlassCard(
+                            modifier = Modifier.fillMaxWidth().weight(0.9f),
+                            cornerRadius = 24.dp,
                             onClick = {
                                 try {
-                                    val tetherIntent = Intent().apply {
+                                    context.startActivity(Intent().apply {
                                         setClassName("com.android.settings", "com.android.settings.TetherSettings")
                                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                    context.startActivity(tetherIntent)
+                                    })
                                 } catch (e: Exception) {
-                                    openSetting(Settings.ACTION_WIRELESS_SETTINGS)
+                                    openAction(Settings.ACTION_WIRELESS_SETTINGS)
                                 }
                             }
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 14.dp),
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.CellTower,
-                                    contentDescription = "Hotspot",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Icon(Icons.Default.CellTower, null, tint = Color.White, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Hotspot",
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                                Text("Hotspot", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
 
-                        // Settings Shortcut Tile
-                        LiquidGlassSurface(
-                            settings = settings,
-                            cornerRadius = 22.dp,
-                            isDarkTheme = isDarkTheme,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(0.9f),
-                            onClick = { openSetting(Settings.ACTION_SETTINGS) }
+                        // Settings Capsule
+                        GlassCard(
+                            modifier = Modifier.fillMaxWidth().weight(0.9f),
+                            cornerRadius = 24.dp,
+                            onClick = { openAction(Settings.ACTION_SETTINGS) }
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 14.dp),
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
@@ -376,38 +271,26 @@ fun ControlCenterOverlay(
                         }
                     }
 
-                    // Right Column: 2 Tall Pill Sliders
+                    // Right Column: Vertical Pill Sliders
                     Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // Brightness Slider
-                        BackdropPillSlider(
-                            value = brightnessLevel,
-                            onValueChange = { brightnessLevel = it },
+                        LiquidGlassPillSlider(
+                            value = brightness,
+                            onValueChange = { brightness = it },
                             icon = Icons.Default.WbSunny,
-                            settings = settings,
-                            isDarkTheme = isDarkTheme,
                             modifier = Modifier.weight(1f).fillMaxHeight()
                         )
 
-                        // Volume Slider
-                        BackdropPillSlider(
+                        LiquidGlassPillSlider(
                             value = currentVolume,
                             onValueChange = {
                                 currentVolume = it
                                 val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-                                audioManager.setStreamVolume(
-                                    AudioManager.STREAM_MUSIC,
-                                    (it * max).toInt().coerceIn(0, max),
-                                    0
-                                )
+                                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (it * max).toInt().coerceIn(0, max), 0)
                             },
                             icon = Icons.Default.VolumeUp,
-                            settings = settings,
-                            isDarkTheme = isDarkTheme,
                             modifier = Modifier.weight(1f).fillMaxHeight()
                         )
                     }
@@ -417,8 +300,47 @@ fun ControlCenterOverlay(
     }
 }
 
+// -------------------------------------------------------------
+// খাঁটি ক্রিস্টাল লিকুইড গ্লাস সারফেস (ভেতরের কনটেন্ট ১০০% শার্প থাকবে)
+// -------------------------------------------------------------
 @Composable
-fun QuickActionCircle(
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    cornerRadius: androidx.compose.ui.unit.Dp = 26.dp,
+    onClick: (() -> Unit)? = null,
+    content: @Composable BoxScope.() -> Unit
+) {
+    val shape = RoundedCornerShape(cornerRadius)
+    Box(
+        modifier = modifier
+            .shadow(16.dp, shape, spotColor = Color(0xFF00E5FF).copy(alpha = 0.25f), ambientColor = Color.Black.copy(alpha = 0.35f))
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.22f),
+                        Color(0xFF0F1A24).copy(alpha = 0.55f)
+                    )
+                )
+            )
+            .border(
+                width = 1.3.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.85f),
+                        Color(0xFF00E5FF).copy(alpha = 0.35f),
+                        Color.White.copy(alpha = 0.12f)
+                    )
+                ),
+                shape = shape
+            )
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        content = content
+    )
+}
+
+@Composable
+fun GlassCircleButton(
     icon: ImageVector,
     active: Boolean,
     onClick: () -> Unit
@@ -429,63 +351,77 @@ fun QuickActionCircle(
             .clip(CircleShape)
             .background(
                 if (active) {
-                    Brush.linearGradient(listOf(Color(0xFF0091EA), Color(0xFF00B4D8)))
+                    Brush.linearGradient(listOf(Color(0xFF00B4D8), Color(0xFF0077B6)))
                 } else {
-                    Brush.linearGradient(listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.08f)))
+                    Brush.linearGradient(listOf(Color.White.copy(alpha = 0.20f), Color.White.copy(alpha = 0.08f)))
                 }
+            )
+            .border(
+                1.dp,
+                if (active) Color(0xFF00E5FF).copy(alpha = 0.7f) else Color.White.copy(alpha = 0.25f),
+                CircleShape
             )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(24.dp)
-        )
+        Icon(icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
     }
 }
 
 @Composable
-fun BackdropPillSlider(
+fun LiquidGlassPillSlider(
     value: Float,
     onValueChange: (Float) -> Unit,
     icon: ImageVector,
-    settings: SettingsManager,
-    isDarkTheme: Boolean,
     modifier: Modifier = Modifier
 ) {
-    LiquidGlassSurface(
-        settings = settings,
-        cornerRadius = 32.dp,
-        isDarkTheme = isDarkTheme,
-        modifier = modifier.pointerInput(Unit) {
-            detectVerticalDragGestures { change, dragAmount ->
-                change.consume()
-                val delta = -dragAmount / size.height
-                val nextValue = (value + delta).coerceIn(0f, 1f)
-                onValueChange(nextValue)
+    val shape = RoundedCornerShape(32.dp)
+    Box(
+        modifier = modifier
+            .shadow(16.dp, shape, spotColor = Color(0xFF00E5FF).copy(alpha = 0.25f))
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.18f),
+                        Color(0xFF0A1520).copy(alpha = 0.55f)
+                    )
+                )
+            )
+            .border(
+                1.3.dp,
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.85f),
+                        Color(0xFF00E5FF).copy(alpha = 0.35f),
+                        Color.White.copy(alpha = 0.12f)
+                    )
+                ),
+                shape
+            )
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { change, dragAmount ->
+                    change.consume()
+                    val delta = -dragAmount / size.height
+                    onValueChange((value + delta).coerceIn(0f, 1f))
+                }
             }
-        }
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.BottomCenter
-        ) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            // White Level Fill
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(value.coerceIn(0f, 1f))
-                    .background(Color.White.copy(alpha = 0.90f))
+                    .background(Color.White.copy(alpha = 0.92f))
             )
 
+            // Icon Indicator
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (value > 0.16f) Color(0xFF1E293B) else Color.White,
-                modifier = Modifier
-                    .padding(bottom = 18.dp)
-                    .size(24.dp)
+                tint = if (value > 0.16f) Color(0xFF0F172A) else Color.White,
+                modifier = Modifier.padding(bottom = 18.dp).size(24.dp)
             )
         }
     }
